@@ -1,0 +1,13 @@
+#!/bin/bash
+# Sync settings.json to settings.local.json in all worktrees
+
+DIR="$(cd "$(dirname "$0")" && pwd)"
+SRC="$DIR/settings.json"
+
+for worktree in "$DIR/../.tree"/*; do
+  if [ -d "$worktree" ]; then
+    mkdir -p "$worktree/.claude"
+    /bin/cp "$SRC" "$worktree/.claude/settings.local.json"
+    echo "Synced to $(basename "$worktree")"
+  fi
+done
