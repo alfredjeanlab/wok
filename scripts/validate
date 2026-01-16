@@ -1,0 +1,311 @@
+#!/bin/bash
+# Pre-release validation script
+# Validates all landing criteria and quality checks
+#
+# Usage: cmd/validate [--fix]
+#
+# Options:
+#   --fix    Auto-fix formatting issues and commit them
+#
+# Exit codes:
+#   0  All checks passed
+#   1  Some checks failed (bugs logged with reporter:validate)
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+ROOT_DIR="$(dirname "$SCRIPT_DIR")"
+
+# Parse arguments
+FIX_MODE=false
+while [[ $# -gt 0 ]]; do
+    case $1 in
+        --fix) FIX_MODE=true; shift ;;
+        -h|--help)
+            sed -n '2,/^set/p' "$0" | grep '^#' | sed 's/^# \?//'
+            exit 0
+            ;;
+        *) echo "Unknown option: $1"; exit 1 ;;
+    esac
+done
+
+cd "$ROOT_DIR"
+
+# Track failures
+FAILURES=()
+WARNINGS=()
+
+# Colors for output (if terminal supports it)
+if [ -t 1 ]; then
+    RED='\033[0;31m'
+    GREEN='\033[0;32m'
+    YELLOW='\033[0;33m'
+    NC='\033[0m'
+else
+    RED='' GREEN='' YELLOW='' NC=''
+fi
+
+log_pass() { echo -e "${GREEN}✓${NC} $1"; }
+log_fail() { echo -e "${RED}✗${NC} $1"; FAILURES+=("$1"); }
+log_warn() { echo -e "${YELLOW}⚠${NC} $1"; WARNINGS+=("$1"); }
+log_info() { echo "  $1"; }
+log_section() { echo ""; echo "=== $1 ==="; echo ""; }
+
+# Log a bug with beads if check fails
+log_bug() {
+    local title="$1"
+    local description="${2:-}"
+
+    # Check if bug already exists
+    if wk list --label reporter:validate 2>/dev/null | grep -q "$title"; then
+        log_info "Bug already exists: $title"
+        return
+    fi
+
+    if [ -n "$description" ]; then
+        wk new bug "$title" --label reporter:validate --description "$description" 2>/dev/null || true
+    else
+        wk new bug "$title" --label reporter:validate 2>/dev/null || true
+    fi
+    log_info "Logged bug: $title"
+}
+
+log_section "Build Validation"
+
+# 1. Cargo build (fundamental - exit early if this fails)
+echo "Running: cargo build --release --all"
+if ! cargo build --release --all 2>&1; then
+    log_fail "cargo build failed"
+    echo ""
+    echo "FATAL: Build failed. Cannot continue validation."
+    exit 1
+fi
+log_pass "cargo build --release --all"
+
+# 2. Cargo check (for warnings)
+echo "Running: cargo check --all"
+if cargo check --all 2>&1 | grep -q "warning:"; then
+    log_warn "cargo check produced warnings"
+else
+    log_pass "cargo check --all (no warnings)"
+fi
+
+log_section "Static Analysis"
+
+# 3. Clippy linting
+echo "Running: cargo clippy --all"
+clippy_output=$(cargo clippy --all -- -D warnings 2>&1) || {
+    log_fail "cargo clippy failed"
+    echo "$clippy_output" | tail -20
+    log_bug "Clippy lint errors" "cargo clippy --all failed"
+}
+if [ $? -eq 0 ]; then
+    log_pass "cargo clippy --all"
+fi
+
+# 4. Formatting check
+echo "Running: cargo fmt --all -- --check"
+if ! cargo fmt --all -- --check 2>&1; then
+    if [ "$FIX_MODE" = true ]; then
+        log_warn "Formatting issues found, auto-fixing..."
+        cargo fmt --all
+        git add -A
+        if ! git diff --cached --quiet; then
+            git commit -m "style: auto-format code
+
+Co-Authored-By: cmd/validate <noreply@validate.local>"
+            log_pass "Formatting fixed and committed"
+        fi
+    else
+        log_fail "cargo fmt failed (run with --fix to auto-commit)"
+        log_bug "Formatting issues" "cargo fmt --all -- --check failed"
+    fi
+else
+    log_pass "cargo fmt --all"
+fi
+
+# 5. Security audit
+echo "Running: cargo audit"
+if command -v cargo-audit &> /dev/null; then
+    audit_output=$(cargo audit 2>&1) || {
+        log_fail "cargo audit found vulnerabilities"
+        echo "$audit_output" | grep -A2 "Vulnerability\|RUSTSEC" | head -20
+        log_bug "Security vulnerabilities found" "cargo audit reported vulnerabilities"
+    }
+    if echo "$audit_output" | grep -q "0 vulnerabilities"; then
+        log_pass "cargo audit (no vulnerabilities)"
+    fi
+else
+    log_warn "cargo-audit not installed, skipping"
+fi
+
+log_section "Code Quality Checks"
+
+# 6. No ====== comment banners
+echo "Checking: No ====== comment banners"
+banner_files=$(grep -rln '======' crates/*/src --include="*.rs" 2>/dev/null || true)
+if [ -n "$banner_files" ]; then
+    log_fail "Found ====== comment banners"
+    echo "$banner_files" | while read -r f; do log_info "  $f"; done
+    log_bug "Remove ====== comment banners" "Files with banners: $(echo "$banner_files" | tr '\n' ' ')"
+else
+    log_pass "No ====== comment banners"
+fi
+
+# 7. Escape hatches check (using quality metric)
+echo "Running: escape hatch analysis"
+if [ -x "checks/quality/metrics/escapes.sh" ]; then
+    escapes_output=$(bash checks/quality/metrics/escapes.sh 2>&1)
+
+    # Extract counts from output
+    unwrap_count=$(echo "$escapes_output" | grep "^\.unwrap() calls:" | grep -oE '[0-9]+' || echo "0")
+    unsafe_count=$(echo "$escapes_output" | grep "^unsafe blocks:" | grep -oE '[0-9]+' || echo "0")
+
+    if [ "$unwrap_count" -gt 2 ] || [ "$unsafe_count" -gt 0 ]; then
+        log_fail "Escape hatches exceed limits (unwrap: $unwrap_count/2, unsafe: $unsafe_count/0)"
+        log_bug "Reduce escape hatches" "unwrap: $unwrap_count, unsafe: $unsafe_count"
+    else
+        log_pass "Escape hatches within limits (unwrap: $unwrap_count/2, unsafe: $unsafe_count/0)"
+    fi
+else
+    log_warn "Escape hatch check script not found"
+fi
+
+log_section "Tests"
+
+# 8. Unit tests
+echo "Running: cargo test --all"
+if ! cargo test --all 2>&1; then
+    log_fail "cargo test failed"
+    log_bug "Unit tests failing" "cargo test --all failed"
+else
+    log_pass "cargo test --all"
+fi
+
+# 9. BATS specs
+echo "Running: checks/specs/run.sh"
+if [ -x "checks/specs/run.sh" ]; then
+    # Build binaries first (use absolute paths for BATS)
+    WK_BIN="$ROOT_DIR/target/release/wk"
+    WK_REMOTE_BIN="$ROOT_DIR/target/release/wk-remote"
+
+    if [ -x "$WK_BIN" ]; then
+        export WK_BIN
+        export WK_REMOTE_BIN
+        if ! checks/specs/run.sh 2>&1; then
+            log_fail "BATS specs failed"
+            log_bug "BATS specification tests failing" "checks/specs/run.sh failed"
+        else
+            log_pass "BATS specs"
+        fi
+    else
+        log_warn "wk binary not found at $WK_BIN, skipping BATS specs"
+    fi
+else
+    log_warn "BATS specs runner not found"
+fi
+
+log_section "Coverage"
+
+# 10. Coverage thresholds
+check_coverage() {
+    local pkg_name="$1"
+    local pkg_dir="$2"
+    local line_threshold="$3"
+    local func_threshold="$4"
+
+    if [ ! -x "$pkg_dir/coverage.sh" ]; then
+        log_warn "Coverage script not found: $pkg_dir/coverage.sh"
+        return
+    fi
+
+    echo "Running: $pkg_name coverage"
+    coverage_output=$(cd "$pkg_dir" && ./coverage.sh 2>&1) || {
+        log_fail "$pkg_name coverage script failed"
+        return
+    }
+
+    # Extract line coverage from TOTAL line
+    line_cov=$(echo "$coverage_output" | grep "^TOTAL" | awk '{print $(NF-3)}' | tr -d '%' | head -1)
+
+    if [ -n "$line_cov" ]; then
+        if (( $(echo "$line_cov >= $line_threshold" | bc -l) )); then
+            log_pass "$pkg_name coverage: ${line_cov}% (≥${line_threshold}%)"
+        else
+            log_fail "$pkg_name coverage: ${line_cov}% (need ≥${line_threshold}%)"
+            log_bug "$pkg_name coverage below threshold" "Current: ${line_cov}%, Required: ${line_threshold}%"
+        fi
+    else
+        log_warn "$pkg_name coverage: could not parse result"
+    fi
+}
+
+check_coverage "crates/core" "crates/core" 90 86
+check_coverage "crates/cli" "crates/cli" 83 79
+check_coverage "crates/remote" "crates/remote" 44 39
+
+log_section "Git State"
+
+# 11. Branch is clean
+echo "Checking: git status"
+if git diff --quiet && git diff --cached --quiet; then
+    log_pass "Working tree is clean"
+else
+    if [ "$FIX_MODE" = true ]; then
+        log_warn "Working tree has changes (--fix mode doesn't auto-commit non-formatting changes)"
+    else
+        log_warn "Working tree has uncommitted changes"
+    fi
+    git status --short | head -10
+fi
+
+# Check for untracked files (warning only)
+untracked=$(git ls-files --others --exclude-standard | head -5)
+if [ -n "$untracked" ]; then
+    log_warn "Untracked files present"
+    echo "$untracked" | while read -r f; do log_info "  $f"; done
+fi
+
+log_section "Quality Evaluation"
+
+# 12. Run quality evaluation (informational)
+if [ -x "checks/quality/evaluate.sh" ]; then
+    echo "Running: checks/quality/evaluate.sh"
+    if ! checks/quality/evaluate.sh 2>&1; then
+        log_warn "Quality evaluation had issues (see report)"
+    else
+        log_pass "Quality evaluation complete"
+    fi
+else
+    log_warn "Quality evaluation script not found"
+fi
+
+log_section "Summary"
+
+echo ""
+if [ ${#FAILURES[@]} -eq 0 ]; then
+    echo -e "${GREEN}All validation checks passed!${NC}"
+    if [ ${#WARNINGS[@]} -gt 0 ]; then
+        echo ""
+        echo "Warnings (${#WARNINGS[@]}):"
+        for w in "${WARNINGS[@]}"; do
+            echo "  - $w"
+        done
+    fi
+    exit 0
+else
+    echo -e "${RED}Validation failed with ${#FAILURES[@]} error(s):${NC}"
+    for f in "${FAILURES[@]}"; do
+        echo "  - $f"
+    done
+    if [ ${#WARNINGS[@]} -gt 0 ]; then
+        echo ""
+        echo "Warnings (${#WARNINGS[@]}):"
+        for w in "${WARNINGS[@]}"; do
+            echo "  - $w"
+        done
+    fi
+    echo ""
+    echo "Bugs logged with label: reporter:validate"
+    echo "Run 'wk list --label reporter:validate' to see logged issues"
+    exit 1
+fi

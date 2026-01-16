@@ -1,0 +1,87 @@
+#!/bin/bash
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 Alfred Jean LLC
+set -e
+
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+ROOT_DIR="$(dirname "$SCRIPT_DIR")"
+
+# License headers
+RUST_HEADER="// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 Alfred Jean LLC"
+
+BASH_HEADER="# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 Alfred Jean LLC"
+
+# Add license header to a Rust file
+add_rust_header() {
+    local file="$1"
+
+    # Skip if already has SPDX header
+    if head -1 "$file" | grep -q "SPDX-License-Identifier"; then
+        return 0
+    fi
+
+    # Create temp file with header + original content
+    {
+        echo "$RUST_HEADER"
+        echo ""
+        cat "$file"
+    } > "$file.tmp"
+    mv "$file.tmp" "$file"
+    echo "Added header to: $file"
+}
+
+# Add license header to a bash file (after shebang)
+add_bash_header() {
+    local file="$1"
+
+    # Skip if already has SPDX header
+    if grep -q "SPDX-License-Identifier" "$file"; then
+        return 0
+    fi
+
+    # Check if file starts with shebang
+    if head -1 "$file" | grep -q "^#!"; then
+        # Extract shebang and rest of file
+        local shebang
+        shebang=$(head -1 "$file")
+        local rest
+        rest=$(tail -n +2 "$file")
+
+        # Reconstruct file with shebang, header, then rest
+        {
+            echo "$shebang"
+            echo "$BASH_HEADER"
+            echo "$rest"
+        } > "$file.tmp"
+        mv "$file.tmp" "$file"
+    else
+        # No shebang - add header at top
+        {
+            echo "$BASH_HEADER"
+            echo ""
+            cat "$file"
+        } > "$file.tmp"
+        mv "$file.tmp" "$file"
+    fi
+    echo "Added header to: $file"
+}
+
+cd "$ROOT_DIR"
+
+# Process Rust files
+echo "Processing Rust files..."
+find crates checks -name "*.rs" -type f | while read -r file; do
+    add_rust_header "$file"
+done
+
+# Process bash scripts in checks/
+echo "Processing bash scripts in checks/..."
+find checks -name "*.sh" -type f | while read -r file; do
+    if head -1 "$file" | grep -qE "^#!.*(bash|sh)"; then
+        add_bash_header "$file"
+    fi
+done
+
+echo "Done."

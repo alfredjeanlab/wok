@@ -1,0 +1,45 @@
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 Alfred Jean LLC
+
+mod common;
+use common::*;
+
+#[test]
+fn remote_status_local_mode() {
+    let temp = init_temp_local();
+
+    // In local mode, remote status should say "not applicable"
+    wk().arg("remote")
+        .arg("status")
+        .current_dir(temp.path())
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("not applicable"))
+        .stdout(predicate::str::contains("no remote configured"));
+}
+
+#[test]
+fn remote_status_remote_mode() {
+    let temp = init_temp(); // Default is now remote mode with git:.
+
+    // In remote mode, remote status should show remote URL
+    wk().arg("remote")
+        .arg("status")
+        .current_dir(temp.path())
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("Remote: git:."));
+}
+
+#[test]
+fn remote_sync_local_mode() {
+    let temp = init_temp_local();
+
+    // In local mode, remote sync should say "nothing to sync"
+    wk().arg("remote")
+        .arg("sync")
+        .current_dir(temp.path())
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("Not in remote mode"));
+}

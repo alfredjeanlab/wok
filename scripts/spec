@@ -1,0 +1,155 @@
+#!/bin/bash
+# Run BATS specs with automatic bats detection
+#
+# Usage: scripts/spec [suite] [options]
+#
+# Suites:
+#   (none)     Run all specs
+#   cli        Run CLI specs only
+#   remote     Run remote specs only
+#
+# Options:
+#   --filter <regex>   Filter tests by name
+#   --file <path>      Run specific test file (relative to checks/specs/)
+#   --filter-tags <t>  Filter by bats tags (e.g., todo:implement)
+#
+# Examples:
+#   scripts/spec --filter "short flag"      # Run tests matching "short flag"
+#   scripts/spec --file cli/unit/list.bats  # Run specific test file
+#   scripts/spec cli --filter "list"        # Run CLI tests matching "list"
+#
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+ROOT_DIR="$(dirname "$SCRIPT_DIR")"
+SPECS_DIR="$ROOT_DIR/checks/specs"
+BATS_LOCAL_DIR="$SPECS_DIR/bats"
+
+# Initialize bats submodules if needed
+if [ ! -f "$BATS_LOCAL_DIR/bats-support/load.bash" ]; then
+    if [ -x "$BATS_LOCAL_DIR/install.sh" ]; then
+        echo "Initializing bats libraries..."
+        "$BATS_LOCAL_DIR/install.sh"
+    fi
+fi
+
+# Detect bats binary: system or local
+if command -v bats &>/dev/null; then
+    BATS="$(command -v bats)"
+else
+    BATS="$BATS_LOCAL_DIR/bats-core/bin/bats"
+fi
+
+# Find bats library path (support/assert)
+export BATS_LIB_PATH=""
+for p in /usr/local/lib /opt/homebrew/lib /usr/lib; do
+    if [ -d "$p/bats-support" ] && [ -d "$p/bats-assert" ]; then
+        export BATS_LIB_PATH="$p"
+        break
+    fi
+done
+
+# Fall back to local libraries
+if [ -z "$BATS_LIB_PATH" ]; then
+    export BATS_LIB_PATH="$BATS_LOCAL_DIR"
+fi
+
+# Verify bats is available
+if [ ! -x "$BATS" ]; then
+    echo "Error: bats not found at $BATS" >&2
+    exit 1
+fi
+
+# Verify bats libraries are available
+if [ ! -f "$BATS_LIB_PATH/bats-support/load.bash" ]; then
+    echo "Error: bats libraries not found at $BATS_LIB_PATH" >&2
+    exit 1
+fi
+
+# Default binary paths - auto-detect from build output or fall back to PATH
+if [ -z "${WK_BIN:-}" ]; then
+    if [ -x "$ROOT_DIR/target/release/wk" ]; then
+        export WK_BIN="$ROOT_DIR/target/release/wk"
+    elif [ -x "$ROOT_DIR/target/debug/wk" ]; then
+        export WK_BIN="$ROOT_DIR/target/debug/wk"
+    else
+        export WK_BIN="wk"
+    fi
+fi
+
+if [ -z "${WK_REMOTE_BIN:-}" ]; then
+    if [ -x "$ROOT_DIR/target/release/wk-remote" ]; then
+        export WK_REMOTE_BIN="$ROOT_DIR/target/release/wk-remote"
+    elif [ -x "$ROOT_DIR/target/debug/wk-remote" ]; then
+        export WK_REMOTE_BIN="$ROOT_DIR/target/debug/wk-remote"
+    else
+        export WK_REMOTE_BIN="wk-remote"
+    fi
+fi
+
+# Auto-detect parallel jobs
+PARALLEL_JOBS=1
+if command -v parallel &>/dev/null || command -v rush &>/dev/null; then
+    PARALLEL_JOBS=4
+fi
+
+# Parse arguments
+SUITE=""
+FILE=""
+BATS_ARGS=()
+
+while [ $# -gt 0 ]; do
+    case "$1" in
+        cli|cli/)
+            SUITE="cli"
+            shift
+            ;;
+        remote|remote/)
+            SUITE="remote"
+            shift
+            ;;
+        --file)
+            FILE="$2"
+            shift 2
+            ;;
+        *)
+            BATS_ARGS+=("$1")
+            shift
+            ;;
+    esac
+done
+
+# Build test targets
+if [ -n "$FILE" ]; then
+    # Specific file mode
+    if [[ "$FILE" = /* ]]; then
+        TARGETS=("$FILE")
+    else
+        TARGETS=("$SPECS_DIR/$FILE")
+    fi
+else
+    # Suite mode
+    case "$SUITE" in
+        cli)
+            TARGETS=("$SPECS_DIR/cli/unit" "$SPECS_DIR/cli/integration" "$SPECS_DIR/cli/edge_cases")
+            ;;
+        remote)
+            TARGETS=("$SPECS_DIR/remote/unit" "$SPECS_DIR/remote/integration" "$SPECS_DIR/remote/edge_cases")
+            ;;
+        *)
+            TARGETS=(
+                "$SPECS_DIR/cli/unit" "$SPECS_DIR/cli/integration" "$SPECS_DIR/cli/edge_cases"
+                "$SPECS_DIR/remote/unit" "$SPECS_DIR/remote/integration" "$SPECS_DIR/remote/edge_cases"
+            )
+            ;;
+    esac
+fi
+
+echo "BATS: $BATS"
+echo "BATS_LIB_PATH: $BATS_LIB_PATH"
+echo "WK_BIN: $WK_BIN"
+echo "WK_REMOTE_BIN: $WK_REMOTE_BIN"
+echo "Parallel jobs: $PARALLEL_JOBS"
+echo ""
+
+exec "$BATS" -j "$PARALLEL_JOBS" --recursive "${BATS_ARGS[@]+"${BATS_ARGS[@]}"}" "${TARGETS[@]}"

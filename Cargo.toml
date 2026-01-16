@@ -1,0 +1,12 @@
+[workspace]
+resolver = "2"
+members = [
+    "crates/cli",
+    "crates/core",
+    "crates/remote",
+]
+
+[profile.release]
+strip = true
+lto = true
+panic = "abort"

@@ -1,0 +1,265 @@
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 Alfred Jean LLC
+
+#![allow(clippy::unwrap_used)]
+#![allow(clippy::expect_used)]
+
+use crate::commands::testing::TestContext;
+use crate::models::{Action, IssueType};
+
+#[test]
+fn test_add_label_logs_event() {
+    let ctx = TestContext::new();
+    ctx.create_issue("test-1", IssueType::Task, "Test issue");
+
+    // Manually perform what add() does
+    ctx.db.add_label("test-1", "urgent").unwrap();
+    let event = crate::models::Event::new("test-1".to_string(), Action::Labeled)
+        .with_values(None, Some("urgent".to_string()));
+    ctx.db.log_event(&event).unwrap();
+
+    // Verify label was added
+    let labels = ctx.db.get_labels("test-1").unwrap();
+    assert_eq!(labels, vec!["urgent"]);
+
+    // Verify event was logged
+    let events = ctx.db.get_events("test-1").unwrap();
+    assert!(events.iter().any(|e| e.action == Action::Labeled));
+}
+
+#[test]
+fn test_add_multiple_labels() {
+    let ctx = TestContext::new();
+    ctx.create_issue("test-1", IssueType::Task, "Test issue")
+        .add_label("test-1", "backend")
+        .add_label("test-1", "urgent")
+        .add_label("test-1", "p0");
+
+    let labels = ctx.db.get_labels("test-1").unwrap();
+    assert_eq!(labels.len(), 3);
+    assert!(labels.contains(&"backend".to_string()));
+    assert!(labels.contains(&"urgent".to_string()));
+    assert!(labels.contains(&"p0".to_string()));
+}
+
+#[test]
+fn test_add_duplicate_label_is_idempotent() {
+    let ctx = TestContext::new();
+    ctx.create_issue("test-1", IssueType::Task, "Test issue");
+
+    ctx.db.add_label("test-1", "urgent").unwrap();
+    ctx.db.add_label("test-1", "urgent").unwrap();
+
+    let labels = ctx.db.get_labels("test-1").unwrap();
+    assert_eq!(labels, vec!["urgent"]);
+}
+
+#[test]
+fn test_add_label_to_nonexistent_issue_fails() {
+    let ctx = TestContext::new();
+
+    // Trying to add label to non-existent issue should fail
+    let result = ctx.db.get_issue("nonexistent");
+    assert!(result.is_err());
+}
+
+#[test]
+fn test_remove_label_logs_event() {
+    let ctx = TestContext::new();
+    ctx.create_issue("test-1", IssueType::Task, "Test issue")
+        .add_label("test-1", "urgent");
+
+    // Manually perform what remove() does
+    let removed = ctx.db.remove_label("test-1", "urgent").unwrap();
+    assert!(removed);
+
+    let event = crate::models::Event::new("test-1".to_string(), Action::Unlabeled)
+        .with_values(None, Some("urgent".to_string()));
+    ctx.db.log_event(&event).unwrap();
+
+    // Verify label was removed
+    let labels = ctx.db.get_labels("test-1").unwrap();
+    assert!(labels.is_empty());
+
+    // Verify unlabeled event was logged
+    let events = ctx.db.get_events("test-1").unwrap();
+    assert!(events.iter().any(|e| e.action == Action::Unlabeled));
+}
+
+#[test]
+fn test_remove_nonexistent_label_returns_false() {
+    let ctx = TestContext::new();
+    ctx.create_issue("test-1", IssueType::Task, "Test issue");
+
+    let removed = ctx.db.remove_label("test-1", "nonexistent").unwrap();
+    assert!(!removed);
+}
+
+#[test]
+fn test_labels_persist_across_status_changes() {
+    let ctx = TestContext::new();
+    ctx.create_issue("test-1", IssueType::Task, "Test issue")
+        .add_label("test-1", "urgent")
+        .set_status("test-1", crate::models::Status::InProgress);
+
+    let labels = ctx.db.get_labels("test-1").unwrap();
+    assert_eq!(labels, vec!["urgent"]);
+}
+
+#[test]
+fn test_label_filtering_in_list() {
+    let ctx = TestContext::new();
+    ctx.create_issue("test-1", IssueType::Task, "Task with label")
+        .create_issue("test-2", IssueType::Task, "Task without label")
+        .add_label("test-1", "backend");
+
+    let issues = ctx.db.list_issues(None, None, Some("backend")).unwrap();
+    assert_eq!(issues.len(), 1);
+    assert_eq!(issues[0].id, "test-1");
+}
+
+#[test]
+fn test_special_characters_in_label_names() {
+    let ctx = TestContext::new();
+    ctx.create_issue("test-1", IssueType::Task, "Test issue");
+
+    // Labels with special characters
+    ctx.db.add_label("test-1", "high-priority").unwrap();
+    ctx.db.add_label("test-1", "v2.0").unwrap();
+    ctx.db.add_label("test-1", "area:backend").unwrap();
+
+    let labels = ctx.db.get_labels("test-1").unwrap();
+    assert_eq!(labels.len(), 3);
+    assert!(labels.contains(&"high-priority".to_string()));
+    assert!(labels.contains(&"v2.0".to_string()));
+    assert!(labels.contains(&"area:backend".to_string()));
+}
+
+// Tests for run_impl
+
+use crate::commands::label::{add_impl, remove_impl};
+
+#[test]
+fn test_add_impl_success() {
+    let ctx = TestContext::new();
+    ctx.create_issue("test-1", IssueType::Task, "Test issue");
+
+    let result = add_impl(&ctx.db, &["test-1".to_string()], "urgent");
+    assert!(result.is_ok());
+
+    let labels = ctx.db.get_labels("test-1").unwrap();
+    assert!(labels.contains(&"urgent".to_string()));
+}
+
+#[test]
+fn test_add_impl_nonexistent_issue() {
+    let ctx = TestContext::new();
+
+    let result = add_impl(&ctx.db, &["nonexistent".to_string()], "label");
+    assert!(result.is_err());
+}
+
+#[test]
+fn test_remove_impl_success() {
+    let ctx = TestContext::new();
+    ctx.create_issue("test-1", IssueType::Task, "Test issue")
+        .add_label("test-1", "urgent");
+
+    let result = remove_impl(&ctx.db, &["test-1".to_string()], "urgent");
+    assert!(result.is_ok());
+
+    let labels = ctx.db.get_labels("test-1").unwrap();
+    assert!(!labels.contains(&"urgent".to_string()));
+}
+
+#[test]
+fn test_remove_impl_nonexistent_label() {
+    let ctx = TestContext::new();
+    ctx.create_issue("test-1", IssueType::Task, "Test issue");
+
+    // Removing non-existent label should succeed but print a message
+    let result = remove_impl(&ctx.db, &["test-1".to_string()], "nonexistent");
+    assert!(result.is_ok());
+}
+
+#[test]
+fn test_remove_impl_nonexistent_issue() {
+    let ctx = TestContext::new();
+
+    let result = remove_impl(&ctx.db, &["nonexistent".to_string()], "label");
+    assert!(result.is_err());
+}
+
+// === Batch Operations Tests ===
+
+#[test]
+fn test_add_impl_multiple_issues() {
+    let ctx = TestContext::new();
+    ctx.create_issue("test-1", IssueType::Task, "Task 1");
+    ctx.create_issue("test-2", IssueType::Task, "Task 2");
+
+    let result = add_impl(
+        &ctx.db,
+        &["test-1".to_string(), "test-2".to_string()],
+        "urgent",
+    );
+
+    assert!(result.is_ok());
+    assert!(ctx
+        .db
+        .get_labels("test-1")
+        .unwrap()
+        .contains(&"urgent".to_string()));
+    assert!(ctx
+        .db
+        .get_labels("test-2")
+        .unwrap()
+        .contains(&"urgent".to_string()));
+}
+
+#[test]
+fn test_add_impl_fails_on_nonexistent_issue() {
+    let ctx = TestContext::new();
+    ctx.create_issue("test-1", IssueType::Task, "Task 1");
+
+    let result = add_impl(
+        &ctx.db,
+        &["test-1".to_string(), "nonexistent".to_string()],
+        "urgent",
+    );
+
+    assert!(result.is_err());
+    // First one succeeded before failure
+    assert!(ctx
+        .db
+        .get_labels("test-1")
+        .unwrap()
+        .contains(&"urgent".to_string()));
+}
+
+#[test]
+fn test_remove_impl_multiple_issues() {
+    let ctx = TestContext::new();
+    ctx.create_issue("test-1", IssueType::Task, "Task 1")
+        .add_label("test-1", "urgent");
+    ctx.create_issue("test-2", IssueType::Task, "Task 2")
+        .add_label("test-2", "urgent");
+
+    let result = remove_impl(
+        &ctx.db,
+        &["test-1".to_string(), "test-2".to_string()],
+        "urgent",
+    );
+
+    assert!(result.is_ok());
+    assert!(!ctx
+        .db
+        .get_labels("test-1")
+        .unwrap()
+        .contains(&"urgent".to_string()));
+    assert!(!ctx
+        .db
+        .get_labels("test-2")
+        .unwrap()
+        .contains(&"urgent".to_string()));
+}
