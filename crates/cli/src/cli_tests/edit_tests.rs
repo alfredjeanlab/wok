@@ -27,7 +27,14 @@ fn test_edit_title() {
 
 #[test]
 fn test_edit_description() {
-    let cli = parse(&["wk", "edit", "prj-1234", "description", "Updated description"]).unwrap();
+    let cli = parse(&[
+        "wk",
+        "edit",
+        "prj-1234",
+        "description",
+        "Updated description",
+    ])
+    .unwrap();
     match cli.command {
         Command::Edit { id, attr, value } => {
             assert_eq!(id, "prj-1234");

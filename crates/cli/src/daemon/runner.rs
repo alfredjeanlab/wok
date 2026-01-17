@@ -28,6 +28,9 @@ use crate::sync::{SyncClient, SyncConfig, Transport, WebSocketTransport};
 use crate::wal::Wal;
 use crate::worktree::{self, OplogWorktree};
 
+/// Snapshot data: (issues, tags) received from server
+type SnapshotData = (Vec<wk_core::Issue>, Vec<(String, String)>);
+
 use super::ipc::{framing_async, DaemonRequest, DaemonResponse, DaemonStatus};
 use super::lifecycle::{get_lock_path, get_pid_path, get_socket_path};
 
@@ -433,7 +436,7 @@ async fn sync_websocket<T: Transport>(client: &mut SyncClient<T>, db_path: &Path
     // Receive and apply operations from server
     let mut ops_received = 0;
     let mut received_ops = Vec::new();
-    let mut snapshot_data: Option<(Vec<wk_core::Issue>, Vec<(String, String)>)> = None;
+    let mut snapshot_data: Option<SnapshotData> = None;
 
     // Set a timeout for receiving sync response
     let timeout = tokio::time::timeout(std::time::Duration::from_secs(10), async {
