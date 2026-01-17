@@ -2,6 +2,8 @@
 
 SHELL := /bin/bash
 SPECS_DIR := checks/specs
+JOBS ?=
+JOBS_ARG := $(if $(JOBS),-j $(JOBS),)
 
 .PHONY: help install validate spec spec-cli spec-remote spec-todo quality stress stress-docker bench license
 
@@ -25,6 +27,7 @@ help:
 	@echo "  make spec ARGS='--filter \"pattern\"'  - Filter tests by name"
 	@echo "  make spec ARGS='--file path.bats'    - Run specific file"
 	@echo "  make spec-cli ARGS='--filter list'   - Combine suite + filter"
+	@echo "  make spec JOBS=1                     - Run tests sequentially"
 
 install:
 	@scripts/install
@@ -37,16 +40,16 @@ quality:
 
 # Run specs via script (pass ARGS for options like --filter, --file)
 spec:
-	@scripts/spec $(ARGS)
+	@scripts/spec $(JOBS_ARG) $(ARGS)
 
 spec-cli:
-	@scripts/spec cli $(ARGS)
+	@scripts/spec cli $(JOBS_ARG) $(ARGS)
 
 spec-remote:
-	@scripts/spec remote $(ARGS)
+	@scripts/spec remote $(JOBS_ARG) $(ARGS)
 
 spec-todo:
-	@scripts/spec --filter-tags todo:implement $(ARGS)
+	@scripts/spec --filter-tags todo:implement $(JOBS_ARG) $(ARGS)
 
 stress:
 	@checks/stress/run.sh $(ARGS)

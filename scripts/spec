@@ -13,6 +13,7 @@
 #   --file <path>      Run specific test file (relative to checks/specs/)
 #   --filter-tags <t>  Filter by bats tags (e.g., todo:implement)
 #   -j, --jobs <n>     Number of parallel jobs (default: 4 if parallel available, else 1)
+#   --timeout <secs>   Test timeout in seconds (default: 5)
 #
 # Examples:
 #   scripts/spec --filter "short flag"      # Run tests matching "short flag"
@@ -34,12 +35,8 @@ if [ ! -f "$BATS_LOCAL_DIR/bats-support/load.bash" ]; then
     fi
 fi
 
-# Detect bats binary: system or local
-if command -v bats &>/dev/null; then
-    BATS="$(command -v bats)"
-else
-    BATS="$BATS_LOCAL_DIR/bats-core/bin/bats"
-fi
+# Always use local bats for consistent behavior across environments
+BATS="$BATS_LOCAL_DIR/bats-core/bin/bats"
 
 # Find bats library path (support/assert)
 export BATS_LIB_PATH=""
@@ -94,6 +91,9 @@ if command -v parallel &>/dev/null || command -v rush &>/dev/null; then
     PARALLEL_JOBS=4
 fi
 
+# Default test timeout (seconds) - prevents hung tests from blocking CI
+DEFAULT_TIMEOUT=5
+
 # Parse arguments
 SUITE=""
 FILE=""
@@ -115,6 +115,10 @@ while [ $# -gt 0 ]; do
             ;;
         -j|--jobs)
             PARALLEL_JOBS="$2"
+            shift 2
+            ;;
+        --timeout)
+            DEFAULT_TIMEOUT="$2"
             shift 2
             ;;
         *)
@@ -156,5 +160,8 @@ echo "WK_BIN: $WK_BIN"
 echo "WK_REMOTE_BIN: $WK_REMOTE_BIN"
 echo "Parallel jobs: $PARALLEL_JOBS"
 echo ""
+
+# Export timeout for bats to enforce
+export BATS_TEST_TIMEOUT="$DEFAULT_TIMEOUT"
 
 exec "$BATS" -j "$PARALLEL_JOBS" --recursive --timing "${BATS_ARGS[@]+"${BATS_ARGS[@]}"}" "${TARGETS[@]}"
