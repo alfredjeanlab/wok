@@ -12,6 +12,7 @@
 #   --filter <regex>   Filter tests by name
 #   --file <path>      Run specific test file (relative to checks/specs/)
 #   --filter-tags <t>  Filter by bats tags (e.g., todo:implement)
+#   -j, --jobs <n>     Number of parallel jobs (default: 4 if parallel available, else 1)
 #
 # Examples:
 #   scripts/spec --filter "short flag"      # Run tests matching "short flag"
@@ -112,6 +113,10 @@ while [ $# -gt 0 ]; do
             FILE="$2"
             shift 2
             ;;
+        -j|--jobs)
+            PARALLEL_JOBS="$2"
+            shift 2
+            ;;
         *)
             BATS_ARGS+=("$1")
             shift
@@ -152,4 +157,4 @@ echo "WK_REMOTE_BIN: $WK_REMOTE_BIN"
 echo "Parallel jobs: $PARALLEL_JOBS"
 echo ""
 
-exec "$BATS" -j "$PARALLEL_JOBS" --recursive "${BATS_ARGS[@]+"${BATS_ARGS[@]}"}" "${TARGETS[@]}"
+exec "$BATS" -j "$PARALLEL_JOBS" --recursive --timing "${BATS_ARGS[@]+"${BATS_ARGS[@]}"}" "${TARGETS[@]}"
