@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Wok Project Dashboard</title>
+  <style>
+    :root {
+      --bg: #0d1117;
+      --card-bg: #161b22;
+      --border: #30363d;
+      --text: #c9d1d9;
+      --text-muted: #8b949e;
+      --link: #58a6ff;
+      --green: #3fb950;
+      --yellow: #d29922;
+      --red: #f85149;
+    }
+    * { box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      margin: 0;
+      padding: 20px;
+      line-height: 1.5;
+    }
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    h1 {
+      font-size: 2rem;
+      font-weight: 600;
+      margin-bottom: 8px;
+    }
+    .subtitle {
+      color: var(--text-muted);
+      margin-bottom: 32px;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 20px;
+    }
+    .card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 20px;
+    }
+    .card h2 {
+      font-size: 1.25rem;
+      margin: 0 0 8px 0;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .card p {
+      color: var(--text-muted);
+      margin: 0 0 16px 0;
+    }
+    .card a {
+      color: var(--link);
+      text-decoration: none;
+    }
+    .card a:hover {
+      text-decoration: underline;
+    }
+    .status {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 12px;
+      font-size: 0.75rem;
+      font-weight: 500;
+    }
+    .status-ok { background: rgba(63, 185, 80, 0.2); color: var(--green); }
+    .status-warn { background: rgba(210, 153, 34, 0.2); color: var(--yellow); }
+    .status-error { background: rgba(248, 81, 73, 0.2); color: var(--red); }
+    .metrics {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 12px;
+      margin-top: 16px;
+    }
+    .metric {
+      text-align: center;
+      padding: 12px;
+      background: var(--bg);
+      border-radius: 4px;
+    }
+    .metric-value {
+      font-size: 1.5rem;
+      font-weight: 600;
+    }
+    .metric-label {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+    }
+    footer {
+      margin-top: 40px;
+      text-align: center;
+      color: var(--text-muted);
+      font-size: 0.875rem;
+    }
+    footer a { color: var(--link); }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Wok Project Dashboard</h1>
+    <p class="subtitle">Collaborative, offline-first, AI-friendly issue tracker</p>
+
+    <div class="grid">
+      <div class="card">
+        <h2>Quality Metrics</h2>
+        <p>Code quality evaluation including LOC analysis, escape hatches, and binary size.</p>
+        <a href="quality/">View Quality Report &rarr;</a>
+        <div class="metrics" id="quality-metrics">
+          <div class="metric">
+            <div class="metric-value" id="avg-loc">--</div>
+            <div class="metric-label">Avg LOC</div>
+          </div>
+          <div class="metric">
+            <div class="metric-value" id="binary-size">--</div>
+            <div class="metric-label">Binary Size</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Performance Benchmarks</h2>
+        <p>Command execution times and performance trends over time.</p>
+        <a href="benchmarks/">View Benchmark Report &rarr;</a>
+        <div class="metrics" id="bench-metrics">
+          <div class="metric">
+            <div class="metric-value" id="list-time">--</div>
+            <div class="metric-label">List (default)</div>
+          </div>
+          <div class="metric">
+            <div class="metric-value" id="filter-time">--</div>
+            <div class="metric-label">Filter</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Code Coverage</h2>
+        <p>Test coverage across crates with per-package thresholds.</p>
+        <div class="metrics">
+          <div class="metric">
+            <div class="metric-value">85%</div>
+            <div class="metric-label">CLI Target</div>
+          </div>
+          <div class="metric">
+            <div class="metric-value">90%</div>
+            <div class="metric-label">Core Target</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>CI Status</h2>
+        <p>Build, test, lint, and security audit status.</p>
+        <a href="https://github.com/alfredjean/wok/actions">View Actions &rarr;</a>
+      </div>
+    </div>
+
+    <footer>
+      <p>Updated automatically by <a href="https://github.com/alfredjean/wok/actions">GitHub Actions</a></p>
+    </footer>
+  </div>
+
+  <script>
+    // Load quality metrics
+    fetch('quality/latest.json')
+      .then(r => r.json())
+      .then(data => {
+        if (data.source_avg_loc) {
+          document.getElementById('avg-loc').textContent = Math.round(data.source_avg_loc);
+        }
+        if (data.binary_size_mb) {
+          document.getElementById('binary-size').textContent = data.binary_size_mb.toFixed(1) + 'MB';
+        }
+      })
+      .catch(() => {});
+
+    // Load benchmark metrics
+    fetch('benchmarks/latest.json')
+      .then(r => r.json())
+      .then(data => {
+        if (data.results) {
+          const listResult = data.results.find(r => r.command && r.command.includes('list'));
+          if (listResult) {
+            document.getElementById('list-time').textContent = Math.round(listResult.mean * 1000) + 'ms';
+          }
+          const filterResult = data.results.find(r => r.command && r.command.includes('filter'));
+          if (filterResult) {
+            document.getElementById('filter-time').textContent = Math.round(filterResult.mean * 1000) + 'ms';
+          }
+        }
+      })
+      .catch(() => {});
+  </script>
+</body>
+</html>

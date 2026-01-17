@@ -1,0 +1,15 @@
+# CODEOWNERS - Define code ownership for review requirements
+# https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
+
+# Default owners for everything
+* @alfredjean
+
+# Core library changes require review
+crates/core/ @alfredjean
+
+# CI/CD workflow changes require review
+.github/ @alfredjean
+
+# Quality and benchmark configurations
+checks/quality/ @alfredjean
+checks/benchmarks/ @alfredjean

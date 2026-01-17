@@ -33,14 +33,15 @@ jobs:
       - name: Run benchmarks
         run: |
           export PATH="$PWD/target/release:$PATH"
+          export RESULTS_DIR="$PWD/checks/benchmarks/results"
           cd checks/benchmarks
-          ./run.sh --size large --output-dir results
+          ./run.sh --size large all
 
       - name: Check for regressions
         if: github.event_name == 'pull_request'
         run: |
           # Compare against baseline from main branch
-          ./checks/benchmarks/compare.sh results/latest.json .bench-baseline.json
+          ./checks/benchmarks/compare.sh checks/benchmarks/results .bench-baseline.json
 
       - name: Generate report
         run: |
