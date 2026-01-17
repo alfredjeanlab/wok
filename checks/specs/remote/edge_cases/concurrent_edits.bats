@@ -5,7 +5,6 @@ load '../helpers/remote_common'
 # Concurrent Edit Handling
 # ============================================================================
 
-# bats test_tags=todo:implement
 @test "last write wins for same-field edits" {
     start_server
 
@@ -70,7 +69,6 @@ load '../helpers/remote_common'
     assert_output --partial "A title"
 }
 
-# bats test_tags=todo:implement
 @test "independent fields don't conflict" {
     start_server
 
@@ -128,7 +126,7 @@ load '../helpers/remote_common'
     run "$WK_BIN" show "$b_id"
     assert_success
     assert_output --partial "New title from B"
-    assert_output --partial "(in_progress)"
+    assert_output --partial "in_progress"
 }
 
 # ============================================================================

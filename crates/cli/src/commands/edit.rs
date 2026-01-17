@@ -1,8 +1,12 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Alfred Jean LLC
 
+use std::path::Path;
 use std::str::FromStr;
 
+use wk_core::OpPayload;
+
+use crate::config::{find_work_dir, get_db_path, Config};
 use crate::db::Database;
 use crate::error::{Error, Result};
 use crate::models::{Action, Event, IssueType};
@@ -10,15 +14,25 @@ use crate::validate::{
     validate_and_normalize_title, validate_and_trim_description, validate_assignee,
 };
 
-use super::open_db;
+use super::queue_op;
 
 pub fn run(id: &str, attr: &str, value: &str) -> Result<()> {
-    let (db, _) = open_db()?;
-    run_impl(&db, id, attr, value)
+    let work_dir = find_work_dir()?;
+    let config = Config::load(&work_dir)?;
+    let db_path = get_db_path(&work_dir, &config);
+    let db = Database::open(&db_path)?;
+    run_impl(&db, &config, &work_dir, id, attr, value)
 }
 
-/// Internal implementation that accepts db for testing.
-pub(crate) fn run_impl(db: &Database, id: &str, attr: &str, value: &str) -> Result<()> {
+/// Internal implementation that accepts db/config for testing.
+pub(crate) fn run_impl(
+    db: &Database,
+    config: &Config,
+    work_dir: &Path,
+    id: &str,
+    attr: &str,
+    value: &str,
+) -> Result<()> {
     let issue = db.get_issue(id)?;
 
     match attr.to_lowercase().as_str() {
@@ -38,6 +52,13 @@ pub(crate) fn run_impl(db: &Database, id: &str, attr: &str, value: &str) -> Resu
                 .with_values(Some(old_title), Some(normalized.title.clone()));
             db.log_event(&event)?;
 
+            // Queue SetTitle op for sync
+            queue_op(
+                work_dir,
+                config,
+                OpPayload::set_title(id.to_string(), normalized.title.clone()),
+            )?;
+
             println!("Updated title of {} to: {}", id, normalized.title);
         }
         "type" => {
@@ -52,6 +73,13 @@ pub(crate) fn run_impl(db: &Database, id: &str, attr: &str, value: &str) -> Resu
                     Some(new_type.as_str().to_string()),
                 );
                 db.log_event(&event)?;
+
+                // Queue SetType op for sync
+                queue_op(
+                    work_dir,
+                    config,
+                    OpPayload::set_type(id.to_string(), new_type.into()),
+                )?;
 
                 println!("Updated type of {} to: {}", id, new_type.as_str());
             }

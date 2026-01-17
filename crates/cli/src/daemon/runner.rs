@@ -20,7 +20,7 @@ use std::time::{Duration, Instant};
 use std::path::PathBuf;
 
 use tokio::net::UnixListener;
-use wk_core::{Database, Merge, Op};
+use wk_core::{Database, Hlc, Merge, Op, OpPayload};
 
 use crate::config::{get_db_path, Config, RemoteType};
 use crate::error::{Error, Result};
@@ -396,6 +396,57 @@ async fn perform_sync_async<T: Transport>(backend: &mut SyncBackend<T>) -> Resul
     }
 }
 
+/// Convert a snapshot issue to synthetic operations for HLC-aware merge.
+fn snapshot_issue_to_ops(issue: &wk_core::Issue) -> Vec<Op> {
+    let mut ops = Vec::new();
+
+    // CreateIssue with minimal HLC (first-write-wins handles duplicates)
+    ops.push(Op::new(
+        Hlc::min(),
+        OpPayload::CreateIssue {
+            id: issue.id.clone(),
+            issue_type: issue.issue_type,
+            title: issue.title.clone(),
+        },
+    ));
+
+    // SetTitle with issue's title HLC
+    if let Some(hlc) = issue.last_title_hlc {
+        ops.push(Op::new(
+            hlc,
+            OpPayload::SetTitle {
+                issue_id: issue.id.clone(),
+                title: issue.title.clone(),
+            },
+        ));
+    }
+
+    // SetStatus with issue's status HLC
+    if let Some(hlc) = issue.last_status_hlc {
+        ops.push(Op::new(
+            hlc,
+            OpPayload::SetStatus {
+                issue_id: issue.id.clone(),
+                status: issue.status,
+                reason: None,
+            },
+        ));
+    }
+
+    // SetType with issue's type HLC
+    if let Some(hlc) = issue.last_type_hlc {
+        ops.push(Op::new(
+            hlc,
+            OpPayload::SetType {
+                issue_id: issue.id.clone(),
+                issue_type: issue.issue_type,
+            },
+        ));
+    }
+
+    ops
+}
+
 /// Perform WebSocket sync: connect if needed, flush queue, request sync.
 async fn sync_websocket<T: Transport>(client: &mut SyncClient<T>, db_path: &Path) -> Result<usize> {
     use wk_core::protocol::ServerMessage;
@@ -486,40 +537,32 @@ async fn sync_websocket<T: Transport>(client: &mut SyncClient<T>, db_path: &Path
     }
 
     // Apply snapshot data if received
-    // Use INSERT OR REPLACE to update existing records from snapshots
+    // Convert snapshot to ops and apply through Merge trait for HLC resolution
     if let Some((issues, tags)) = snapshot_data {
-        use rusqlite::params;
-
-        let conn = rusqlite::Connection::open(db_path)
+        let mut db = wk_core::Database::open(db_path)
             .map_err(|e| Error::Sync(format!("failed to open database: {}", e)))?;
 
+        // Convert snapshot to ops
+        let mut all_ops: Vec<Op> = Vec::new();
         for issue in &issues {
-            conn.execute(
-                "INSERT OR REPLACE INTO issues (id, type, title, status, created_at, updated_at,
-                 last_status_hlc, last_title_hlc, last_type_hlc)
-                 VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)",
-                params![
-                    issue.id,
-                    issue.issue_type.as_str(),
-                    issue.title,
-                    issue.status.as_str(),
-                    issue.created_at.to_rfc3339(),
-                    issue.updated_at.to_rfc3339(),
-                    issue.last_status_hlc.map(|h| h.to_string()),
-                    issue.last_title_hlc.map(|h| h.to_string()),
-                    issue.last_type_hlc.map(|h| h.to_string()),
-                ],
-            )
-            .map_err(|e| Error::Sync(format!("failed to create issue: {}", e)))?;
+            all_ops.extend(snapshot_issue_to_ops(issue));
         }
 
+        // Add label ops (idempotent, HLC doesn't matter)
         for (issue_id, label) in &tags {
-            conn.execute(
-                "INSERT OR IGNORE INTO labels (issue_id, label) VALUES (?1, ?2)",
-                params![issue_id, label],
-            )
-            .map_err(|e| Error::Sync(format!("failed to add label: {}", e)))?;
+            all_ops.push(Op::new(
+                Hlc::min(),
+                OpPayload::AddLabel {
+                    issue_id: issue_id.clone(),
+                    label: label.clone(),
+                },
+            ));
         }
+
+        // Sort and apply through Merge trait
+        all_ops.sort();
+        db.apply_all(&all_ops)
+            .map_err(|e| Error::Sync(format!("failed to apply snapshot: {}", e)))?;
     }
 
     Ok(flushed + ops_received)

@@ -25,6 +25,7 @@ mod note;
 
 pub use dependency::{Dependency, Relation, UserRelation};
 pub use event::{Action, Event};
-pub use issue::{Issue, IssueType, Status};
+pub use issue::{Issue, Status};
 pub use link::{parse_link_url, Link, LinkRel, LinkType};
 pub use note::Note;
+pub use wk_core::IssueType;

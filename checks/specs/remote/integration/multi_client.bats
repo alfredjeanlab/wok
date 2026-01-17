@@ -169,7 +169,6 @@ load '../helpers/remote_common'
 # ============================================================================
 
 @test "real-time propagation: client B sees issue created by A without sync" {
-    # bats test_tags=todo:implement
     # Requires: CLI commands must generate ops for daemon to send to server
     start_server
 
@@ -204,7 +203,6 @@ load '../helpers/remote_common'
 }
 
 @test "real-time propagation: status changes appear on other client" {
-    # bats test_tags=todo:implement
     # Requires: CLI commands must generate ops for daemon to send to server
     start_server
 

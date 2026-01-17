@@ -24,6 +24,8 @@ pub enum IssueType {
     Task,
     /// Defect or problem to fix.
     Bug,
+    /// Maintenance work (refactoring, cleanup, dependency updates).
+    Chore,
 }
 
 impl IssueType {
@@ -33,6 +35,7 @@ impl IssueType {
             IssueType::Feature => "feature",
             IssueType::Task => "task",
             IssueType::Bug => "bug",
+            IssueType::Chore => "chore",
         }
     }
 }
@@ -51,6 +54,7 @@ impl FromStr for IssueType {
             "feature" => Ok(IssueType::Feature),
             "task" => Ok(IssueType::Task),
             "bug" => Ok(IssueType::Bug),
+            "chore" => Ok(IssueType::Chore),
             _ => Err(Error::InvalidIssueType(s.to_string())),
         }
     }

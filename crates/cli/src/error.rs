@@ -104,6 +104,40 @@ impl From<SyncError> for Error {
     }
 }
 
+impl From<wk_core::Error> for Error {
+    fn from(e: wk_core::Error) -> Self {
+        match e {
+            wk_core::Error::IssueNotFound(id) => Error::IssueNotFound(id),
+            wk_core::Error::InvalidTransition {
+                from,
+                to,
+                valid_targets,
+            } => Error::InvalidTransition {
+                from,
+                to,
+                valid_targets,
+            },
+            wk_core::Error::CycleDetected => Error::CycleDetected,
+            wk_core::Error::SelfDependency => Error::SelfDependency,
+            wk_core::Error::DependencyNotFound { from, rel, to } => {
+                Error::DependencyNotFound { from, rel, to }
+            }
+            wk_core::Error::InvalidIssueType(s) => Error::InvalidIssueType(s),
+            wk_core::Error::InvalidStatus(s) => Error::InvalidStatus(s),
+            wk_core::Error::InvalidRelation(s) => Error::InvalidRelation(s),
+            wk_core::Error::InvalidAction(s) => Error::InvalidInput(format!("invalid action: {}", s)),
+            wk_core::Error::InvalidInput(s) => Error::InvalidInput(s),
+            wk_core::Error::Database(e) => Error::Database(e),
+            wk_core::Error::Io(e) => Error::Io(e),
+            wk_core::Error::Json(e) => Error::Json(e),
+            wk_core::Error::CorruptedData(s) => Error::CorruptedData(s),
+            wk_core::Error::DuplicateOp(s) => Error::InvalidInput(format!("duplicate op: {}", s)),
+            wk_core::Error::InvalidHlc(s) => Error::InvalidInput(format!("invalid HLC: {}", s)),
+            wk_core::Error::Oplog(s) => Error::Sync(format!("oplog error: {}", s)),
+        }
+    }
+}
+
 #[cfg(test)]
 #[path = "error_tests.rs"]
 mod tests;

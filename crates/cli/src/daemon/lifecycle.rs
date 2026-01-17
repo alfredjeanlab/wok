@@ -161,6 +161,20 @@ pub fn stop_daemon(daemon_dir: &Path) -> Result<()> {
     }
 }
 
+/// Notify daemon that queue has changed (fire-and-forget).
+/// Best-effort: silently ignores all errors.
+pub fn notify_daemon_sync(daemon_dir: &Path) {
+    let socket_path = get_socket_path(daemon_dir);
+    if !socket_path.exists() {
+        return;
+    }
+    // Non-blocking connect, send SyncNow, ignore response
+    if let Ok(mut stream) = UnixStream::connect(&socket_path) {
+        let _ = stream.set_write_timeout(Some(Duration::from_millis(100)));
+        let _ = framing::write_request(&mut stream, &DaemonRequest::SyncNow);
+    }
+}
+
 /// Request immediate sync from the daemon.
 pub fn request_sync(daemon_dir: &Path) -> Result<usize> {
     let socket_path = get_socket_path(daemon_dir);

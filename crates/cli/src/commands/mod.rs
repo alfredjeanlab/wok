@@ -81,6 +81,9 @@ pub fn write_pending_op(work_dir: &Path, config: &Config, op: &Op) -> Result<()>
             queue
                 .enqueue(op)
                 .map_err(|e| crate::error::Error::Io(std::io::Error::other(e.to_string())))?;
+
+            // Notify daemon to push immediately (fire-and-forget)
+            crate::daemon::notify_daemon_sync(&daemon_dir);
         }
     }
 

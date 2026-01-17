@@ -7,54 +7,7 @@ use std::fmt;
 use std::str::FromStr;
 
 use crate::error::{Error, Result};
-
-/// Classification of issues by their nature and scope.
-///
-/// Issue types help organize work and provide visual distinction in lists.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(rename_all = "snake_case")]
-pub enum IssueType {
-    /// Large feature or initiative containing multiple tasks.
-    Feature,
-    /// Standard unit of work.
-    Task,
-    /// Defect or problem to fix.
-    Bug,
-    /// Maintenance work (refactoring, cleanup, dependency updates).
-    Chore,
-}
-
-impl IssueType {
-    /// Returns the string representation used in storage and display.
-    pub fn as_str(&self) -> &'static str {
-        match self {
-            IssueType::Feature => "feature",
-            IssueType::Task => "task",
-            IssueType::Bug => "bug",
-            IssueType::Chore => "chore",
-        }
-    }
-}
-
-impl fmt::Display for IssueType {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", self.as_str())
-    }
-}
-
-impl FromStr for IssueType {
-    type Err = Error;
-
-    fn from_str(s: &str) -> Result<Self> {
-        match s.to_lowercase().as_str() {
-            "feature" => Ok(IssueType::Feature),
-            "task" => Ok(IssueType::Task),
-            "bug" => Ok(IssueType::Bug),
-            "chore" => Ok(IssueType::Chore),
-            _ => Err(Error::InvalidIssueType(s.to_string())),
-        }
-    }
-}
+use wk_core::IssueType;
 
 /// Workflow status of an issue.
 ///
