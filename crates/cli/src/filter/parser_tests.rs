@@ -122,6 +122,12 @@ fn parse_operator_unknown_error() {
 // ─────────────────────────────────────────────────────────────────────────────
 
 #[test]
+fn parse_duration_milliseconds() {
+    let expr = parse_filter("age < 500ms").unwrap();
+    assert_eq!(expr.value, FilterValue::Duration(Duration::milliseconds(500)));
+}
+
+#[test]
 fn parse_duration_seconds() {
     let expr = parse_filter("age < 30s").unwrap();
     assert_eq!(expr.value, FilterValue::Duration(Duration::seconds(30)));
@@ -338,6 +344,7 @@ fn parse_missing_operator_error() {
 
 #[test]
 fn duration_parse_standalone() {
+    assert_eq!(parse_duration("100ms").unwrap(), Duration::milliseconds(100));
     assert_eq!(parse_duration("30s").unwrap(), Duration::seconds(30));
     assert_eq!(parse_duration("5m").unwrap(), Duration::minutes(5));
     assert_eq!(parse_duration("2h").unwrap(), Duration::hours(2));

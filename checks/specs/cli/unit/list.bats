@@ -229,7 +229,7 @@ setup() {
 
 @test "list same priority sorts by created_at DESC (newest first)" {
     id1=$(create_issue task "SortTest Older task")
-    sleep 1
+    sleep 0.1
     id2=$(create_issue task "SortTest Newer task")
     # Both have default priority 2
     run "$WK_BIN" list
@@ -277,10 +277,10 @@ setup() {
 
 @test "list --filter with age filters by creation time" {
     old_id=$(create_issue task "FilterTest Old issue")
-    sleep 2
+    sleep 0.2
     new_id=$(create_issue task "FilterTest New issue")
-    # Filter for issues created less than 1 second ago (only new issue)
-    run "$WK_BIN" list --filter "age < 1s"
+    # Filter for issues created less than 100ms ago (only new issue)
+    run "$WK_BIN" list --filter "age < 100ms"
     assert_success
     assert_output --partial "FilterTest New issue"
     refute_output --partial "FilterTest Old issue"
@@ -288,10 +288,10 @@ setup() {
 
 @test "list --filter with age >= shows older issues" {
     old_id=$(create_issue task "AgeTest Old issue")
-    sleep 2
+    sleep 0.2
     new_id=$(create_issue task "AgeTest New issue")
-    # Filter for issues at least 1 second old
-    run "$WK_BIN" list --filter "age >= 1s"
+    # Filter for issues at least 100ms old
+    run "$WK_BIN" list --filter "age >= 100ms"
     assert_success
     assert_output --partial "AgeTest Old issue"
     refute_output --partial "AgeTest New issue"

@@ -233,12 +233,21 @@ pub fn spawn_daemon(daemon_dir: &Path, work_dir: &Path) -> Result<DaemonInfo> {
         }
     }
 
-    // Verify daemon is running with retries
-    for attempt in 0..5 {
+    // Verify daemon is running with short polling
+    // Use 10ms intervals with up to 150 attempts (1.5s total timeout)
+    for _ in 0..150 {
+        // Check if daemon process has exited (indicates failure)
+        if let Ok(Some(status)) = child.try_wait() {
+            return Err(Error::Io(std::io::Error::other(format!(
+                "daemon process exited with status: {}",
+                status
+            ))));
+        }
+
         if let Some(info) = detect_daemon(daemon_dir)? {
             return Ok(info);
         }
-        std::thread::sleep(Duration::from_millis(100 * (attempt + 1)));
+        std::thread::sleep(Duration::from_millis(10));
     }
 
     // Daemon failed to start - return error instead of Ok with invalid pid

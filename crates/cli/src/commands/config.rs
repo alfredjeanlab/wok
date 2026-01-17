@@ -132,8 +132,7 @@ fn trigger_sync(work_dir: &Path) -> Result<()> {
                 return Ok(()); // Continue anyway
             }
         }
-        // Wait for daemon to be ready
-        std::thread::sleep(std::time::Duration::from_millis(500));
+        // spawn_daemon already waits for "READY" and verifies with detect_daemon
     }
 
     // Request sync

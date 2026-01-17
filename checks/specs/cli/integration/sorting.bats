@@ -90,7 +90,7 @@ setup() {
 
 @test "list: same priority sorts by created_at DESC (newest first)" {
     id1=$(create_issue task "Older list task")
-    sleep 1
+    sleep 0.1
     id2=$(create_issue task "Newer list task")
     # Both have default priority 2
     run "$WK_BIN" list

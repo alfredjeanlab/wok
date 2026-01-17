@@ -171,6 +171,7 @@ pub fn parse_duration(s: &str) -> Result<Duration> {
 
     // Convert to Duration based on unit
     match unit {
+        "ms" => Ok(Duration::milliseconds(num)),
         "s" => Ok(Duration::seconds(num)),
         "m" => Ok(Duration::minutes(num)),
         "h" => Ok(Duration::hours(num)),
@@ -179,7 +180,7 @@ pub fn parse_duration(s: &str) -> Result<Duration> {
         "M" => Ok(Duration::days(num.saturating_mul(30))), // Approximate month
         "y" => Ok(Duration::days(num.saturating_mul(365))), // Approximate year
         _ => Err(Error::InvalidInput(format!(
-            "unknown duration unit '{unit}'. Valid units: s, m, h, d, w, M, y"
+            "unknown duration unit '{unit}'. Valid units: ms, s, m, h, d, w, M, y"
         ))),
     }
 }
@@ -202,7 +203,7 @@ fn split_number_unit(s: &str) -> Result<(&str, &str)> {
 
     if unit.is_empty() {
         return Err(Error::InvalidInput(format!(
-            "duration missing unit: '{s}'. Valid units: s, m, h, d, w, M, y"
+            "duration missing unit: '{s}'. Valid units: ms, s, m, h, d, w, M, y"
         )));
     }
 

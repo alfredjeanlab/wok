@@ -183,9 +183,9 @@ setup() {
 
 @test "search --filter with age filters by creation time" {
     old_id=$(create_issue task "SearchFilterTest Old")
-    sleep 2
+    sleep 0.2
     new_id=$(create_issue task "SearchFilterTest New")
-    run "$WK_BIN" search "SearchFilterTest" --filter "age < 1s"
+    run "$WK_BIN" search "SearchFilterTest" --filter "age < 100ms"
     assert_success
     assert_output --partial "SearchFilterTest New"
     refute_output --partial "SearchFilterTest Old"
