@@ -217,6 +217,10 @@ fn test_done_impl_from_todo_requires_reason() {
     let ctx = TestContext::new();
     ctx.create_issue("test-1", IssueType::Task, "Todo task");
 
+    // Set AI env var to ensure non-interactive mode (requires reason)
+    let prev = std::env::var_os("CLAUDE_CODE");
+    std::env::set_var("CLAUDE_CODE", "1");
+
     let result = done_impl(
         &ctx.db,
         &ctx.config,
@@ -224,6 +228,11 @@ fn test_done_impl_from_todo_requires_reason() {
         &["test-1".to_string()],
         None,
     );
+
+    match prev {
+        Some(v) => std::env::set_var("CLAUDE_CODE", v),
+        None => std::env::remove_var("CLAUDE_CODE"),
+    }
 
     assert!(result.is_err());
 }
