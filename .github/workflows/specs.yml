@@ -1,0 +1,37 @@
+name: Specs
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  specs:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        suite: [cli, remote]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Build release binary
+        run: cargo build --release
+
+      - name: Install BATS
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y bats
+
+      - name: Setup BATS libraries
+        run: |
+          git clone --depth 1 https://github.com/bats-core/bats-support checks/specs/test_helper/bats-support
+          git clone --depth 1 https://github.com/bats-core/bats-assert checks/specs/test_helper/bats-assert
+
+      - name: Run ${{ matrix.suite }} specs
+        run: make spec-${{ matrix.suite }}
+        env:
+          PATH: ${{ github.workspace }}/target/release:$PATH

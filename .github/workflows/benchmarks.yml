@@ -1,0 +1,93 @@
+name: Benchmarks
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  schedule:
+    - cron: '0 7 * * 1'  # Weekly after quality
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+jobs:
+  bench:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Install hyperfine
+        run: |
+          wget https://github.com/sharkdp/hyperfine/releases/download/v1.18.0/hyperfine_1.18.0_amd64.deb
+          sudo dpkg -i hyperfine_1.18.0_amd64.deb
+
+      - name: Build release
+        run: cargo build --release
+
+      - name: Run benchmarks
+        run: |
+          export PATH="$PWD/target/release:$PATH"
+          cd checks/benchmarks
+          ./run.sh --size large --output-dir results
+
+      - name: Check for regressions
+        if: github.event_name == 'pull_request'
+        run: |
+          # Compare against baseline from main branch
+          ./checks/benchmarks/compare.sh results/latest.json .bench-baseline.json
+
+      - name: Generate report
+        run: |
+          mkdir -p docs/reports/benchmarks
+          cp checks/benchmarks/results/latest.json docs/reports/benchmarks/
+          ./scripts/append-bench-history.sh
+          ./scripts/generate-bench-report.sh
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: benchmark-report
+          path: docs/reports/benchmarks/
+
+      - name: Comment on PR
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const report = fs.readFileSync('docs/reports/benchmarks/comparison.md', 'utf8');
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: '## Benchmark Results\n\n' + report
+            });
+
+  deploy:
+    needs: bench
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: benchmark-report
+          path: docs/reports/benchmarks/
+      - uses: actions/download-artifact@v4
+        with:
+          name: quality-report
+          path: docs/reports/quality/
+        continue-on-error: true
+      - uses: actions/configure-pages@v4
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: docs/reports/
+      - uses: actions/deploy-pages@v4
