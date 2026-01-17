@@ -182,8 +182,8 @@ else
 fi
 
 # 9. BATS specs
-echo "Running: checks/specs/run.sh"
-if [ -x "checks/specs/run.sh" ]; then
+echo "Running: scripts/spec"
+if [ -x "scripts/spec" ]; then
     # Build binaries first (use absolute paths for BATS)
     WK_BIN="$ROOT_DIR/target/release/wk"
     WK_REMOTE_BIN="$ROOT_DIR/target/release/wk-remote"
@@ -191,9 +191,9 @@ if [ -x "checks/specs/run.sh" ]; then
     if [ -x "$WK_BIN" ]; then
         export WK_BIN
         export WK_REMOTE_BIN
-        if ! checks/specs/run.sh 2>&1; then
+        if ! scripts/spec 2>&1; then
             log_fail "BATS specs failed"
-            log_bug "BATS specification tests failing" "checks/specs/run.sh failed"
+            log_bug "BATS specification tests failing" "scripts/spec failed"
         else
             log_pass "BATS specs"
         fi

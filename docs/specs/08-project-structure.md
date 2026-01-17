@@ -28,11 +28,10 @@ bin/
 ```
 checks/
 ├── specs/          # BATS acceptance tests (validates REQUIREMENTS.md)
-│   ├── run.sh              # Test runner
+│   ├── bats/               # BATS framework (auto-installed)
 │   ├── helpers/common.bash # Shared test utilities
-│   ├── unit/               # Per-command tests
-│   ├── integration/        # Cross-feature tests
-│   └── edge_cases/         # Error handling, limits, cycles
+│   ├── cli/                # CLI tests (unit, integration, edge_cases)
+│   └── remote/             # Remote tests (unit, integration, edge_cases)
 ├── benchmarks/     # Performance benchmarks
 │   ├── run.sh              # Benchmark runner
 │   └── scenarios/          # Individual benchmark scripts
@@ -45,16 +44,16 @@ checks/
 
 ```bash
 # Build CLI
-(cd bin/cli && cargo build --release)
+cargo build --release
 
 # Run Rust tests
-(cd bin/cli && cargo test)
+cargo test
 
 # Run BATS acceptance tests
-WK_BIN=bin/cli/target/release/wk checks/specs/run.sh
+make spec
 
 # Run benchmarks
-checks/benchmarks/run.sh
+make bench
 ```
 
 ## CLI Behavior

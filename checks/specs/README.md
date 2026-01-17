@@ -10,17 +10,16 @@ A portable test suite that validates the `wk` CLI against REQUIREMENTS.md.
 
 ## Setup
 
-BATS can be used from a system installation or downloaded locally:
+BATS libraries are installed locally on first run:
 
 ```bash
-# Option 1: System bats (preferred for faster setup)
-brew install bats-core bats-assert bats-support  # macOS
+# System bats-core (optional, slightly faster)
+brew install bats-core  # macOS
 
-# Option 2: Local installation (automatic)
-make test-init
+# Libraries (bats-support, bats-assert) are auto-installed to checks/specs/bats/
 ```
 
-The Makefile automatically detects system bats and uses it when available.
+The test runner automatically detects system bats and uses it when available, falling back to the local installation.
 
 ## Running Tests
 
@@ -43,33 +42,6 @@ make bats-check
 
 # Test with specific binary
 WK_BIN=crates/cli/target/release/wk make spec
-```
-
-### Using run.sh directly
-
-The legacy `run.sh` script is still available:
-
-```bash
-# Test the default wk in PATH
-./run.sh
-
-# Test the built binary
-WK_BIN=$(pwd)/../../crates/cli/target/release/wk ./run.sh
-
-# Run specific test file
-./run.sh unit/init.bats
-
-# Force serial execution
-./run.sh --jobs 1
-
-# Run with specific parallelism (requires parallel or rush)
-./run.sh --jobs 8
-
-# Verbose output
-./run.sh --verbose
-
-# TAP output for CI
-./run.sh --formatter tap
 ```
 
 ## Performance
