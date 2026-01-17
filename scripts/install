@@ -17,4 +17,9 @@ cargo build --release -p wk
 echo "Installing to $INSTALL_DIR/wk..."
 /bin/cp "$ROOT_DIR/target/release/wk" "$INSTALL_DIR/wk"
 
+# Re-sign the binary after copying (required on macOS for adhoc-signed binaries)
+if [[ "$(uname)" == "Darwin" ]]; then
+    codesign --force --sign - "$INSTALL_DIR/wk"
+fi
+
 echo "Done."
