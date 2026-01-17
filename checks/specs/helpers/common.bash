@@ -1,5 +1,8 @@
 #!/usr/bin/env bash
 
+# Default test timeout (seconds) - can be overridden in individual test files
+: "${BATS_TEST_TIMEOUT:=10}"
+
 # Compute the path to bats helpers relative to this file
 HELPERS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SPECS_DIR="$(dirname "$HELPERS_DIR")"
