@@ -132,9 +132,7 @@ fn parse_operator(s: &str) -> Result<(CompareOp, &str)> {
 /// These are shell-friendly alternatives to <, <=, >, >=, =, !=.
 fn try_parse_word_operator(s: &str) -> Option<(CompareOp, &str)> {
     // Find word boundary (whitespace or end)
-    let word_end = s
-        .find(|c: char| c.is_whitespace())
-        .unwrap_or(s.len());
+    let word_end = s.find(|c: char| c.is_whitespace()).unwrap_or(s.len());
 
     if word_end == 0 {
         return None;
