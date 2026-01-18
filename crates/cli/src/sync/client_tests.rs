@@ -81,7 +81,13 @@ async fn test_client_flush_queue() {
     client.connect().await.unwrap();
     let flushed = client.flush_queue().await.unwrap();
 
+    // flush_queue sends ops but does NOT clear queue (for reliability)
+    // Queue is only cleared after receiving sync response
     assert_eq!(flushed, 2);
+    assert_eq!(client.pending_ops_count().unwrap(), 2);
+
+    // Explicit clear_queue() is needed after confirming server receipt
+    client.clear_queue().unwrap();
     assert_eq!(client.pending_ops_count().unwrap(), 0);
 }
 
@@ -178,8 +184,9 @@ async fn test_client_sync_on_connect_with_hlc() {
     client.connect().await.unwrap();
     client.sync_on_connect().await.unwrap();
 
-    // Queue should be flushed
-    assert_eq!(client.pending_ops_count().unwrap(), 0);
+    // Queue ops are sent but not cleared (queue is cleared after sync response)
+    // sync_on_connect doesn't wait for response, so queue still has ops
+    assert_eq!(client.pending_ops_count().unwrap(), 1);
 }
 
 #[tokio::test]

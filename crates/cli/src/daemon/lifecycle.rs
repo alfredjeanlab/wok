@@ -278,9 +278,18 @@ pub fn spawn_daemon(daemon_dir: &Path, work_dir: &Path) -> Result<DaemonInfo> {
     for _ in 0..150 {
         // Check if daemon process has exited (indicates failure)
         if let Ok(Some(status)) = child.try_wait() {
+            // Read stderr for error message
+            let stderr_output = if let Some(mut stderr) = child.stderr.take() {
+                use std::io::Read;
+                let mut output = String::new();
+                let _ = stderr.read_to_string(&mut output);
+                output
+            } else {
+                String::new()
+            };
             return Err(Error::Io(std::io::Error::other(format!(
-                "daemon process exited with status: {}",
-                status
+                "daemon process exited with status: {}\nstderr: {}",
+                status, stderr_output
             ))));
         }
 

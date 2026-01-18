@@ -151,7 +151,11 @@ pub fn sync(force: bool, quiet: bool) -> Result<()> {
                         // The daemon signals READY as soon as IPC is available, but the
                         // WebSocket connection is established asynchronously.
                         let timeout = Duration::from_secs(remote.connect_timeout_secs);
-                        let _ = wait_daemon_connected(&daemon_dir, timeout);
+                        if !wait_daemon_connected(&daemon_dir, timeout)? {
+                            // Daemon couldn't connect within timeout - let sync proceed anyway
+                            // since it will queue ops for later if still disconnected
+                            eprintln!("Warning: daemon still connecting to server...");
+                        }
                     }
                 }
                 Err(e) => {
@@ -171,7 +175,7 @@ pub fn sync(force: bool, quiet: bool) -> Result<()> {
                     println!("Sync complete. {} operations synced.", ops_synced);
                 }
                 Err(e) => {
-                    println!("Sync failed: {}", e);
+                    return Err(Error::Sync(format!("Sync failed: {}", e)));
                 }
             }
         }

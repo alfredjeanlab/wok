@@ -224,9 +224,7 @@ async fn run_daemon_async(daemon_dir: &Path, config: &Config) -> Result<()> {
                                 pid,
                                 start_time,
                             };
-                            if let Err(e) = handle_ipc_request_async(stream, &mut state).await {
-                                eprintln!("IPC error: {}", e);
-                            }
+                            let _ = handle_ipc_request_async(stream, &mut state).await;
                         }
                     }
 
@@ -258,13 +256,11 @@ async fn run_daemon_async(daemon_dir: &Path, config: &Config) -> Result<()> {
 
                                         // Sync on connect
                                         if let SyncBackend::WebSocket { client: Some(c), db_path, .. } = &mut backend {
-                                            if let Err(e) = sync_on_reconnect(c, db_path, &oplog_path_clone).await {
-                                                eprintln!("Sync on reconnect failed: {}", e);
-                                            }
+                                            // Note: Errors are silently ignored here since we'll retry on next sync
+                                            let _ = sync_on_reconnect(c, db_path, &oplog_path_clone).await;
                                         }
                                     }
-                                    Err(e) => {
-                                        eprintln!("Failed to create client: {}", e);
+                                    Err(_) => {
                                         // Trigger reconnection
                                         if let Some(ref manager) = connection_manager {
                                             manager.spawn_connect_task();
@@ -272,8 +268,7 @@ async fn run_daemon_async(daemon_dir: &Path, config: &Config) -> Result<()> {
                                     }
                                 }
                             }
-                            ConnectionEvent::Failed { attempts, error } => {
-                                eprintln!("Connection failed after {} attempts: {}", attempts, error);
+                            ConnectionEvent::Failed { .. } => {
                                 // Connection manager has given up, wait a bit then try again
                                 tokio::time::sleep(Duration::from_secs(5)).await;
                                 if let Some(ref manager) = connection_manager {
@@ -312,9 +307,7 @@ async fn run_daemon_async(daemon_dir: &Path, config: &Config) -> Result<()> {
                                         *ping_sent = None;
                                     }
                                 }
-                                if let Err(e) = handle_server_message(&msg, &db_path_clone, &oplog_path_clone) {
-                                    eprintln!("Error handling server message: {}", e);
-                                }
+                                let _ = handle_server_message(&msg, &db_path_clone, &oplog_path_clone);
                             }
                             Ok(None) | Err(_) => {
                                 // Connection closed or error - handle connection lost
@@ -356,7 +349,6 @@ async fn run_daemon_async(daemon_dir: &Path, config: &Config) -> Result<()> {
 
                     // Pong timeout timer - detect dead connection
                     _ = tokio::time::sleep(pong_timeout_remaining), if heartbeat_enabled && has_pending_ping => {
-                        eprintln!("Heartbeat timeout - connection presumed dead");
                         handle_connection_lost(
                             &mut backend,
                             &connection_state,
@@ -379,9 +371,7 @@ async fn run_daemon_async(daemon_dir: &Path, config: &Config) -> Result<()> {
                                 pid,
                                 start_time,
                             };
-                            if let Err(e) = handle_ipc_request_async(stream, &mut state).await {
-                                eprintln!("IPC error: {}", e);
-                            }
+                            let _ = handle_ipc_request_async(stream, &mut state).await;
                         }
                     }
                 }
@@ -546,7 +536,15 @@ fn handle_server_message(
                 let _ = crate::commands::update_last_hlc(daemon_dir, max_hlc);
             }
         }
-        // Ignore other message types (Pong, Error, SnapshotResponse, etc.)
+        ServerMessage::SnapshotResponse {
+            issues,
+            tags,
+            since,
+        } => {
+            // Apply snapshot: convert issues to ops and apply through Merge trait
+            apply_snapshot_to_cache(issues, tags, *since, db_path, oplog_path, daemon_dir)?;
+        }
+        // Ignore other message types (Pong, Error)
         _ => {}
     }
 
@@ -573,6 +571,64 @@ fn apply_op_to_cache(op: &Op, db_path: &Path, oplog_path: &Path) -> Result<()> {
         Database::open(db_path).map_err(|e| Error::Sync(format!("failed to open db: {}", e)))?;
     db.apply(op)
         .map_err(|e| Error::Sync(format!("failed to apply op: {}", e)))?;
+    Ok(())
+}
+
+/// Apply a snapshot response to the local cache database.
+fn apply_snapshot_to_cache(
+    issues: &[wk_core::Issue],
+    tags: &[(String, String)],
+    since: Hlc,
+    db_path: &Path,
+    oplog_path: &Path,
+    daemon_dir: &Path,
+) -> Result<()> {
+    use wk_core::Merge;
+
+    let mut oplog =
+        Oplog::open(oplog_path).map_err(|e| Error::Sync(format!("failed to open oplog: {}", e)))?;
+    let mut db = wk_core::Database::open(db_path)
+        .map_err(|e| Error::Sync(format!("failed to open database: {}", e)))?;
+
+    // Convert snapshot to ops
+    let mut all_ops: Vec<Op> = Vec::new();
+    for (index, issue) in issues.iter().enumerate() {
+        #[allow(clippy::cast_possible_truncation)]
+        all_ops.extend(snapshot_issue_to_ops(issue, index as u32));
+    }
+
+    // Add label ops with unique synthetic HLCs
+    // Start counter after issue ops to avoid collisions
+    #[allow(clippy::cast_possible_truncation)]
+    let label_offset = issues.len() as u32;
+    for (index, (issue_id, label)) in tags.iter().enumerate() {
+        #[allow(clippy::cast_possible_truncation)]
+        all_ops.push(Op::new(
+            Hlc::new(0, label_offset + index as u32, 0),
+            OpPayload::AddLabel {
+                issue_id: issue_id.clone(),
+                label: label.clone(),
+            },
+        ));
+    }
+
+    // Sort and apply through Merge trait with deduplication
+    all_ops.sort();
+    for op in &all_ops {
+        // Only apply if new (not a duplicate)
+        if oplog
+            .append(op)
+            .map_err(|e| Error::Sync(format!("failed to append to oplog: {}", e)))?
+        {
+            db.apply(op)
+                .map_err(|e| Error::Sync(format!("failed to apply op: {}", e)))?;
+        }
+    }
+
+    // Persist the snapshot's high-water HLC for future sync requests
+    let _ = crate::commands::update_server_hlc(daemon_dir, since);
+    let _ = crate::commands::update_last_hlc(daemon_dir, since);
+
     Ok(())
 }
 
@@ -609,14 +665,44 @@ async fn sync_on_reconnect<T: Transport>(
         }
     }
 
-    // Request sync to catch up on missed ops
-    if let Some(since) = client.last_hlc() {
-        let _ = client.request_sync(since).await;
+    // Request sync to catch up on missed ops, using persisted SERVER HLC (not client.last_hlc).
+    // client.last_hlc() gets contaminated by local ops, which would cause new clients
+    // to request sync(since=local_hlc) instead of snapshot, missing earlier ops.
+    let sync_since = crate::commands::read_server_hlc(daemon_dir);
 
-        // Receive and apply sync response
-        if let Ok(Some(msg)) = client.recv().await {
-            handle_server_message(&msg, db_path, oplog_path)?;
+    if let Some(since) = sync_since {
+        let _ = client.request_sync(since).await;
+    } else {
+        // No server HLC means this is a new client - request snapshot
+        let _ = client.request_snapshot().await;
+    }
+
+    // Receive and apply sync/snapshot response
+    // Note: The server broadcasts our own ops back to us before responding with the
+    // sync/snapshot response, so we need to keep receiving until we get the response.
+    let mut got_response = false;
+    while let Ok(Some(msg)) = client.recv().await {
+        use wk_core::protocol::ServerMessage;
+
+        // Apply the message to local state
+        handle_server_message(&msg, db_path, oplog_path)?;
+
+        // Check if this is the sync/snapshot response (signals end of sync)
+        match &msg {
+            ServerMessage::SyncResponse { .. } | ServerMessage::SnapshotResponse { .. } => {
+                got_response = true;
+                break;
+            }
+            _ => {
+                // Keep receiving (Op broadcasts, etc.)
+                continue;
+            }
         }
+    }
+
+    // Clear the queue only after successfully receiving sync response
+    if got_response {
+        let _ = client.clear_queue();
     }
 
     Ok(())
@@ -750,16 +836,16 @@ async fn sync_websocket<T: Transport>(
         return Err(Error::Sync("not connected to server".to_string()));
     }
 
-    // Save last_hlc BEFORE flushing - flush_queue updates last_hlc with
-    // each op sent, so if we check after, new clients would request sync
-    // instead of snapshot and miss earlier ops from other clients.
-    let sync_since = client.last_hlc();
-
-    // Add queued operations to oplog BEFORE sending (for deduplication when server broadcasts back)
-    // Derive queue path from oplog path (both are in the same daemon directory)
+    // Derive daemon_dir from oplog path (both are in the same daemon directory)
     let daemon_dir = oplog_path
         .parent()
         .ok_or_else(|| Error::Sync("invalid oplog path - no parent directory".to_string()))?;
+
+    // Use persisted SERVER HLC for sync baseline, not client.last_hlc().
+    // client.last_hlc() gets contaminated by local ops (via send_op), which
+    // would cause new clients to request sync(since=local_hlc) instead of
+    // snapshot, missing earlier ops from other clients.
+    let sync_since = crate::commands::read_server_hlc(daemon_dir);
     let queue_path = daemon_dir.join("sync_queue.jsonl");
 
     // Read operations from queue without dequeuing
@@ -788,7 +874,7 @@ async fn sync_websocket<T: Transport>(
         .await
         .map_err(|e| Error::Sync(format!("failed to flush queue: {}", e)))?;
 
-    // Request sync from server based on HLC BEFORE flush
+    // Request sync from server based on persisted server HLC (or snapshot if none)
     if let Some(hlc) = sync_since {
         client
             .request_sync(hlc)
@@ -807,13 +893,14 @@ async fn sync_websocket<T: Transport>(
     let mut snapshot_data: Option<SnapshotData> = None;
 
     // Set a timeout for receiving sync response
-    let timeout = tokio::time::timeout(std::time::Duration::from_secs(10), async {
+    // Returns true if we successfully received a sync/snapshot response
+    let timeout_result = tokio::time::timeout(std::time::Duration::from_secs(10), async {
         loop {
             match client.recv().await {
                 Ok(Some(ServerMessage::SyncResponse { ops })) => {
                     received_ops.extend(ops.clone());
                     ops_received += ops.len();
-                    break;
+                    return true; // Successfully received sync response
                 }
                 Ok(Some(ServerMessage::SnapshotResponse {
                     issues,
@@ -823,7 +910,7 @@ async fn sync_websocket<T: Transport>(
                     // Snapshot contains full issues, tags, and high-water HLC
                     ops_received += issues.len();
                     snapshot_data = Some((issues, tags, since));
-                    break;
+                    return true; // Successfully received snapshot response
                 }
                 Ok(Some(ServerMessage::Op(op))) => {
                     received_ops.push(op);
@@ -835,17 +922,24 @@ async fn sync_websocket<T: Transport>(
                 }
                 Ok(None) => {
                     // Connection closed
-                    break;
+                    return false;
                 }
                 Err(_) => {
-                    break;
+                    return false;
                 }
             }
         }
     });
 
-    // Ignore timeout errors - we'll sync what we got
-    let _ = timeout.await;
+    // Check if we successfully received a sync response (not timed out, not connection error)
+    let sync_response_received = matches!(timeout_result.await, Ok(true));
+
+    // Clear the send queue only if we successfully received a sync response.
+    // This ensures ops are not lost if the connection drops before the server
+    // acknowledges receipt. Duplicate ops on resend are handled by the server.
+    if sync_response_received {
+        let _ = client.clear_queue();
+    }
 
     // Apply received ops to cache
     if !received_ops.is_empty() {
@@ -1120,3 +1214,7 @@ fn acquire_lock(lock_path: &Path) -> Result<File> {
 
     Ok(file)
 }
+
+#[cfg(test)]
+#[path = "runner_tests.rs"]
+mod tests;

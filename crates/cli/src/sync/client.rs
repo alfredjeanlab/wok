@@ -311,6 +311,13 @@ impl<T: Transport> SyncClient<T> {
 
     /// Flush the offline queue to the server.
     ///
+    /// Sends all pending operations to the server but does NOT clear the queue.
+    /// The caller must explicitly call `clear_queue()` after confirming the
+    /// server received the operations (e.g., after receiving a sync response).
+    ///
+    /// This ensures operations are not lost if the connection drops after sending
+    /// but before the server acknowledges receipt.
+    ///
     /// Returns the number of operations successfully sent.
     pub async fn flush_queue(&mut self) -> SyncResult<usize> {
         if !self.is_connected() {
@@ -327,22 +334,27 @@ impl<T: Transport> SyncClient<T> {
                     sent += 1;
                 }
                 Err(e) => {
-                    // Connection lost, remove already-sent ops
+                    // Connection lost - do NOT remove any ops from queue.
+                    // They will be resent on reconnect (server handles duplicates).
                     self.state = ConnectionState::Disconnected;
-                    if sent > 0 {
-                        self.queue.remove_first(sent)?;
-                    }
                     return Err(e.into());
                 }
             }
         }
 
-        // All ops sent successfully, clear queue
-        if sent > 0 {
-            self.queue.clear()?;
-        }
+        // Note: Queue is NOT cleared here. Caller must call clear_queue()
+        // after confirming server received the operations.
 
         Ok(sent)
+    }
+
+    /// Clear the offline queue.
+    ///
+    /// Should be called after receiving confirmation that the server has
+    /// processed our operations (e.g., after receiving a sync response).
+    pub fn clear_queue(&mut self) -> SyncResult<()> {
+        self.queue.clear()?;
+        Ok(())
     }
 
     /// Perform sync on connect.

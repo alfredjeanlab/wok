@@ -357,8 +357,15 @@ fn test_stop_remote_success() {
     let (temp, work_dir) = setup_test_env();
     create_remote_config(&work_dir);
 
-    let status_response =
-        DaemonStatus::new(true, false, "ws://localhost:7890".to_string(), 0, None, 12345, 100);
+    let status_response = DaemonStatus::new(
+        true,
+        false,
+        "ws://localhost:7890".to_string(),
+        0,
+        None,
+        12345,
+        100,
+    );
 
     // Need 2 connections: one for detect_daemon (ping) and one for stop_daemon (shutdown)
     let _handle = start_mock_daemon_multi(&work_dir, status_response, 2);
@@ -376,8 +383,15 @@ fn test_sync_remote_with_running_daemon() {
     let (temp, work_dir) = setup_test_env();
     create_remote_config(&work_dir);
 
-    let status_response =
-        DaemonStatus::new(true, false, "ws://localhost:7890".to_string(), 0, None, 12345, 100);
+    let status_response = DaemonStatus::new(
+        true,
+        false,
+        "ws://localhost:7890".to_string(),
+        0,
+        None,
+        12345,
+        100,
+    );
 
     // Need 2 connections: one for detect_daemon (ping) and one for request_sync (SyncNow)
     let _handle = start_mock_daemon_multi(&work_dir, status_response, 2);
