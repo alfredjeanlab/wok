@@ -136,6 +136,32 @@ pub fn get_daemon_status(daemon_dir: &Path) -> Result<Option<DaemonStatus>> {
     }
 }
 
+/// Wait for the daemon to establish a connection to the remote server.
+///
+/// Polls the daemon status until connected, disconnected (gave up), or timeout.
+/// Returns Ok(true) if connected, Ok(false) if timed out or disconnected.
+pub fn wait_daemon_connected(daemon_dir: &Path, timeout: Duration) -> Result<bool> {
+    use std::time::Instant;
+
+    let start = Instant::now();
+    let poll_interval = Duration::from_millis(50);
+
+    while start.elapsed() < timeout {
+        if let Ok(Some(status)) = get_daemon_status(daemon_dir) {
+            if status.connected {
+                return Ok(true);
+            }
+            // If not connected and not connecting, daemon has given up - stop waiting
+            if !status.connecting {
+                return Ok(false);
+            }
+        }
+        std::thread::sleep(poll_interval);
+    }
+
+    Ok(false)
+}
+
 /// Send a shutdown request to the daemon.
 pub fn stop_daemon(daemon_dir: &Path) -> Result<()> {
     let socket_path = get_socket_path(daemon_dir);

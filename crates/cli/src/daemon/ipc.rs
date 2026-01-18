@@ -47,6 +47,9 @@ pub enum DaemonResponse {
 pub struct DaemonStatus {
     /// Whether connected to remote server.
     pub connected: bool,
+    /// Whether actively trying to connect.
+    #[serde(default)]
+    pub connecting: bool,
     /// Remote server URL.
     pub remote_url: String,
     /// Number of pending operations in queue.
@@ -63,6 +66,7 @@ impl DaemonStatus {
     /// Create a new status with the given parameters.
     pub fn new(
         connected: bool,
+        connecting: bool,
         remote_url: String,
         pending_ops: usize,
         last_sync: Option<u64>,
@@ -71,6 +75,7 @@ impl DaemonStatus {
     ) -> Self {
         Self {
             connected,
+            connecting,
             remote_url,
             pending_ops,
             last_sync,

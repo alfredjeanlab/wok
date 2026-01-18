@@ -1,287 +1,227 @@
 #!/usr/bin/env bats
 load '../../helpers/common'
 
-# ============================================================================
-# Help and Documentation
-# ============================================================================
-
-@test "hooks shows help with no subcommand" {
-    run timeout 3 "$WK_BIN" hooks
-    # Should show usage, not hang waiting for input (exit 2 for missing subcommand is OK)
-    [ "$status" -ne 124 ]  # Not killed by timeout
-    assert_output --partial "Usage"
+setup() {
+    TEST_DIR="$(mktemp -d)"
+    cd "$TEST_DIR" || exit 1
+    export HOME="$TEST_DIR"
 }
 
-@test "hooks install --help shows usage" {
+teardown() {
+    cd / || exit 1
+    rm -rf "$TEST_DIR"
+}
+
+@test "hooks help and documentation" {
+    # hooks shows help with no subcommand
+    run timeout 3 "$WK_BIN" hooks
+    [ "$status" -ne 124 ]  # Not killed by timeout
+    assert_output --partial "Usage"
+
+    # hooks install --help shows usage
     run "$WK_BIN" hooks install --help
     assert_success
     assert_output --partial "local"
     assert_output --partial "project"
     assert_output --partial "user"
-}
 
-@test "hooks -h shows help" {
+    # hooks -h shows help
     run "$WK_BIN" hooks -h
     assert_success
     assert_output --partial "hooks"
 }
 
-# ============================================================================
-# Non-Interactive Mode (-y flag)
-# ============================================================================
-
-@test "hooks install -y defaults to local scope" {
+@test "hooks install -y creates settings for each scope" {
+    # -y defaults to local scope
     run "$WK_BIN" hooks install -y
     assert_success
     [ -f ".claude/settings.local.json" ]
-}
+    rm -rf .claude
 
-@test "hooks install -y local creates settings.local.json" {
+    # -y local creates settings.local.json
     run "$WK_BIN" hooks install -y local
     assert_success
     [ -f ".claude/settings.local.json" ]
     grep -q '"hooks"' .claude/settings.local.json
-}
+    rm -rf .claude
 
-@test "hooks install -y project creates settings.json" {
+    # -y project creates settings.json
     run "$WK_BIN" hooks install -y project
     assert_success
     [ -f ".claude/settings.json" ]
     grep -q '"hooks"' .claude/settings.json
-}
+    rm -rf .claude
 
-@test "hooks install -y user creates ~/.claude/settings.json" {
+    # -y user creates ~/.claude/settings.json
     run "$WK_BIN" hooks install -y user
     assert_success
     [ -f "$HOME/.claude/settings.json" ]
     grep -q '"hooks"' "$HOME/.claude/settings.json"
 }
 
-@test "hooks install -y is idempotent" {
+@test "hooks install -y is idempotent and preserves existing settings" {
+    # First install
     run "$WK_BIN" hooks install -y local
     assert_success
     local first_content
     first_content=$(cat .claude/settings.local.json)
 
+    # Second install should be identical
     run "$WK_BIN" hooks install -y local
     assert_success
     local second_content
     second_content=$(cat .claude/settings.local.json)
-
     [ "$first_content" = "$second_content" ]
-}
 
-@test "hooks install -y preserves existing settings" {
+    # Preserves existing settings
+    rm -rf .claude
     mkdir -p .claude
     echo '{"mcpServers": {"test": {}}}' > .claude/settings.local.json
-
     run "$WK_BIN" hooks install -y local
     assert_success
-
-    # Should have both hooks and existing mcpServers
     grep -q '"hooks"' .claude/settings.local.json
     grep -q '"mcpServers"' .claude/settings.local.json
 }
 
-# ============================================================================
-# Uninstall
-# ============================================================================
-
-@test "hooks uninstall removes hooks from local" {
-    # Install first
+@test "hooks uninstall removes hooks and preserves other settings" {
+    # Install then uninstall from local
     run "$WK_BIN" hooks install -y local
     assert_success
-
-    # Uninstall
     run "$WK_BIN" hooks uninstall local
     assert_success
-
-    # File may still exist but hooks should be removed
     if [ -f ".claude/settings.local.json" ]; then
         ! grep -q '"PreCompact"' .claude/settings.local.json
     fi
-}
 
-@test "hooks uninstall preserves other settings" {
+    # Preserves other settings
+    rm -rf .claude
     mkdir -p .claude
     echo '{"mcpServers": {"test": {}}, "hooks": {"PreCompact": []}}' > .claude/settings.local.json
-
     run "$WK_BIN" hooks uninstall local
     assert_success
-
-    # mcpServers should remain
     grep -q '"mcpServers"' .claude/settings.local.json
-}
 
-@test "hooks uninstall on non-existent file succeeds" {
+    # Uninstall on non-existent file succeeds
+    rm -rf .claude
     run "$WK_BIN" hooks uninstall local
     assert_success
-}
 
-@test "hooks uninstall does not accept -y flag" {
+    # Uninstall does not accept -y flag
     run "$WK_BIN" hooks uninstall -y local
     assert_failure
     assert_output --partial "unexpected argument"
 }
 
-# ============================================================================
-# Status
-# ============================================================================
-
-@test "hooks status shows no hooks when none installed" {
+@test "hooks status shows installation state" {
+    # No hooks when none installed
     run "$WK_BIN" hooks status
     assert_success
     assert_output --partial "No hooks installed"
-}
 
-@test "hooks status shows installed hooks" {
+    # Shows installed hooks for single scope
     run "$WK_BIN" hooks install -y local
     assert_success
-
     run "$WK_BIN" hooks status
     assert_success
     assert_output --partial "local"
     assert_output --partial "installed"
-}
 
-@test "hooks status shows multiple scopes" {
-    run "$WK_BIN" hooks install -y local
+    # Shows multiple scopes
     run "$WK_BIN" hooks install -y project
     assert_success
-
     run "$WK_BIN" hooks status
     assert_success
     assert_output --partial "local"
     assert_output --partial "project"
 }
 
-# ============================================================================
-# Auto-Detection (Non-TTY)
-# ============================================================================
-
-@test "hooks install defaults to non-interactive when not a TTY" {
-    # Run in subshell with stdin from /dev/null (non-TTY)
+@test "hooks install auto-detects non-interactive mode" {
+    # Non-TTY (stdin from /dev/null)
     run timeout 3 bash -c 'echo "" | "$WK_BIN" hooks install local'
     assert_success
     [ -f ".claude/settings.local.json" ]
-}
+    rm -rf .claude
 
-@test "hooks install defaults to non-interactive under CLAUDE_CODE env" {
+    # CLAUDE_CODE env
     CLAUDE_CODE=1 run timeout 3 "$WK_BIN" hooks install local
     assert_success
     [ -f ".claude/settings.local.json" ]
-}
+    rm -rf .claude
 
-@test "hooks install defaults to non-interactive under CODEX_ENV" {
+    # CODEX_ENV env
     CODEX_ENV=1 run timeout 3 "$WK_BIN" hooks install local
     assert_success
     [ -f ".claude/settings.local.json" ]
-}
+    rm -rf .claude
 
-@test "hooks install defaults to non-interactive under AIDER_MODEL env" {
+    # AIDER_MODEL env
     AIDER_MODEL=gpt-4 run timeout 3 "$WK_BIN" hooks install local
     assert_success
     [ -f ".claude/settings.local.json" ]
 }
 
-# ============================================================================
-# Error Handling
-# ============================================================================
-
-@test "hooks install rejects invalid scope" {
+@test "hooks install error handling" {
+    # Rejects invalid scope
     run "$WK_BIN" hooks install -y invalid
     assert_failure
     assert_output --partial "invalid"
-}
 
-@test "hooks uninstall rejects invalid scope" {
+    # uninstall rejects invalid scope
     run "$WK_BIN" hooks uninstall invalid
     assert_failure
-}
 
-@test "hooks install fails gracefully on permission error" {
-    # Create read-only directory
+    # Fails gracefully on permission error
     mkdir -p .claude
     chmod 444 .claude
-
     run "$WK_BIN" hooks install -y local
     assert_failure
     assert_output --partial "permission" || assert_output --partial "Permission"
-
-    # Cleanup
     chmod 755 .claude
-}
 
-@test "hooks with both -i and -y flags errors" {
+    # Both -i and -y flags errors
     run "$WK_BIN" hooks install -i -y local
     assert_failure
     assert_output --partial "cannot be used with"
 }
 
-# ============================================================================
-# JSON Output Format
-# ============================================================================
-
-@test "installed hooks contain PreCompact" {
+@test "hooks install creates valid JSON with PreCompact and wk prime" {
     run "$WK_BIN" hooks install -y local
     assert_success
+
+    # Contains PreCompact
     grep -q '"PreCompact"' .claude/settings.local.json
-}
 
-@test "installed hooks contain valid JSON" {
-    run "$WK_BIN" hooks install -y local
-    assert_success
-    # Validate JSON syntax
+    # Valid JSON syntax
     python3 -c "import json; json.load(open('.claude/settings.local.json'))" || \
     jq . .claude/settings.local.json > /dev/null
-}
 
-@test "installed hooks reference wk prime command" {
-    run "$WK_BIN" hooks install -y local
-    assert_success
+    # References wk prime command
     grep -q 'wk prime' .claude/settings.local.json
 }
 
-# ============================================================================
-# Timeout Protection for Potentially Interactive Commands
-# ============================================================================
-
-@test "hooks install without scope times out in non-TTY" {
-    # This should NOT hang - it should either:
-    # 1. Auto-detect non-TTY and use default scope
-    # 2. Show help and exit
+@test "hooks install does not hang in non-TTY or CI" {
+    # Without scope times out in non-TTY - should not hang
     run timeout 3 bash -c '"$WK_BIN" hooks install < /dev/null'
-    # Should complete within timeout (success or failure, but not hang)
     [ $status -ne 124 ]  # 124 = timeout killed the process
-}
 
-@test "hooks command never hangs in CI environment" {
-    # Simulate CI by setting common CI env vars
+    # CI environment
     CI=true GITHUB_ACTIONS=true run timeout 3 "$WK_BIN" hooks install local
     assert_success
 }
 
-# ============================================================================
-# Works Without Project Initialization
-# ============================================================================
-
-@test "hooks install works without wk init" {
-    # Don't call init_project - this should work anyway
+@test "hooks work without wk init" {
+    # Install works without wk init
     run "$WK_BIN" hooks install -y local
     assert_success
     [ -f ".claude/settings.local.json" ]
-}
 
-@test "hooks status works without wk init" {
+    # Status works without wk init
     run "$WK_BIN" hooks status
     assert_success
 }
 
-# ============================================================================
-# Smart Merge Behavior
-# ============================================================================
-
-@test "hooks install preserves existing non-wk hooks" {
+@test "hooks install smart merge preserves existing hooks" {
+    # Preserves existing non-wk hooks
     mkdir -p .claude
     cat > .claude/settings.local.json << 'EOF'
 {
@@ -294,22 +234,20 @@ load '../../helpers/common'
 EOF
     run "$WK_BIN" hooks install -y local
     assert_success
-    # Both custom hook and wk hook should exist
     grep -q 'custom-script.sh' .claude/settings.local.json
     grep -q 'wk prime' .claude/settings.local.json
-}
 
-@test "hooks install does not duplicate wk hooks" {
+    # Does not duplicate wk hooks
+    rm -rf .claude
     run "$WK_BIN" hooks install -y local
     run "$WK_BIN" hooks install -y local
     assert_success
-    # Count occurrences of "wk prime" - should be exactly 2 (PreCompact + SessionStart)
     local count
     count=$(grep -o 'wk prime' .claude/settings.local.json | wc -l | tr -d ' ')
     [ "$count" -eq 2 ]
-}
 
-@test "hooks install adds missing events to partial config" {
+    # Adds missing events to partial config
+    rm -rf .claude
     mkdir -p .claude
     cat > .claude/settings.local.json << 'EOF'
 {
@@ -322,11 +260,10 @@ EOF
 EOF
     run "$WK_BIN" hooks install -y local
     assert_success
-    # SessionStart should now be added
     grep -q '"SessionStart"' .claude/settings.local.json
-}
 
-@test "hooks install preserves hooks on other events" {
+    # Preserves hooks on other events
+    rm -rf .claude
     mkdir -p .claude
     cat > .claude/settings.local.json << 'EOF'
 {
@@ -357,13 +294,12 @@ EOF
 EOF
     run "$WK_BIN" hooks uninstall local
     assert_success
-    # Custom hook should remain
     grep -q 'custom.sh' .claude/settings.local.json
-    # wk prime should be gone
     ! grep -q 'wk prime' .claude/settings.local.json
 }
 
-@test "hooks install detects wk prime with full path" {
+@test "hooks install detects wk prime with full path or args" {
+    # Full path
     mkdir -p .claude
     cat > .claude/settings.local.json << 'EOF'
 {
@@ -376,13 +312,12 @@ EOF
 EOF
     run "$WK_BIN" hooks install -y local
     assert_success
-    # Should not duplicate - count should be 1 for PreCompact, 1 for SessionStart
     local count
     count=$(grep -o 'wk prime' .claude/settings.local.json | wc -l | tr -d ' ')
     [ "$count" -eq 2 ]
-}
 
-@test "hooks install detects wk prime with args" {
+    # With args
+    rm -rf .claude
     mkdir -p .claude
     cat > .claude/settings.local.json << 'EOF'
 {
@@ -395,23 +330,6 @@ EOF
 EOF
     run "$WK_BIN" hooks install -y local
     assert_success
-    # Should not duplicate PreCompact wk hook
-    local count
     count=$(grep -c 'PreCompact' .claude/settings.local.json | tr -d ' ')
     [ "$count" -eq 1 ]
-}
-
-# ============================================================================
-# Setup / Teardown
-# ============================================================================
-
-setup() {
-    TEST_DIR="$(mktemp -d)"
-    cd "$TEST_DIR" || exit 1
-    export HOME="$TEST_DIR"
-}
-
-teardown() {
-    cd / || exit 1
-    rm -rf "$TEST_DIR"
 }

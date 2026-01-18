@@ -17,7 +17,7 @@ setup() {
     test_setup
 }
 
-@test "init examples work" {
+@test "init and new examples work" {
     # wk init
     local tmpdir="$(mktemp -d)"
     cd "$tmpdir" || exit 1
@@ -35,9 +35,8 @@ setup() {
     rm -rf "$tmpdir"
 
     cd "$BATS_FILE_TMPDIR" || exit 1
-}
 
-@test "new examples work" {
+    # new examples
     run "$WK_BIN" new "Fix login bug"
     assert_success
     assert_output --partial "[task]"
@@ -58,7 +57,7 @@ setup() {
     assert_success
 }
 
-@test "lifecycle examples work" {
+@test "lifecycle and edit examples work" {
     # start
     id=$(create_issue task "Start test")
     run "$WK_BIN" start "$id"
@@ -84,9 +83,8 @@ setup() {
     "$WK_BIN" done "$id"
     run "$WK_BIN" reopen "$id" --reason "regression found"
     assert_success
-}
 
-@test "edit examples work" {
+    # edit examples
     id=$(create_issue task "Original")
     run "$WK_BIN" edit "$id" title "new title"
     assert_success
@@ -95,7 +93,7 @@ setup() {
     assert_success
 }
 
-@test "list examples work" {
+@test "list, show, and tree examples work" {
     create_issue task "List test"
     id1=$(create_issue task "Blocker")
     id2=$(create_issue task "Blocked")
@@ -119,9 +117,8 @@ setup() {
 
     run "$WK_BIN" list --blocked
     assert_success
-}
 
-@test "show and tree examples work" {
+    # show and tree examples
     id=$(create_issue task "Show test")
     run "$WK_BIN" show "$id"
     assert_success
@@ -130,7 +127,7 @@ setup() {
     assert_success
 }
 
-@test "dep and undep examples work" {
+@test "dep, label, note, and log examples work" {
     id1=$(create_issue task "Task A")
     id2=$(create_issue task "Task B")
     id3=$(create_issue task "Task C")
@@ -153,11 +150,9 @@ setup() {
     # undep
     run "$WK_BIN" undep "$id1" blocks "$id2"
     assert_success
-}
 
-@test "label and unlabel examples work" {
+    # label and unlabel examples
     id=$(create_issue task "Label test")
-
     run "$WK_BIN" label "$id" "project:auth"
     assert_success
 
@@ -166,17 +161,14 @@ setup() {
 
     run "$WK_BIN" unlabel "$id" urgent
     assert_success
-}
 
-@test "note example works" {
+    # note example
     id=$(create_issue task "Note test")
     run "$WK_BIN" note "$id" "This is a note about the issue"
     assert_success
-}
 
-@test "log examples work" {
+    # log examples
     create_issue task "Log test"
-
     run "$WK_BIN" log
     assert_success
 
@@ -188,14 +180,13 @@ setup() {
     assert_success
 }
 
-@test "export example works" {
+@test "export and help examples work" {
     create_issue task "Export test"
     run "$WK_BIN" export "$BATS_FILE_TMPDIR/issues.jsonl"
     assert_success
     [ -f "$BATS_FILE_TMPDIR/issues.jsonl" ]
-}
 
-@test "help examples work" {
+    # help examples
     run "$WK_BIN" help
     assert_success
 

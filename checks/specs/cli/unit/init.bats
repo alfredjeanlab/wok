@@ -28,7 +28,7 @@ teardown() {
     rm -rf "$TEST_DIR"
 }
 
-@test "init creates .wok directory with config and database" {
+@test "init creates .wok directory and fails if already initialized" {
     run "$WK_BIN" init --prefix myapp
     assert_success
     [ -n "$output" ]
@@ -36,10 +36,8 @@ teardown() {
     [ -f ".wok/config.toml" ]
     [ -f ".wok/issues.db" ]
     grep -q 'prefix = "myapp"' .wok/config.toml
-}
 
-@test "init fails if already initialized" {
-    "$WK_BIN" init --prefix prj
+    # Fails if already initialized
     run "$WK_BIN" init --prefix prj
     assert_failure
     [ -n "$output" ]
@@ -70,7 +68,8 @@ teardown() {
     assert_failure
 }
 
-@test "init without prefix uses directory name" {
+@test "init prefix handling and validation" {
+    # Without prefix uses directory name
     mkdir -p myproject && cd myproject
     run "$WK_BIN" init
     assert_success
@@ -89,16 +88,16 @@ teardown() {
     run "$WK_BIN" init --prefix custom
     assert_success
     grep -q 'prefix = "custom"' .wok/config.toml
-}
+    cd ..
 
-@test "init fails with invalid directory name for prefix" {
+    # Fails with invalid directory name for prefix
     mkdir -p "a---" && cd "a---"
     run "$WK_BIN" init
     assert_failure
-}
+    cd ..
 
-@test "init prefix validation" {
     # Valid prefixes
+    mkdir -p validpfx && cd validpfx
     run "$WK_BIN" init --prefix abc
     assert_success
     rm -rf .wok
@@ -124,7 +123,7 @@ teardown() {
     done
 }
 
-@test "init creates valid SQLite database with required tables" {
+@test "init creates valid database, config, and allows issue creation" {
     run "$WK_BIN" init --prefix prj
     assert_success
 
@@ -144,18 +143,15 @@ teardown() {
     run "$WK_BIN" list
     assert_success
     refute_output --regexp '\[task\]|\[bug\]|\[feature\]'
-}
 
-@test "init config.toml is valid TOML" {
-    run "$WK_BIN" init --prefix prj
-    assert_success
+    # Config.toml is valid TOML
     grep -qE '^prefix = "[a-z]+"' .wok/config.toml
     local line_count
     line_count=$(grep -cE '^[a-z]' .wok/config.toml || echo 0)
     [ "$line_count" -ge 1 ]
-}
 
-@test "init allows immediate issue creation with correct prefix" {
+    # Allows immediate issue creation with correct prefix
+    rm -rf .wok
     run "$WK_BIN" init --prefix myprj
     assert_success
     run "$WK_BIN" new task "Test issue"
@@ -163,7 +159,7 @@ teardown() {
     assert_output --regexp 'myprj-[a-z0-9]+'
 }
 
-@test "init with --workspace creates config without local database" {
+@test "init with --workspace" {
     mkdir -p /tmp/workspace
     run "$WK_BIN" init --workspace /tmp/workspace
     assert_success
@@ -199,9 +195,9 @@ teardown() {
     assert_success
     [ -d "subdir/.wok" ]
     grep -q 'workspace = "external/workspace"' subdir/.wok/config.toml
-}
 
-@test "init with --workspace fails if workspace does not exist" {
+    # Fails if workspace does not exist
+    rm -rf .wok subdir/.wok
     run "$WK_BIN" init --workspace /nonexistent/path
     assert_failure
     assert_output --partial "workspace not found"
@@ -237,7 +233,7 @@ teardown() {
     grep -q "config.toml" .wok/.gitignore
 }
 
-@test "init with git remote creates worktree in .git/wk/oplog" {
+@test "init with git remote creates worktree and supports sync" {
     run timeout 3 git init
     assert_success
     run timeout 3 "$WK_BIN" init --prefix prj --remote .
@@ -253,13 +249,8 @@ teardown() {
     run timeout 3 git branch -D wk/oplog
     assert_failure
     assert_output --partial "worktree"
-}
 
-@test "wk remote sync works with .git/wk/oplog worktree" {
-    run timeout 3 git init
-    assert_success
-    run timeout 3 "$WK_BIN" init --prefix prj --remote .
-    assert_success
+    # Remote sync works with .git/wk/oplog worktree
     run timeout 3 "$WK_BIN" new task "Test issue"
     assert_success
     run timeout 3 "$WK_BIN" remote sync

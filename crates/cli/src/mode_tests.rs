@@ -29,6 +29,7 @@ fn test_detect_remote_mode() {
             reconnect_max_delay_secs: 30,
             heartbeat_interval_ms: 30_000,
             heartbeat_timeout_ms: 10_000,
+            connect_timeout_secs: 2,
         }),
     };
     let mode = OperatingMode::detect(&config);

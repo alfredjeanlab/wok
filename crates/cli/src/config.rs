@@ -69,6 +69,10 @@ pub struct RemoteConfig {
     /// Only relevant for WebSocket remotes.
     #[serde(default = "default_heartbeat_timeout_ms")]
     pub heartbeat_timeout_ms: u64,
+    /// Max time to wait for initial connection in seconds (default: 5).
+    /// Used when starting a new daemon to wait for WebSocket connection.
+    #[serde(default = "default_connect_timeout_secs")]
+    pub connect_timeout_secs: u64,
 }
 
 fn default_branch() -> String {
@@ -172,6 +176,10 @@ fn default_heartbeat_interval_ms() -> u64 {
 
 fn default_heartbeat_timeout_ms() -> u64 {
     10_000
+}
+
+fn default_connect_timeout_secs() -> u64 {
+    2
 }
 
 impl Config {

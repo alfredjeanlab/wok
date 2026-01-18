@@ -24,7 +24,7 @@ fn daemon_request_serialization(request: DaemonRequest) {
 }
 
 #[parameterized(
-    status = { DaemonResponse::Status(DaemonStatus::new(true, "ws://localhost:7890".to_string(), 5, Some(12345), 1234, 3600)) },
+    status = { DaemonResponse::Status(DaemonStatus::new(true, false, "ws://localhost:7890".to_string(), 5, Some(12345), 1234, 3600)) },
     sync_complete = { DaemonResponse::SyncComplete { ops_synced: 42 } },
     shutting_down = { DaemonResponse::ShuttingDown },
     pong = { DaemonResponse::Pong },
@@ -41,6 +41,7 @@ fn daemon_response_serialization(response: DaemonResponse) {
 fn daemon_status_new() {
     let status = DaemonStatus::new(
         true,
+        false,
         "ws://example.com:7890".to_string(),
         10,
         Some(99999),
@@ -49,6 +50,7 @@ fn daemon_status_new() {
     );
 
     assert!(status.connected);
+    assert!(!status.connecting);
     assert_eq!(status.remote_url, "ws://example.com:7890");
     assert_eq!(status.pending_ops, 10);
     assert_eq!(status.last_sync, Some(99999));
@@ -73,7 +75,7 @@ fn framing_roundtrip_request(request: DaemonRequest) {
 }
 
 #[parameterized(
-    status = { DaemonResponse::Status(DaemonStatus::new(true, "ws://test:7890".to_string(), 5, Some(12345), 1000, 100)) },
+    status = { DaemonResponse::Status(DaemonStatus::new(true, false, "ws://test:7890".to_string(), 5, Some(12345), 1000, 100)) },
     sync_complete = { DaemonResponse::SyncComplete { ops_synced: 42 } },
     shutting_down = { DaemonResponse::ShuttingDown },
     pong = { DaemonResponse::Pong },

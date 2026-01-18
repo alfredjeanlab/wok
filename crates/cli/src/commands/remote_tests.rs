@@ -46,6 +46,7 @@ fn create_remote_config(work_dir: &Path) {
             reconnect_max_delay_secs: 30,
             heartbeat_interval_ms: 30_000,
             heartbeat_timeout_ms: 10_000,
+            connect_timeout_secs: 2,
         }),
     };
     config.save(work_dir).unwrap();
@@ -254,7 +255,8 @@ fn test_status_remote_connected() {
     create_remote_config(&work_dir);
 
     let status_response = DaemonStatus::new(
-        true, // connected
+        true,  // connected
+        false, // connecting
         "ws://localhost:7890".to_string(),
         5,                // pending_ops
         Some(1700000000), // last_sync timestamp
@@ -280,6 +282,7 @@ fn test_status_remote_disconnected() {
 
     let status_response = DaemonStatus::new(
         false, // disconnected
+        false, // connecting
         "ws://localhost:7890".to_string(),
         0,
         None, // no last sync
@@ -304,6 +307,7 @@ fn test_status_last_sync_never() {
 
     let status_response = DaemonStatus::new(
         true,
+        false, // connecting
         "ws://localhost:7890".to_string(),
         0,
         None, // last_sync = None triggers "never" branch
@@ -330,6 +334,7 @@ fn test_status_last_sync_timestamp_overflow() {
     // This happens when the timestamp is out of range
     let status_response = DaemonStatus::new(
         true,
+        false, // connecting
         "ws://localhost:7890".to_string(),
         0,
         Some(u64::MAX), // Very large timestamp
@@ -353,7 +358,7 @@ fn test_stop_remote_success() {
     create_remote_config(&work_dir);
 
     let status_response =
-        DaemonStatus::new(true, "ws://localhost:7890".to_string(), 0, None, 12345, 100);
+        DaemonStatus::new(true, false, "ws://localhost:7890".to_string(), 0, None, 12345, 100);
 
     // Need 2 connections: one for detect_daemon (ping) and one for stop_daemon (shutdown)
     let _handle = start_mock_daemon_multi(&work_dir, status_response, 2);
@@ -372,7 +377,7 @@ fn test_sync_remote_with_running_daemon() {
     create_remote_config(&work_dir);
 
     let status_response =
-        DaemonStatus::new(true, "ws://localhost:7890".to_string(), 0, None, 12345, 100);
+        DaemonStatus::new(true, false, "ws://localhost:7890".to_string(), 0, None, 12345, 100);
 
     // Need 2 connections: one for detect_daemon (ping) and one for request_sync (SyncNow)
     let _handle = start_mock_daemon_multi(&work_dir, status_response, 2);

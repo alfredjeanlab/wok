@@ -110,6 +110,7 @@ fn setup_remote(work_dir: &Path, repo_path: &Path, remote_url: &str) -> Result<(
         reconnect_max_delay_secs: 30,
         heartbeat_interval_ms: 30_000,
         heartbeat_timeout_ms: 10_000,
+        connect_timeout_secs: 2,
     };
 
     // Load and update config

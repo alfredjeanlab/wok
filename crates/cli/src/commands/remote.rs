@@ -5,11 +5,14 @@
 //!
 //! Commands for controlling remote synchronization in remote mode.
 
+use std::time::Duration;
+
 use chrono::{DateTime, Utc};
 
 use crate::config::{find_work_dir, get_daemon_dir, Config};
 use crate::daemon::{
     detect_daemon, ensure_compatible_daemon, get_daemon_status, request_sync, stop_daemon,
+    wait_daemon_connected,
 };
 use crate::error::{Error, Result};
 use crate::mode::OperatingMode;
@@ -144,6 +147,11 @@ pub fn sync(force: bool, quiet: bool) -> Result<()> {
                 Ok(info) => {
                     if !was_running {
                         println!("Daemon started (PID: {})", info.pid);
+                        // Wait for daemon to establish connection before requesting sync.
+                        // The daemon signals READY as soon as IPC is available, but the
+                        // WebSocket connection is established asynchronously.
+                        let timeout = Duration::from_secs(remote.connect_timeout_secs);
+                        let _ = wait_daemon_connected(&daemon_dir, timeout);
                     }
                 }
                 Err(e) => {

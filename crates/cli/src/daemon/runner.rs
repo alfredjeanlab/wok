@@ -474,8 +474,10 @@ async fn handle_ipc_request_async<T: Transport>(
             let uptime_secs = state.start_time.elapsed().as_secs();
             // Use shared connection state for accurate status
             let connected = state.connection_state.is_connected();
+            let connecting = state.connection_state.is_connecting();
             DaemonResponse::Status(DaemonStatus::new(
                 connected,
+                connecting,
                 state.remote_url.to_string(),
                 pending_ops,
                 *state.last_sync,

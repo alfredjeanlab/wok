@@ -14,7 +14,7 @@ setup() {
     test_setup
 }
 
-@test "list shows issues and handles empty database" {
+@test "list shows issues with status filtering" {
     # Empty database
     run "$WK_BIN" list
     assert_success
@@ -26,9 +26,8 @@ setup() {
     assert_success
     assert_output --partial "Task 1"
     assert_output --partial "Task 2"
-}
 
-@test "list default shows todo and in_progress, excludes done" {
+    # Default shows todo and in_progress, excludes done
     id1=$(create_issue task "ListDefault Todo task")
     id2=$(create_issue task "ListDefault Active task")
     id3=$(create_issue task "ListDefault Done task")
@@ -40,9 +39,8 @@ setup() {
     assert_output --partial "ListDefault Todo task"
     assert_output --partial "ListDefault Active task"
     refute_output --partial "ListDefault Done task"
-}
 
-@test "list --status filters by status" {
+    # --status filters by status
     id1=$(create_issue task "StatusFilter Todo")
     id2=$(create_issue task "StatusFilter InProgress")
     id3=$(create_issue task "StatusFilter Done")
@@ -66,7 +64,8 @@ setup() {
     assert_output --partial "StatusFilter Done"
 }
 
-@test "list --type filters by issue type" {
+@test "list filters by type, label, and blocked" {
+    # --type filters by issue type
     create_issue feature "TypeFilter MyFeature"
     create_issue bug "TypeFilter MyBug"
     create_issue chore "TypeFilter MyChore"
@@ -89,9 +88,8 @@ setup() {
     run "$WK_BIN" list -t task
     assert_success
     assert_output --partial "TypeFilter MyTask"
-}
 
-@test "list --label and --blocked filters" {
+    # --label and --blocked filters
     create_issue task "LabelFilter Labeled" --label "project:auth"
     create_issue task "LabelFilter Other"
     a=$(create_issue task "BlockFilter Blocker")
@@ -119,9 +117,8 @@ setup() {
     # No blocked count footer
     run "$WK_BIN" list
     refute_output --partial "blocked issues"
-}
 
-@test "list combines filters" {
+    # Combines filters
     create_issue feature "Combined Feature" --label "team:alpha"
     create_issue task "Combined Task" --label "team:alpha"
     run "$WK_BIN" list --type feature --label "team:alpha"
@@ -130,7 +127,7 @@ setup() {
     refute_output --partial "Combined Task"
 }
 
-@test "list --format json outputs valid data with fields" {
+@test "list --format json outputs valid data" {
     id=$(create_issue task "JSONList Task")
     "$WK_BIN" label "$id" "priority:high"
 
@@ -151,9 +148,8 @@ setup() {
     run "$WK_BIN" list -f json
     assert_success
     echo "$output" | jq . >/dev/null
-}
 
-@test "list --format json respects filters and has no blocked_count" {
+    # Respects filters
     create_issue task "JSONFilter Task"
     create_issue bug "JSONFilter Bug"
     a=$(create_issue task "JSONBlock Blocker")
@@ -172,7 +168,8 @@ setup() {
     [ "$result" = "null" ]
 }
 
-@test "list sorts by priority ASC then created_at DESC" {
+@test "list sorts by priority" {
+    # Sorts by priority ASC then created_at DESC
     id1=$(create_issue task "SortList P3 task")
     "$WK_BIN" label "$id1" "priority:3"
     id2=$(create_issue task "SortList P1 task")
@@ -191,9 +188,8 @@ setup() {
     newer_line=$(echo "$output" | grep -n "SortList Newer" | cut -d: -f1)
     older_line=$(echo "$output" | grep -n "SortList Older" | cut -d: -f1)
     [ "$newer_line" -lt "$older_line" ]
-}
 
-@test "list treats missing priority as 2 and prefers priority: over p:" {
+    # Treats missing priority as 2
     id1=$(create_issue task "PrioList High")
     "$WK_BIN" label "$id1" "priority:1"
     id2=$(create_issue task "PrioList Default")
@@ -219,7 +215,8 @@ setup() {
     [ "$default2_line" -lt "$dual_line" ]
 }
 
-@test "list --filter with age filters by time" {
+@test "list --filter expressions" {
+    # Age filter
     old_id=$(create_issue task "AgeFilter Old")
     sleep 0.2
     new_id=$(create_issue task "AgeFilter New")
@@ -237,9 +234,8 @@ setup() {
     # Short flag -q works
     run "$WK_BIN" list -q "age < 1h"
     assert_success
-}
 
-@test "list --filter validates expressions" {
+    # Validates expressions
     run "$WK_BIN" list --filter "invalid < 3d"
     assert_failure
     assert_output --partial "unknown field"
@@ -251,9 +247,8 @@ setup() {
     run "$WK_BIN" list --filter "age < 3x"
     assert_failure
     assert_output --partial "unknown duration unit"
-}
 
-@test "list --filter multiple filters and combined with flags" {
+    # Multiple filters and combined with flags
     create_issue task "MultiFilter Task" --label "team:alpha"
     create_issue bug "MultiFilter Bug" --label "team:alpha"
 
@@ -267,7 +262,8 @@ setup() {
     refute_output --partial "MultiFilter Bug"
 }
 
-@test "list --limit truncates results" {
+@test "list --limit and --filter closed" {
+    # --limit truncates results
     create_issue task "Limit 1" --label "limit-tag"
     create_issue task "Limit 2" --label "limit-tag"
     create_issue task "Limit 3" --label "limit-tag"
@@ -282,9 +278,8 @@ setup() {
     assert_success
     count=$(echo "$output" | grep -c "Limit")
     [ "$count" -eq 1 ]
-}
 
-@test "list --format json includes metadata when filters/limit used" {
+    # JSON includes metadata when filters/limit used
     create_issue task "JSONMeta Issue"
 
     run "$WK_BIN" list --filter "age < 1d" --format json
@@ -296,9 +291,8 @@ setup() {
     assert_success
     local limit=$(echo "$output" | jq '.limit')
     [ "$limit" = "10" ]
-}
 
-@test "list --filter closed shows closed issues" {
+    # --filter closed shows closed issues
     id=$(create_issue task "ClosedFilter Issue")
     "$WK_BIN" start "$id"
     "$WK_BIN" done "$id"
@@ -311,9 +305,8 @@ setup() {
     run "$WK_BIN" list --filter "closed < 1d"
     assert_success
     assert_output --partial "ClosedFilter Issue"
-}
 
-@test "list --filter closed includes done and closed statuses" {
+    # Closed includes done and closed statuses
     done_id=$(create_issue task "ClosedStatus Done")
     "$WK_BIN" start "$done_id"
     "$WK_BIN" done "$done_id"
@@ -326,9 +319,8 @@ setup() {
     assert_output --partial "ClosedStatus Done"
     assert_output --partial "ClosedStatus Closed"
     refute_output --partial "ClosedStatus Open"
-}
 
-@test "list --filter closed synonyms work" {
+    # Closed synonyms work
     id=$(create_issue task "ClosedSyn Issue")
     "$WK_BIN" start "$id"
     "$WK_BIN" done "$id"
