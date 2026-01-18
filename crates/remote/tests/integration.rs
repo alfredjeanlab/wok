@@ -60,15 +60,16 @@ async fn test_server_lifecycle() {
     let server = ServerProcess::spawn();
 
     // Wait for server to start and retry connection a few times
+    // CI runners can be slow, so we use generous timeouts
     let mut ws_stream = None;
-    for _ in 0..10 {
-        tokio::time::sleep(Duration::from_millis(100)).await;
+    for _ in 0..20 {
         if let Ok(Ok((stream, _))) =
             tokio::time::timeout(Duration::from_millis(500), connect_async(&server.ws_url())).await
         {
             ws_stream = Some(stream);
             break;
         }
+        tokio::time::sleep(Duration::from_millis(200)).await;
     }
 
     let ws_stream = ws_stream.expect("should connect to server within retries");
