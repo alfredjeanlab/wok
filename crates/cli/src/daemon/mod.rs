@@ -7,6 +7,7 @@
 //! and handles bidirectional sync. CLI commands communicate with the daemon
 //! via a Unix socket.
 
+mod connection;
 mod ipc;
 mod lifecycle;
 mod runner;
