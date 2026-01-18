@@ -1,62 +1,49 @@
 #!/usr/bin/env bats
 load '../../helpers/common'
 
-@test "list on empty database succeeds" {
-    init_project
-    run "$WK_BIN" list
+# Tests verifying commands handle empty database gracefully.
+
+setup_file() {
+    file_setup
+    init_project_once test
+}
+
+teardown_file() {
+    file_teardown
+}
+
+setup() {
+    test_setup
+}
+
+@test "read commands succeed on empty database" {
+    local commands=(
+        "list"
+        "list --blocked"
+        "list --all"
+        "list --status in_progress"
+        "list --type bug"
+        "list --label nonexistent"
+        "log"
+    )
+    for cmd in "${commands[@]}"; do
+        run $WK_BIN $cmd
+        assert_success
+    done
+}
+
+@test "export succeeds on empty database" {
+    run "$WK_BIN" export "$BATS_FILE_TMPDIR/empty.jsonl"
     assert_success
 }
 
-@test "list --blocked on empty database succeeds" {
-    init_project
-    run "$WK_BIN" list --blocked
-    assert_success
-}
-
-@test "list --all on empty database succeeds" {
-    init_project
-    run "$WK_BIN" list --all
-    assert_success
-}
-
-@test "log on empty database succeeds" {
-    init_project
-    run "$WK_BIN" log
-    assert_success
-}
-
-@test "export empty database succeeds" {
-    init_project
-    run "$WK_BIN" export "$TEST_DIR/empty.jsonl"
-    assert_success
-}
-
-@test "show nonexistent on empty database fails" {
-    init_project
-    run "$WK_BIN" show "test-nonexistent"
-    assert_failure
-}
-
-@test "start nonexistent on empty database fails" {
-    init_project
-    run "$WK_BIN" start "test-nonexistent"
-    assert_failure
-}
-
-@test "status filter on empty database succeeds" {
-    init_project
-    run "$WK_BIN" list --status in_progress
-    assert_success
-}
-
-@test "type filter on empty database succeeds" {
-    init_project
-    run "$WK_BIN" list --type bug
-    assert_success
-}
-
-@test "tag filter on empty database succeeds" {
-    init_project
-    run "$WK_BIN" list --label "nonexistent"
-    assert_success
+@test "commands on nonexistent issues fail" {
+    local commands=(
+        "show test-nonexistent"
+        "start test-nonexistent"
+    )
+    for cmd in "${commands[@]}"; do
+        run $WK_BIN $cmd
+        assert_failure
+    done
 }

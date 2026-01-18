@@ -14,109 +14,88 @@ setup() {
     test_setup
 }
 
-@test "ready shows unblocked todo issues" {
+@test "ready shows unblocked todo issues and excludes blocked" {
     create_issue task "Ready task"
-    run "$WK_BIN" ready
-    assert_success
-    assert_output --partial "Ready task"
-}
-
-@test "ready excludes blocked issues" {
     a=$(create_issue task "Blocker")
     b=$(create_issue task "Blocked issue")
     "$WK_BIN" dep "$a" blocks "$b"
+
     run "$WK_BIN" ready
     assert_success
+    assert_output --partial "Ready task"
     assert_output --partial "Blocker"
     refute_output --partial "Blocked issue"
-}
-
-@test "ready shows no ready issues message when no label matches" {
-    # Use a label that doesn't exist to get "no ready issues"
-    run "$WK_BIN" ready --label "nonexistent-label-xyz123"
-    assert_success
-    assert_output --partial "No ready issues"
 }
 
 @test "ready with label filter" {
     id=$(create_issue task "Labeled task")
     "$WK_BIN" label "$id" "priority:high"
     create_issue task "Unlabeled task"
+
+    # With matching label
     run "$WK_BIN" ready --label "priority:high"
     assert_success
     assert_output --partial "Labeled task"
     refute_output --partial "Unlabeled task"
+
+    # With non-matching label
+    run "$WK_BIN" ready --label "nonexistent-label-xyz123"
+    assert_success
+    assert_output --partial "No ready issues"
 }
 
-# JSON format tests
+@test "ready --format json outputs valid data with expected fields" {
+    id=$(create_issue task "JSON ready task")
+    "$WK_BIN" label "$id" "module:api"
 
-@test "ready --format json outputs valid JSON" {
-    create_issue task "JSON ready task"
+    # Test --format json
     run "$WK_BIN" ready --format json
     assert_success
-    echo "$output" | jq . >/dev/null  # Validates JSON
-}
-
-@test "ready --format json contains issue fields" {
-    create_issue task "JSON ready task"
-    run "$WK_BIN" ready --format json
-    assert_success
+    echo "$output" | jq . >/dev/null
     echo "$output" | jq -e '.issues[0].id' >/dev/null
     echo "$output" | jq -e '.issues[0].issue_type' >/dev/null
     echo "$output" | jq -e '.issues[0].status' >/dev/null
     echo "$output" | jq -e '.issues[0].title' >/dev/null
     echo "$output" | jq -e '.issues[0].labels' >/dev/null
+
+    # Verify labels included
+    label=$(echo "$output" | jq -r '.issues[] | select(.title == "JSON ready task") | .labels[0]')
+    [ "$label" = "module:api" ]
+
+    # Test -f json short flag
+    run "$WK_BIN" ready -f json
+    assert_success
+    echo "$output" | jq . >/dev/null
 }
 
-@test "ready --format json excludes blocked issues" {
+@test "ready --format json excludes blocked and respects filters" {
     a=$(create_issue task "Blocker JSON ready")
     b=$(create_issue task "Blocked JSON ready")
     "$WK_BIN" dep "$a" blocks "$b"
-    run "$WK_BIN" ready --format json
-    assert_success
-    # The blocked issue should not appear in the results
-    blocked_present=$(echo "$output" | jq --arg b "$b" '[.issues[].id] | contains([$b])')
-    [ "$blocked_present" = "false" ]
-    # The blocker should appear
-    blocker_present=$(echo "$output" | jq --arg a "$a" '[.issues[].id] | contains([$a])')
-    [ "$blocker_present" = "true" ]
-}
-
-@test "ready --format json returns empty array when no label matches" {
-    # Use a label that doesn't exist to get empty array
-    run "$WK_BIN" ready --label "nonexistent-label-abc456" --format json
-    assert_success
-    count=$(echo "$output" | jq '.issues | length')
-    [ "$count" -eq 0 ]
-}
-
-@test "ready --format json with label filter" {
     id=$(create_issue task "Labeled ready")
     "$WK_BIN" label "$id" "team:backend"
-    create_issue task "Unlabeled ready"
+
+    # Blocked issues excluded
+    run "$WK_BIN" ready --format json
+    assert_success
+    blocked_present=$(echo "$output" | jq --arg b "$b" '[.issues[].id] | contains([$b])')
+    [ "$blocked_present" = "false" ]
+    blocker_present=$(echo "$output" | jq --arg a "$a" '[.issues[].id] | contains([$a])')
+    [ "$blocker_present" = "true" ]
+
+    # Label filter works
     run "$WK_BIN" ready --label "team:backend" --format json
     assert_success
     count=$(echo "$output" | jq '.issues | length')
     [ "$count" -eq 1 ]
     title=$(echo "$output" | jq -r '.issues[0].title')
     [ "$title" = "Labeled ready" ]
-}
 
-@test "ready -f json short flag works" {
-    create_issue task "Short flag ready"
-    run "$WK_BIN" ready -f json
+    # Non-matching label returns empty
+    run "$WK_BIN" ready --label "nonexistent-label-abc456" --format json
     assert_success
-    echo "$output" | jq . >/dev/null
-}
-
-@test "ready --format json with labels" {
-    id=$(create_issue task "JsonLabelReady task")
-    "$WK_BIN" label "$id" "module:api"
-    run "$WK_BIN" ready --format json
-    assert_success
-    # Find our specific issue and check its label
-    label=$(echo "$output" | jq -r '.issues[] | select(.title == "JsonLabelReady task") | .labels[0]')
-    [ "$label" = "module:api" ]
+    count=$(echo "$output" | jq '.issues | length')
+    [ "$count" -eq 0 ]
 }
 
 # Sort order tests
