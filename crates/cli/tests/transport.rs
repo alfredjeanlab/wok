@@ -26,6 +26,22 @@ use wk_core::protocol::{ClientMessage, ServerMessage};
 use wk_core::{Hlc, Op, OpPayload};
 use wkrs::sync::{SyncClient, SyncConfig, Transport, WebSocketTransport};
 
+/// Helper macro to skip tests when wk-remote binary is not available.
+/// Prints a message and returns early instead of failing.
+macro_rules! require_server {
+    () => {
+        match TestServer::spawn() {
+            Some(server) => server,
+            None => {
+                eprintln!(
+                    "SKIPPED: wk-remote binary not found. Run `cargo build -p wk-remote` first."
+                );
+                return;
+            }
+        }
+    };
+}
+
 /// Returns timeout duration, longer for CI environments.
 fn timeout() -> Duration {
     if std::env::var("CI").is_ok() {
@@ -41,7 +57,9 @@ fn timeout() -> Duration {
 /// 1. WK_REMOTE_BIN environment variable
 /// 2. Sibling package target directory (../remote/target/{debug,release}/wk-remote)
 /// 3. Same target directory (for workspace builds)
-fn find_wk_remote() -> PathBuf {
+///
+/// Returns `None` if the binary is not found, allowing tests to skip gracefully.
+fn find_wk_remote() -> Option<PathBuf> {
     let binary_name = if cfg!(windows) {
         "wk-remote.exe"
     } else {
@@ -52,7 +70,7 @@ fn find_wk_remote() -> PathBuf {
     if let Ok(path) = std::env::var("WK_REMOTE_BIN") {
         let binary_path = PathBuf::from(path);
         if binary_path.exists() {
-            return binary_path;
+            return Some(binary_path);
         }
     }
 
@@ -76,7 +94,7 @@ fn find_wk_remote() -> PathBuf {
                                 .join(profile)
                                 .join(binary_name);
                             if sibling_path.exists() {
-                                return sibling_path;
+                                return Some(sibling_path);
                             }
                         }
                     }
@@ -91,25 +109,12 @@ fn find_wk_remote() -> PathBuf {
         if let Some(profile_dir) = deps_dir.parent() {
             let binary_path = profile_dir.join(binary_name);
             if binary_path.exists() {
-                return binary_path;
+                return Some(binary_path);
             }
         }
     }
 
-    // Fallback: same target directory (for workspace builds)
-    let target_dir = test_exe
-        .parent()
-        .and_then(|p| p.parent())
-        .expect("cannot find target directory");
-
-    let binary_path = target_dir.join(binary_name);
-    panic!(
-        "wk-remote binary not found. Either:\n\
-         1. Set WK_REMOTE_BIN environment variable\n\
-         2. Build wk-remote: cd ../remote && cargo build\n\
-         Searched: {:?}",
-        binary_path
-    );
+    None
 }
 
 /// Helper to spawn `wk-remote` server and clean up on drop.
@@ -121,8 +126,9 @@ struct TestServer {
 
 impl TestServer {
     /// Spawn a new test server, trying multiple ports if needed.
-    fn spawn() -> Self {
-        let binary = find_wk_remote();
+    /// Returns `None` if wk-remote binary is not found (test should be skipped).
+    fn spawn() -> Option<Self> {
+        let binary = find_wk_remote()?;
 
         for attempt in 0..5 {
             let port = Self::random_port(attempt);
@@ -133,7 +139,7 @@ impl TestServer {
                     drop(listener); // Release for server to use
 
                     if let Ok(server) = Self::try_spawn(&binary, port) {
-                        return server;
+                        return Some(server);
                     }
                     // Spawn failed, try next port
                 }
@@ -142,7 +148,7 @@ impl TestServer {
                 }
             }
         }
-        panic!("failed to find available port after 5 attempts");
+        panic!("wk-remote binary found but failed to start server after 5 port attempts");
     }
 
     /// Attempt to spawn server on a specific port.
@@ -206,7 +212,7 @@ impl Drop for TestServer {
 
 #[tokio::test]
 async fn test_websocket_transport_connect_disconnect() {
-    let server = TestServer::spawn();
+    let server = require_server!();
     server.wait_ready().await.unwrap();
 
     let mut transport = WebSocketTransport::new();
@@ -221,7 +227,7 @@ async fn test_websocket_transport_connect_disconnect() {
 
 #[tokio::test]
 async fn test_websocket_transport_ping_pong() {
-    let server = TestServer::spawn();
+    let server = require_server!();
     server.wait_ready().await.unwrap();
 
     let mut transport = WebSocketTransport::new();
@@ -243,7 +249,7 @@ async fn test_websocket_transport_ping_pong() {
 
 #[tokio::test]
 async fn test_sync_client_with_real_transport() {
-    let server = TestServer::spawn();
+    let server = require_server!();
     server.wait_ready().await.unwrap();
 
     let client_dir = TempDir::new().unwrap();

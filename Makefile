@@ -35,6 +35,7 @@ check:
 	cargo clippy -- -D warnings
 	cargo check
 	cargo audit
+	cargo build --workspace
 	cargo test
 
 validate:
