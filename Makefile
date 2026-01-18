@@ -3,11 +3,12 @@
 SHELL := /bin/bash
 SPECS_DIR := checks/specs
 
-.PHONY: help install validate spec spec-cli spec-remote spec-todo quality stress stress-docker bench license
+.PHONY: help install check validate spec spec-cli spec-remote spec-todo quality stress stress-docker bench license
 
 help:
 	@echo "Targets:"
 	@echo "  make install     - Build and install wk to ~/.local/bin"
+	@echo "  make check       - Run fmt, clippy, check, audit, test"
 	@echo "  make validate    - Run all validation checks"
 	@echo "  make quality     - Run quality evaluation"
 	@echo "  make stress      - Run stress tests (native)"
@@ -28,6 +29,13 @@ help:
 
 install:
 	@scripts/install
+
+check:
+	cargo fmt --check
+	cargo clippy -- -D warnings
+	cargo check
+	cargo audit
+	cargo test
 
 validate:
 	@scripts/validate
