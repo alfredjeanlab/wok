@@ -29,6 +29,8 @@ fn test_resolve_oplog_path_same_repo() {
         worktree: None,
         reconnect_max_retries: 10,
         reconnect_max_delay_secs: 30,
+        heartbeat_interval_ms: 30_000,
+        heartbeat_timeout_ms: 10_000,
     };
 
     // For same-repo mode, path should be .git/wk/oplog
@@ -48,6 +50,8 @@ fn test_resolve_oplog_path_separate_repo_local_worktree() {
         worktree: Some(true), // Force local worktree for separate repos
         reconnect_max_retries: 10,
         reconnect_max_delay_secs: 30,
+        heartbeat_interval_ms: 30_000,
+        heartbeat_timeout_ms: 10_000,
     };
 
     let path = resolve_oplog_path(&work_dir, &remote).unwrap();
@@ -66,6 +70,8 @@ fn test_resolve_oplog_path_websocket_error() {
         worktree: None,
         reconnect_max_retries: 10,
         reconnect_max_delay_secs: 30,
+        heartbeat_interval_ms: 30_000,
+        heartbeat_timeout_ms: 10_000,
     };
 
     let result = resolve_oplog_path(&work_dir, &remote);
@@ -93,6 +99,8 @@ fn test_remote_config_is_same_repo() {
         worktree: None,
         reconnect_max_retries: 10,
         reconnect_max_delay_secs: 30,
+        heartbeat_interval_ms: 30_000,
+        heartbeat_timeout_ms: 10_000,
     };
     assert!(remote_dot.is_same_repo());
 
@@ -102,6 +110,8 @@ fn test_remote_config_is_same_repo() {
         worktree: None,
         reconnect_max_retries: 10,
         reconnect_max_delay_secs: 30,
+        heartbeat_interval_ms: 30_000,
+        heartbeat_timeout_ms: 10_000,
     };
     assert!(remote_bare_dot.is_same_repo());
 
@@ -111,6 +121,8 @@ fn test_remote_config_is_same_repo() {
         worktree: None,
         reconnect_max_retries: 10,
         reconnect_max_delay_secs: 30,
+        heartbeat_interval_ms: 30_000,
+        heartbeat_timeout_ms: 10_000,
     };
     assert!(!remote_path.is_same_repo());
 }
@@ -123,6 +135,8 @@ fn test_remote_config_git_url() {
         worktree: None,
         reconnect_max_retries: 10,
         reconnect_max_delay_secs: 30,
+        heartbeat_interval_ms: 30_000,
+        heartbeat_timeout_ms: 10_000,
     };
     assert_eq!(remote_same.git_url(), None);
 
@@ -132,6 +146,8 @@ fn test_remote_config_git_url() {
         worktree: None,
         reconnect_max_retries: 10,
         reconnect_max_delay_secs: 30,
+        heartbeat_interval_ms: 30_000,
+        heartbeat_timeout_ms: 10_000,
     };
     assert_eq!(remote_path.git_url(), Some("~/tracker"));
 
@@ -141,6 +157,8 @@ fn test_remote_config_git_url() {
         worktree: None,
         reconnect_max_retries: 10,
         reconnect_max_delay_secs: 30,
+        heartbeat_interval_ms: 30_000,
+        heartbeat_timeout_ms: 10_000,
     };
     assert_eq!(remote_ssh.git_url(), Some("git@github.com:org/repo.git"));
 }
@@ -153,6 +171,8 @@ fn test_remote_config_remote_type() {
         worktree: None,
         reconnect_max_retries: 10,
         reconnect_max_delay_secs: 30,
+        heartbeat_interval_ms: 30_000,
+        heartbeat_timeout_ms: 10_000,
     };
     assert_eq!(git_remote.remote_type(), RemoteType::Git);
 
@@ -162,6 +182,8 @@ fn test_remote_config_remote_type() {
         worktree: None,
         reconnect_max_retries: 10,
         reconnect_max_delay_secs: 30,
+        heartbeat_interval_ms: 30_000,
+        heartbeat_timeout_ms: 10_000,
     };
     assert_eq!(ws_remote.remote_type(), RemoteType::WebSocket);
 
@@ -171,6 +193,8 @@ fn test_remote_config_remote_type() {
         worktree: None,
         reconnect_max_retries: 10,
         reconnect_max_delay_secs: 30,
+        heartbeat_interval_ms: 30_000,
+        heartbeat_timeout_ms: 10_000,
     };
     assert_eq!(wss_remote.remote_type(), RemoteType::WebSocket);
 }

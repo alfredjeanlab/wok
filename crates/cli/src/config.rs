@@ -61,6 +61,14 @@ pub struct RemoteConfig {
     /// Only relevant for WebSocket remotes.
     #[serde(default = "default_reconnect_max_delay_secs")]
     pub reconnect_max_delay_secs: u64,
+    /// Heartbeat ping interval in milliseconds (default: 30000). 0 = disabled.
+    /// Only relevant for WebSocket remotes.
+    #[serde(default = "default_heartbeat_interval_ms")]
+    pub heartbeat_interval_ms: u64,
+    /// Max time to wait for pong response in milliseconds (default: 10000).
+    /// Only relevant for WebSocket remotes.
+    #[serde(default = "default_heartbeat_timeout_ms")]
+    pub heartbeat_timeout_ms: u64,
 }
 
 fn default_branch() -> String {
@@ -156,6 +164,14 @@ fn default_reconnect_max_retries() -> u32 {
 
 fn default_reconnect_max_delay_secs() -> u64 {
     30
+}
+
+fn default_heartbeat_interval_ms() -> u64 {
+    30_000
+}
+
+fn default_heartbeat_timeout_ms() -> u64 {
+    10_000
 }
 
 impl Config {

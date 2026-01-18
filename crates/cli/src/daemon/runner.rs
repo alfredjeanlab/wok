@@ -63,6 +63,10 @@ enum SyncBackend<T: Transport> {
         db_path: PathBuf,
         /// Path to the client-side oplog for deduplication.
         oplog_path: PathBuf,
+        /// ID of pending ping awaiting pong, if any.
+        pending_ping_id: Option<u64>,
+        /// When the pending ping was sent.
+        last_ping_sent: Option<Instant>,
     },
 }
 
@@ -180,6 +184,8 @@ async fn run_daemon_async(daemon_dir: &Path, config: &Config) -> Result<()> {
                 ref db_path,
                 ref sync_config,
                 ref queue_path,
+                ref mut pending_ping_id,
+                ref mut last_ping_sent,
                 ..
             } => {
                 let is_connected = client.as_ref().is_some_and(|c| c.is_connected());
@@ -187,6 +193,30 @@ async fn run_daemon_async(daemon_dir: &Path, config: &Config) -> Result<()> {
                 let oplog_path_clone = client_oplog_path.clone();
                 let sync_config_clone = sync_config.clone();
                 let queue_path_clone = queue_path.clone();
+
+                // Heartbeat timing - extract state before async blocks
+                let heartbeat_interval_ms = sync_config.heartbeat_interval_ms;
+                let heartbeat_timeout_ms = sync_config.heartbeat_timeout_ms;
+                let heartbeat_enabled = heartbeat_interval_ms > 0 && is_connected;
+
+                // Debug: Log heartbeat config on first pass
+                static LOGGED: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+                if !LOGGED.swap(true, std::sync::atomic::Ordering::Relaxed) {
+                    eprintln!("Heartbeat config: interval={}ms, timeout={}ms, enabled={}",
+                        heartbeat_interval_ms, heartbeat_timeout_ms, heartbeat_enabled);
+                }
+                let has_pending_ping = pending_ping_id.is_some();
+                // Calculate remaining timeout based on when ping was sent
+                let pong_timeout_remaining = if let Some(sent) = last_ping_sent {
+                    let elapsed = sent.elapsed().as_millis() as u64;
+                    if elapsed >= heartbeat_timeout_ms {
+                        Duration::ZERO
+                    } else {
+                        Duration::from_millis(heartbeat_timeout_ms - elapsed)
+                    }
+                } else {
+                    Duration::MAX
+                };
 
                 tokio::select! {
                     // Accept IPC connections - ALWAYS responsive
@@ -223,9 +253,11 @@ async fn run_daemon_async(daemon_dir: &Path, config: &Config) -> Result<()> {
                                             new_client.set_last_hlc(server_hlc);
                                         }
 
-                                        // Update backend with new client
-                                        if let SyncBackend::WebSocket { client, .. } = &mut backend {
+                                        // Update backend with new client and clear heartbeat state
+                                        if let SyncBackend::WebSocket { client, pending_ping_id, last_ping_sent, .. } = &mut backend {
                                             *client = Some(new_client);
+                                            *pending_ping_id = None;
+                                            *last_ping_sent = None;
                                         }
 
                                         // Sync on connect
@@ -266,21 +298,84 @@ async fn run_daemon_async(daemon_dir: &Path, config: &Config) -> Result<()> {
                     }, if is_connected => {
                         match result {
                             Ok(Some(msg)) => {
+                                // Clear heartbeat state on any message (connection is alive)
+                                if let SyncBackend::WebSocket {
+                                    pending_ping_id: ping_id,
+                                    last_ping_sent: ping_sent,
+                                    ..
+                                } = &mut backend {
+                                    // Check if this is a Pong response to our ping
+                                    if let wk_core::protocol::ServerMessage::Pong { id } = &msg {
+                                        if *ping_id == Some(*id) {
+                                            *ping_id = None;
+                                            *ping_sent = None;
+                                        }
+                                    } else {
+                                        // Any other message also means connection is alive
+                                        *ping_id = None;
+                                        *ping_sent = None;
+                                    }
+                                }
                                 if let Err(e) = handle_server_message(&msg, &db_path_clone, &oplog_path_clone) {
                                     eprintln!("Error handling server message: {}", e);
                                 }
                             }
                             Ok(None) | Err(_) => {
-                                // Connection closed or error - clear client and reconnect
-                                if let SyncBackend::WebSocket { client, .. } = &mut backend {
-                                    *client = None;
-                                }
-                                connection_state.set(super::connection::STATE_DISCONNECTED);
-                                if let Some(ref manager) = connection_manager {
-                                    manager.spawn_connect_task();
-                                }
+                                // Connection closed or error - handle connection lost
+                                handle_connection_lost(
+                                    &mut backend,
+                                    &connection_state,
+                                    &connection_manager,
+                                );
                             }
                         }
+                    }
+
+                    // Heartbeat interval timer - send ping when interval elapses
+                    _ = tokio::time::sleep(Duration::from_millis(heartbeat_interval_ms)), if heartbeat_enabled && !has_pending_ping => {
+                        eprintln!("DEBUG: Heartbeat interval fired, sending ping");
+                        // Generate a unique ping ID
+                        let ping_id = std::time::SystemTime::now()
+                            .duration_since(std::time::UNIX_EPOCH)
+                            .map(|d| d.as_nanos() as u64)
+                            .unwrap_or(1);
+
+                        // Send ping
+                        let ping_sent = if let SyncBackend::WebSocket { client: Some(c), .. } = &mut backend {
+                            match c.ping(ping_id).await {
+                                Ok(()) => {
+                                    eprintln!("DEBUG: Ping sent successfully");
+                                    true
+                                }
+                                Err(e) => {
+                                    eprintln!("DEBUG: Ping failed: {}", e);
+                                    false
+                                }
+                            }
+                        } else {
+                            false
+                        };
+
+                        if ping_sent {
+                            if let SyncBackend::WebSocket {
+                                pending_ping_id: pid,
+                                last_ping_sent: lps,
+                                ..
+                            } = &mut backend {
+                                *pid = Some(ping_id);
+                                *lps = Some(Instant::now());
+                            }
+                        }
+                    }
+
+                    // Pong timeout timer - detect dead connection
+                    _ = tokio::time::sleep(pong_timeout_remaining), if heartbeat_enabled && has_pending_ping => {
+                        eprintln!("DEBUG: Heartbeat timeout - connection presumed dead");
+                        handle_connection_lost(
+                            &mut backend,
+                            &connection_state,
+                            &connection_manager,
+                        );
                     }
                 }
             }
@@ -359,6 +454,8 @@ fn init_backend(daemon_dir: &Path, config: &Config) -> Result<SyncBackend<WebSoc
                 max_retries: remote.reconnect_max_retries,
                 max_delay_secs: remote.reconnect_max_delay_secs,
                 initial_delay_ms: 100,
+                heartbeat_interval_ms: remote.heartbeat_interval_ms,
+                heartbeat_timeout_ms: remote.heartbeat_timeout_ms,
             };
 
             let db_path = get_db_path(daemon_dir, config);
@@ -371,6 +468,8 @@ fn init_backend(daemon_dir: &Path, config: &Config) -> Result<SyncBackend<WebSoc
                 queue_path,
                 db_path,
                 oplog_path,
+                pending_ping_id: None,
+                last_ping_sent: None,
             })
         }
     }
@@ -990,6 +1089,29 @@ fn git_rev_parse(worktree_path: &std::path::Path, refspec: &str) -> Result<Strin
         Ok(String::from_utf8_lossy(&output.stdout).trim().to_string())
     } else {
         Err(Error::Config(format!("git rev-parse {} failed", refspec)))
+    }
+}
+
+/// Handle connection lost: clear client, clear heartbeat state, set disconnected, spawn reconnect.
+fn handle_connection_lost<T: Transport>(
+    backend: &mut SyncBackend<T>,
+    connection_state: &Arc<SharedConnectionState>,
+    connection_manager: &Option<ConnectionManager>,
+) {
+    if let SyncBackend::WebSocket {
+        client,
+        pending_ping_id,
+        last_ping_sent,
+        ..
+    } = backend
+    {
+        *client = None;
+        *pending_ping_id = None;
+        *last_ping_sent = None;
+    }
+    connection_state.set(super::connection::STATE_DISCONNECTED);
+    if let Some(ref manager) = connection_manager {
+        manager.spawn_connect_task();
     }
 }
 

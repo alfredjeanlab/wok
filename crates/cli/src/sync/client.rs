@@ -29,6 +29,10 @@ pub struct SyncConfig {
     pub max_delay_secs: u64,
     /// Initial delay for exponential backoff (milliseconds).
     pub initial_delay_ms: u64,
+    /// Heartbeat ping interval in milliseconds. 0 = disabled.
+    pub heartbeat_interval_ms: u64,
+    /// Max time to wait for pong response in milliseconds.
+    pub heartbeat_timeout_ms: u64,
 }
 
 impl Default for SyncConfig {
@@ -38,6 +42,8 @@ impl Default for SyncConfig {
             max_retries: 10,
             max_delay_secs: 30,
             initial_delay_ms: 100,
+            heartbeat_interval_ms: 30_000,
+            heartbeat_timeout_ms: 10_000,
         }
     }
 }

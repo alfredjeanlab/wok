@@ -123,6 +123,8 @@ fn test_remote_mode() {
             worktree: None,
             reconnect_max_retries: 10,
             reconnect_max_delay_secs: 30,
+            heartbeat_interval_ms: 30_000,
+            heartbeat_timeout_ms: 10_000,
         }),
     };
     assert!(config.is_remote_mode());
@@ -179,6 +181,8 @@ fn test_save_and_load_remote_config() {
         worktree: None,
         reconnect_max_retries: 15,
         reconnect_max_delay_secs: 45,
+        heartbeat_interval_ms: 30_000,
+        heartbeat_timeout_ms: 10_000,
     });
     config.save(&work_dir).unwrap();
 
@@ -404,6 +408,8 @@ fn test_remote_config_validate_url_websocket() {
         worktree: None,
         reconnect_max_retries: 10,
         reconnect_max_delay_secs: 30,
+        heartbeat_interval_ms: 30_000,
+        heartbeat_timeout_ms: 10_000,
     };
     assert!(config.validate_url().is_none());
 
@@ -413,6 +419,8 @@ fn test_remote_config_validate_url_websocket() {
         worktree: None,
         reconnect_max_retries: 10,
         reconnect_max_delay_secs: 30,
+        heartbeat_interval_ms: 30_000,
+        heartbeat_timeout_ms: 10_000,
     };
     assert!(config.validate_url().is_none());
 }
@@ -425,6 +433,8 @@ fn test_remote_config_validate_url_git_same_repo() {
         worktree: None,
         reconnect_max_retries: 10,
         reconnect_max_delay_secs: 30,
+        heartbeat_interval_ms: 30_000,
+        heartbeat_timeout_ms: 10_000,
     };
     assert!(config.validate_url().is_none());
 
@@ -434,6 +444,8 @@ fn test_remote_config_validate_url_git_same_repo() {
         worktree: None,
         reconnect_max_retries: 10,
         reconnect_max_delay_secs: 30,
+        heartbeat_interval_ms: 30_000,
+        heartbeat_timeout_ms: 10_000,
     };
     assert!(config.validate_url().is_none());
 }
@@ -447,6 +459,8 @@ fn test_remote_config_validate_url_git_separate_repo() {
         worktree: None,
         reconnect_max_retries: 10,
         reconnect_max_delay_secs: 30,
+        heartbeat_interval_ms: 30_000,
+        heartbeat_timeout_ms: 10_000,
     };
     assert!(config.validate_url().is_none());
 
@@ -457,6 +471,8 @@ fn test_remote_config_validate_url_git_separate_repo() {
         worktree: None,
         reconnect_max_retries: 10,
         reconnect_max_delay_secs: 30,
+        heartbeat_interval_ms: 30_000,
+        heartbeat_timeout_ms: 10_000,
     };
     assert!(config.validate_url().is_none());
 }
@@ -469,6 +485,8 @@ fn test_remote_config_validate_url_bare_ssh() {
         worktree: None,
         reconnect_max_retries: 10,
         reconnect_max_delay_secs: 30,
+        heartbeat_interval_ms: 30_000,
+        heartbeat_timeout_ms: 10_000,
     };
     assert!(config.validate_url().is_none());
 
@@ -478,6 +496,8 @@ fn test_remote_config_validate_url_bare_ssh() {
         worktree: None,
         reconnect_max_retries: 10,
         reconnect_max_delay_secs: 30,
+        heartbeat_interval_ms: 30_000,
+        heartbeat_timeout_ms: 10_000,
     };
     assert!(config.validate_url().is_none());
 }
@@ -491,6 +511,8 @@ fn test_remote_config_validate_url_invalid() {
         worktree: None,
         reconnect_max_retries: 10,
         reconnect_max_delay_secs: 30,
+        heartbeat_interval_ms: 30_000,
+        heartbeat_timeout_ms: 10_000,
     };
     let error = config.validate_url();
     assert!(error.is_some());
@@ -503,6 +525,8 @@ fn test_remote_config_validate_url_invalid() {
         worktree: None,
         reconnect_max_retries: 10,
         reconnect_max_delay_secs: 30,
+        heartbeat_interval_ms: 30_000,
+        heartbeat_timeout_ms: 10_000,
     };
     assert!(config.validate_url().is_some());
 
@@ -513,6 +537,8 @@ fn test_remote_config_validate_url_invalid() {
         worktree: None,
         reconnect_max_retries: 10,
         reconnect_max_delay_secs: 30,
+        heartbeat_interval_ms: 30_000,
+        heartbeat_timeout_ms: 10_000,
     };
     let error = config.validate_url();
     assert!(error.is_some());

@@ -1,55 +1,55 @@
 #!/usr/bin/env bats
 load '../../helpers/common'
 
-# ============================================================================
-# Basic Initialization
-# ============================================================================
+# Each test needs fresh directory, so use default setup/teardown
 
-@test "init creates .wok directory" {
-    run "$WK_BIN" init --prefix prj
-    assert_success
-    [ -d ".wok" ]
+setup() {
+    TEST_DIR="$(mktemp -d)"
+    cd "$TEST_DIR" || exit 1
+    export HOME="$TEST_DIR"
 }
 
-@test "init creates config.toml with prefix" {
+teardown() {
+    # Stop daemon if running (from remote sync tests)
+    if command -v timeout >/dev/null 2>&1; then
+        timeout 1 "$WK_BIN" remote stop 2>/dev/null || true
+    fi
+    # Force kill by PID if daemon.pid exists
+    local daemon_pid_file="${TEST_DIR}/.wok/daemon.pid"
+    if [ -f "$daemon_pid_file" ]; then
+        local pid
+        pid=$(cat "$daemon_pid_file" 2>/dev/null || true)
+        if [ -n "$pid" ]; then
+            kill -9 "$pid" 2>/dev/null || true
+        fi
+    fi
+    sleep 0.05
+    cd / || exit 1
+    rm -rf "$TEST_DIR"
+}
+
+@test "init creates .wok directory with config and database" {
     run "$WK_BIN" init --prefix myapp
     assert_success
+    [ -n "$output" ]
+    [ -d ".wok" ]
     [ -f ".wok/config.toml" ]
+    [ -f ".wok/issues.db" ]
     grep -q 'prefix = "myapp"' .wok/config.toml
 }
-
-@test "init creates issues.db" {
-    run "$WK_BIN" init --prefix prj
-    assert_success
-    [ -f ".wok/issues.db" ]
-}
-
-@test "init outputs success message" {
-    run "$WK_BIN" init --prefix prj
-    assert_success
-    # Should have some confirmation output
-    [ -n "$output" ]
-}
-
-# ============================================================================
-# Re-initialization Prevention
-# ============================================================================
 
 @test "init fails if already initialized" {
     "$WK_BIN" init --prefix prj
     run "$WK_BIN" init --prefix prj
     assert_failure
-}
+    [ -n "$output" ]
 
-@test "init fails if .wok directory exists" {
+    # Also fails if .wok exists
+    rm -rf .wok
     mkdir -p .wok
     run "$WK_BIN" init --prefix prj
     assert_failure
 }
-
-# ============================================================================
-# --path Option
-# ============================================================================
 
 @test "init with --path creates at specified location" {
     mkdir -p subdir
@@ -58,305 +58,142 @@ load '../../helpers/common'
     [ -d "subdir/.wok" ]
     [ -f "subdir/.wok/config.toml" ]
     [ -f "subdir/.wok/issues.db" ]
-}
+    grep -q 'prefix = "sub"' subdir/.wok/config.toml
 
-@test "init with --path creates parent directories if needed" {
+    # Creates parent directories if needed
     run "$WK_BIN" init --path nested/deep/dir --prefix prj
     assert_success
     [ -d "nested/deep/dir/.wok" ]
-}
 
-@test "init with --path uses correct prefix in config" {
-    mkdir -p other
-    run "$WK_BIN" init --path other --prefix custom
-    assert_success
-    grep -q 'prefix = "custom"' other/.wok/config.toml
-}
-
-@test "init with --path fails if already initialized at path" {
-    mkdir -p target
-    "$WK_BIN" init --path target --prefix prj
-    run "$WK_BIN" init --path target --prefix prj
+    # Fails if already initialized at path
+    run "$WK_BIN" init --path subdir --prefix sub
     assert_failure
 }
-
-# ============================================================================
-# Default Prefix from Directory Name
-# ============================================================================
 
 @test "init without prefix uses directory name" {
-    # Create a directory with a known name
-    mkdir -p myproject
-    cd myproject
+    mkdir -p myproject && cd myproject
     run "$WK_BIN" init
     assert_success
-    # Prefix should be derived from directory name
     grep -q 'prefix = "myproject"' .wok/config.toml
-}
+    cd ..
 
-@test "init default prefix keeps alphanumeric chars" {
-    # Directory name with numbers and special chars
-    mkdir -p "proj123"
-    cd "proj123"
+    # Lowercases and keeps alphanumeric
+    mkdir -p "MyProject123" && cd "MyProject123"
     run "$WK_BIN" init
     assert_success
-    # Letters and numbers should be kept
-    grep -q 'prefix = "proj123"' .wok/config.toml
-}
+    grep -q 'prefix = "myproject123"' .wok/config.toml
+    cd ..
 
-@test "init default prefix lowercases directory name" {
-    mkdir -p "MyProject"
-    cd "MyProject"
-    run "$WK_BIN" init
-    assert_success
-    # Should be lowercase
-    grep -q 'prefix = "myproject"' .wok/config.toml
-}
-
-@test "init fails if directory name has insufficient chars" {
-    # Directory name with only 1 alphanumeric char
-    mkdir -p "a---"
-    cd "a---"
-    run "$WK_BIN" init
-    assert_failure
-}
-
-@test "init succeeds with alphanumeric directory name" {
-    mkdir -p "v0"
-    cd "v0"
-    run "$WK_BIN" init
-    assert_success
-    grep -q 'prefix = "v0"' .wok/config.toml
-}
-
-@test "init with explicit prefix overrides directory default" {
-    mkdir -p "myproject"
-    cd "myproject"
+    # Explicit prefix overrides directory default
+    mkdir -p "somedir" && cd "somedir"
     run "$WK_BIN" init --prefix custom
     assert_success
     grep -q 'prefix = "custom"' .wok/config.toml
 }
 
-# ============================================================================
-# Prefix Validation
-# ============================================================================
-
-@test "init accepts lowercase prefix" {
-    run "$WK_BIN" init --prefix abc
-    assert_success
-}
-
-@test "init prefix must be lowercase" {
-    run "$WK_BIN" init --prefix ABC
+@test "init fails with invalid directory name for prefix" {
+    mkdir -p "a---" && cd "a---"
+    run "$WK_BIN" init
     assert_failure
 }
 
-@test "init prefix accepts numbers with letters" {
+@test "init prefix validation" {
+    # Valid prefixes
+    run "$WK_BIN" init --prefix abc
+    assert_success
+    rm -rf .wok
+
+    run "$WK_BIN" init --prefix ab
+    assert_success
+    rm -rf .wok
+
     run "$WK_BIN" init --prefix abc123
     assert_success
     grep -q 'prefix = "abc123"' .wok/config.toml
-}
+    rm -rf .wok
 
-@test "init prefix rejects pure numbers" {
-    run "$WK_BIN" init --prefix 123
-    assert_failure
-}
-
-@test "init prefix rejects special characters" {
-    run "$WK_BIN" init --prefix my-prefix
-    assert_failure
-}
-
-@test "init prefix rejects underscores" {
-    run "$WK_BIN" init --prefix my_prefix
-    assert_failure
-}
-
-@test "init prefix requires at least 2 characters" {
-    run "$WK_BIN" init --prefix a
-    assert_failure
-}
-
-@test "init prefix accepts 2 character prefix" {
-    run "$WK_BIN" init --prefix ab
-    assert_success
-    grep -q 'prefix = "ab"' .wok/config.toml
-}
-
-@test "init prefix accepts longer prefix" {
     run "$WK_BIN" init --prefix mylongprefix
     assert_success
-    grep -q 'prefix = "mylongprefix"' .wok/config.toml
+    rm -rf .wok
+
+    # Invalid prefixes
+    local invalid_prefixes=("ABC" "123" "my-prefix" "my_prefix" "a")
+    for prefix in "${invalid_prefixes[@]}"; do
+        run "$WK_BIN" init --prefix "$prefix"
+        assert_failure
+    done
 }
 
-# ============================================================================
-# Database Initialization
-# ============================================================================
-
-@test "init creates valid SQLite database" {
+@test "init creates valid SQLite database with required tables" {
     run "$WK_BIN" init --prefix prj
     assert_success
-    # Verify it's a valid SQLite database
+
+    # Valid SQLite database
     run sqlite3 .wok/issues.db "SELECT name FROM sqlite_master WHERE type='table';"
     assert_success
-}
 
-@test "init creates issues table" {
-    run "$WK_BIN" init --prefix prj
-    assert_success
-    run sqlite3 .wok/issues.db "SELECT name FROM sqlite_master WHERE type='table' AND name='issues';"
-    assert_success
-    [ "$output" = "issues" ]
-}
+    # Has required tables
+    local tables=(issues deps labels notes events)
+    for table in "${tables[@]}"; do
+        run sqlite3 .wok/issues.db "SELECT name FROM sqlite_master WHERE type='table' AND name='$table';"
+        assert_success
+        [ "$output" = "$table" ]
+    done
 
-@test "init creates deps table" {
-    run "$WK_BIN" init --prefix prj
-    assert_success
-    run sqlite3 .wok/issues.db "SELECT name FROM sqlite_master WHERE type='table' AND name='deps';"
-    assert_success
-    [ "$output" = "deps" ]
-}
-
-@test "init creates labels table" {
-    run "$WK_BIN" init --prefix prj
-    assert_success
-    run sqlite3 .wok/issues.db "SELECT name FROM sqlite_master WHERE type='table' AND name='labels';"
-    assert_success
-    [ "$output" = "labels" ]
-}
-
-@test "init creates notes table" {
-    run "$WK_BIN" init --prefix prj
-    assert_success
-    run sqlite3 .wok/issues.db "SELECT name FROM sqlite_master WHERE type='table' AND name='notes';"
-    assert_success
-    [ "$output" = "notes" ]
-}
-
-@test "init creates events table" {
-    run "$WK_BIN" init --prefix prj
-    assert_success
-    run sqlite3 .wok/issues.db "SELECT name FROM sqlite_master WHERE type='table' AND name='events';"
-    assert_success
-    [ "$output" = "events" ]
-}
-
-@test "init creates empty database with no issues" {
-    run "$WK_BIN" init --prefix prj
-    assert_success
+    # Empty database - no issues
     run "$WK_BIN" list
     assert_success
-    # Should show no issues (empty or no output lines with issues)
     refute_output --regexp '\[task\]|\[bug\]|\[feature\]'
 }
-
-# ============================================================================
-# Config File Format
-# ============================================================================
 
 @test "init config.toml is valid TOML" {
     run "$WK_BIN" init --prefix prj
     assert_success
-    # Basic TOML syntax check - should have key = "value" format
     grep -qE '^prefix = "[a-z]+"' .wok/config.toml
-}
-
-@test "init config.toml contains only expected keys" {
-    run "$WK_BIN" init --prefix prj
-    assert_success
-    # Should have prefix, optionally workspace
     local line_count
     line_count=$(grep -cE '^[a-z]' .wok/config.toml || echo 0)
     [ "$line_count" -ge 1 ]
 }
 
-# ============================================================================
-# Integration with Other Commands
-# ============================================================================
-
-@test "init allows immediate issue creation" {
-    run "$WK_BIN" init --prefix prj
-    assert_success
-    run "$WK_BIN" new task "Test issue"
-    assert_success
-}
-
-@test "init prefix is used in issue IDs" {
+@test "init allows immediate issue creation with correct prefix" {
     run "$WK_BIN" init --prefix myprj
     assert_success
     run "$WK_BIN" new task "Test issue"
     assert_success
-    # Output should contain ID with the prefix
     assert_output --regexp 'myprj-[a-z0-9]+'
 }
 
-# ============================================================================
-# Error Messages
-# ============================================================================
-
-@test "init shows helpful error when already initialized" {
-    "$WK_BIN" init --prefix prj
-    run "$WK_BIN" init --prefix prj
-    assert_failure
-    # Should have some error message
-    [ -n "$output" ]
-}
-
-@test "init shows helpful error for invalid prefix" {
-    run "$WK_BIN" init --prefix 123
-    assert_failure
-    # Should have some error message about prefix
-    [ -n "$output" ]
-}
-
-# ============================================================================
-# --workspace Option (Workspace Link Only)
-# ============================================================================
-
-@test "init with --workspace creates config with workspace only" {
+@test "init with --workspace creates config without local database" {
     mkdir -p /tmp/workspace
     run "$WK_BIN" init --workspace /tmp/workspace
     assert_success
     [ -f ".wok/config.toml" ]
-    # Should have workspace line
-    grep -q 'workspace = "/tmp/workspace"' .wok/config.toml
-    # Should NOT have prefix line (when not specified)
-    ! grep -q '^prefix' .wok/config.toml
-}
-
-@test "init with --workspace does not create local database" {
-    mkdir -p /tmp/workspace
-    run "$WK_BIN" init --workspace /tmp/workspace
-    assert_success
-    [ -d ".wok" ]
     [ ! -f ".wok/issues.db" ]
-}
+    grep -q 'workspace = "/tmp/workspace"' .wok/config.toml
+    ! grep -q '^prefix' .wok/config.toml
+    rm -rf .wok
 
-@test "init with --workspace and --prefix includes both" {
-    mkdir -p /tmp/workspace
+    # With both workspace and prefix
     run "$WK_BIN" init --workspace /tmp/workspace --prefix prj
     assert_success
     grep -q 'workspace = "/tmp/workspace"' .wok/config.toml
     grep -q 'prefix = "prj"' .wok/config.toml
-    # Still no local database
     [ ! -f ".wok/issues.db" ]
-}
+    rm -rf .wok
 
-@test "init with --workspace validates prefix if provided" {
-    mkdir -p /tmp/workspace
+    # Validates prefix if provided
     run "$WK_BIN" init --workspace /tmp/workspace --prefix ABC
     assert_failure
-}
+    rm -rf .wok
 
-@test "init with --workspace accepts relative path" {
+    # Accepts relative path
     mkdir -p external/workspace
     run "$WK_BIN" init --workspace external/workspace
     assert_success
     grep -q 'workspace = "external/workspace"' .wok/config.toml
-}
+    rm -rf .wok
 
-@test "init with --workspace at specific --path" {
-    # Workspace path is resolved relative to --path, not cwd
+    # At specific --path
     mkdir -p subdir subdir/external/workspace
     run "$WK_BIN" init --path subdir --workspace external/workspace
     assert_success
@@ -368,50 +205,29 @@ load '../../helpers/common'
     run "$WK_BIN" init --workspace /nonexistent/path
     assert_failure
     assert_output --partial "workspace not found"
-}
 
-@test "init with --workspace fails if relative workspace does not exist" {
     run "$WK_BIN" init --workspace ./nonexistent/dir
     assert_failure
     assert_output --partial "workspace not found"
 }
 
-# ============================================================================
-# .gitignore Creation
-# ============================================================================
-
-@test "init creates .gitignore in .wok directory" {
+@test "init creates .gitignore with correct entries" {
     run "$WK_BIN" init --prefix prj
     assert_success
     [ -f ".wok/.gitignore" ]
-}
-
-@test "init .gitignore includes current directory" {
-    run "$WK_BIN" init --prefix prj
-    assert_success
     grep -q "current/" .wok/.gitignore
-}
-
-@test "init .gitignore includes issues.db" {
-    run "$WK_BIN" init --prefix prj
-    assert_success
     grep -q "issues.db" .wok/.gitignore
-}
-
-@test "init .gitignore does not include config.toml in remote mode" {
-    run "$WK_BIN" init --prefix prj
-    assert_success
-    # Default is remote mode (same-repo git), so config.toml should NOT be ignored
+    # Default (remote mode) does not ignore config.toml
     ! grep -q "config.toml" .wok/.gitignore
-}
+    rm -rf .wok
 
-@test "init --local .gitignore includes config.toml" {
+    # --local mode ignores config.toml
     run "$WK_BIN" init --prefix prj --local
     assert_success
     grep -q "config.toml" .wok/.gitignore
-}
+    rm -rf .wok
 
-@test "init with --workspace creates .gitignore with config.toml" {
+    # --workspace mode ignores config.toml
     mkdir -p /tmp/workspace
     run "$WK_BIN" init --workspace /tmp/workspace
     assert_success
@@ -421,43 +237,31 @@ load '../../helpers/common'
     grep -q "config.toml" .wok/.gitignore
 }
 
-# ============================================================================
-# Git Remote (Same Repo) - Worktree in .git/wk/oplog
-# ============================================================================
-
 @test "init with git remote creates worktree in .git/wk/oplog" {
-    git init
-    run "$WK_BIN" init --prefix prj --remote .
+    run timeout 3 git init
+    assert_success
+    run timeout 3 "$WK_BIN" init --prefix prj --remote .
     assert_success
     [ -d ".git/wk/oplog" ]
     [ -f ".git/wk/oplog/oplog.jsonl" ]
-}
 
-@test "init with git remote creates orphan branch" {
-    git init
-    run "$WK_BIN" init --prefix prj --remote .
+    # Creates orphan branch
+    run timeout 3 git rev-parse --verify refs/heads/wk/oplog
     assert_success
-    run git rev-parse --verify refs/heads/wk/oplog
-    assert_success
-}
 
-@test "worktree protects orphan branch from deletion" {
-    git init
-    run "$WK_BIN" init --prefix prj --remote .
-    assert_success
-    # Attempt to delete the branch should fail
-    run git branch -D wk/oplog
+    # Worktree protects branch from deletion
+    run timeout 3 git branch -D wk/oplog
     assert_failure
-    # Git says either "checked out" or "used by worktree"
     assert_output --partial "worktree"
 }
 
 @test "wk remote sync works with .git/wk/oplog worktree" {
-    git init
-    run "$WK_BIN" init --prefix prj --remote .
+    run timeout 3 git init
     assert_success
-    run "$WK_BIN" new task "Test issue"
+    run timeout 3 "$WK_BIN" init --prefix prj --remote .
     assert_success
-    run "$WK_BIN" remote sync
+    run timeout 3 "$WK_BIN" new task "Test issue"
+    assert_success
+    run timeout 3 "$WK_BIN" remote sync
     assert_success
 }

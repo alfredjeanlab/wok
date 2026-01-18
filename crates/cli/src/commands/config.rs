@@ -95,6 +95,8 @@ fn setup_remote(work_dir: &Path, repo_path: &Path, remote_url: &str) -> Result<(
         worktree: None,
         reconnect_max_retries: 10,
         reconnect_max_delay_secs: 30,
+        heartbeat_interval_ms: 30_000,
+        heartbeat_timeout_ms: 10_000,
     };
 
     let mut config = Config::load(work_dir)?;

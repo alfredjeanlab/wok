@@ -2,12 +2,25 @@
 load '../helpers/remote_common'
 
 # ============================================================================
+# Helper Functions
+# ============================================================================
+
+# Configure fast heartbeat for testing (100ms interval, 100ms timeout = ~200ms detection)
+# Must be called after init_remote_project to append to the [remote] section
+configure_fast_heartbeat() {
+    # Append to existing [remote] section
+    echo 'heartbeat_interval_ms = 100' >> .wok/config.toml
+    echo 'heartbeat_timeout_ms = 100' >> .wok/config.toml
+}
+
+# ============================================================================
 # Reconnection Behavior
 # ============================================================================
 
 @test "daemon reconnects after server restart" {
     start_server
     init_remote_project
+    configure_fast_heartbeat
 
     # Connect
     run "$WK_BIN" remote sync
@@ -43,6 +56,7 @@ load '../helpers/remote_common'
 @test "daemon status shows disconnected when server down" {
     start_server
     init_remote_project
+    configure_fast_heartbeat
 
     # Connect
     run "$WK_BIN" remote sync

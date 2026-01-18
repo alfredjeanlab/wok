@@ -260,6 +260,8 @@ async fn test_sync_client_with_real_transport() {
         max_retries: 3,
         max_delay_secs: 1,
         initial_delay_ms: 100,
+        heartbeat_interval_ms: 0,
+        heartbeat_timeout_ms: 0,
     };
     let transport = WebSocketTransport::new();
     let mut client = SyncClient::with_transport(config, transport, &queue_path).unwrap();
