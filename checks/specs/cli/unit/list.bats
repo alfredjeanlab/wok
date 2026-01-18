@@ -1,19 +1,6 @@
 #!/usr/bin/env bats
 load '../../helpers/common'
 
-setup_file() {
-    file_setup
-    init_project_once test
-}
-
-teardown_file() {
-    file_teardown
-}
-
-setup() {
-    test_setup
-}
-
 @test "list shows issues with status filtering" {
     # Empty database
     run "$WK_BIN" list

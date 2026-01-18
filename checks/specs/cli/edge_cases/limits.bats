@@ -1,19 +1,6 @@
 #!/usr/bin/env bats
 load '../../helpers/common'
 
-setup_file() {
-    file_setup
-    init_project_once test
-}
-
-teardown_file() {
-    file_teardown
-}
-
-setup() {
-    test_setup
-}
-
 # Input limit tests based on REQUIREMENTS.md:
 # - Issue titles: max 500 characters
 # - Note content: max 10,000 characters

@@ -1,19 +1,6 @@
 #!/usr/bin/env bats
 load '../../helpers/common'
 
-setup_file() {
-    file_setup
-    init_project_once test
-}
-
-teardown_file() {
-    file_teardown
-}
-
-setup() {
-    test_setup
-}
-
 @test "default list shows all open issues including blocked" {
     t1=$(create_issue task "Ready task")
     t2=$(create_issue task "Blocked task")

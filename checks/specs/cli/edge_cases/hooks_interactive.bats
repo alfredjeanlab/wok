@@ -1,6 +1,7 @@
 #!/usr/bin/env bats
 load '../../helpers/common'
 
+
 # ============================================================================
 # Interactive Mode Edge Cases
 # These tests verify the interactive mode doesn't break non-interactive usage

@@ -1,21 +1,8 @@
 #!/usr/bin/env bats
 load '../../helpers/common'
 
+
 # Tests verifying commands handle empty database gracefully.
-
-setup_file() {
-    file_setup
-    init_project_once test
-}
-
-teardown_file() {
-    file_teardown
-}
-
-setup() {
-    test_setup
-}
-
 @test "read commands succeed on empty database" {
     local commands=(
         "list"

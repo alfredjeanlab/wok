@@ -1,25 +1,12 @@
 #!/usr/bin/env bats
 load '../../helpers/common'
 
+
 # Tests verifying consistent short flags across commands
 # - --type / -t consistency across list, edit, import
 # - --status / -s consistency across list, import
 # - --label / -l consistency across new, list, import
 # - --format / -f consistency across show, import
-
-setup_file() {
-    file_setup
-    init_project_once test
-}
-
-teardown_file() {
-    file_teardown
-}
-
-setup() {
-    test_setup
-}
-
 # --type / -t consistency
 # All commands with --type should also accept -t
 

@@ -1,19 +1,6 @@
 #!/usr/bin/env bats
 load '../../helpers/common'
 
-setup_file() {
-    file_setup
-    init_project_once test
-}
-
-teardown_file() {
-    file_teardown
-}
-
-setup() {
-    test_setup
-}
-
 @test "new creates issues with correct type (default task, feature, bug, chore)" {
     # Default creates task
     run "$WK_BIN" new "NewType My task"

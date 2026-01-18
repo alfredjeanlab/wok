@@ -1,19 +1,6 @@
 #!/usr/bin/env bats
 load '../../helpers/common'
 
-setup_file() {
-    file_setup
-    init_project_once test
-}
-
-teardown_file() {
-    file_teardown
-}
-
-setup() {
-    test_setup
-}
-
 @test "import empty file succeeds" {
     touch empty.jsonl
     run "$WK_BIN" import empty.jsonl

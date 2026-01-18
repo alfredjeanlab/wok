@@ -1,6 +1,7 @@
 #!/usr/bin/env bats
 load '../../helpers/common'
 
+
 # Each test needs fresh directory, so use default setup/teardown
 
 setup() {
@@ -23,7 +24,7 @@ teardown() {
             kill -9 "$pid" 2>/dev/null || true
         fi
     fi
-    sleep 0.05
+    sleep 0.01
     cd / || exit 1
     rm -rf "$TEST_DIR"
 }

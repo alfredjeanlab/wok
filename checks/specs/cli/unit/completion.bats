@@ -1,19 +1,6 @@
 #!/usr/bin/env bats
 load '../../helpers/common'
 
-setup_file() {
-    file_setup
-    init_project_once test
-}
-
-teardown_file() {
-    file_teardown
-}
-
-setup() {
-    test_setup
-}
-
 @test "completion command exists and generates valid bash script" {
     # Command exists
     run "$WK_BIN" completion --help 2>&1 || run "$WK_BIN" help completion 2>&1

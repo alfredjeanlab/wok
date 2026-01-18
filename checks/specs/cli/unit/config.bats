@@ -1,6 +1,7 @@
 #!/usr/bin/env bats
 load '../../helpers/common'
 
+
 setup_file() {
     file_setup
 }

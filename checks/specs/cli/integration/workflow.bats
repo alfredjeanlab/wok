@@ -1,6 +1,18 @@
 #!/usr/bin/env bats
 load '../../helpers/common'
 
+# Per-test isolation - each test calls init_project with different prefixes
+setup() {
+    TEST_DIR="$(mktemp -d)"
+    cd "$TEST_DIR" || exit 1
+    export HOME="$TEST_DIR"
+}
+
+teardown() {
+    cd / || exit 1
+    rm -rf "$TEST_DIR"
+}
+
 # Full workflow test from DESIGN.md section 5 verification plan
 
 @test "complete workflow from DESIGN.md" {

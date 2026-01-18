@@ -1,6 +1,7 @@
 #!/usr/bin/env bats
 load '../../helpers/common'
 
+
 # Help command tests - verifies help output, flags, and structure.
 # NOTE: These tests only check help output and don't need wk init.
 

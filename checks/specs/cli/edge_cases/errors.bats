@@ -1,6 +1,7 @@
 #!/usr/bin/env bats
 load '../../helpers/common'
 
+
 # Error handling tests - uses per-test setup for isolation
 
 setup() {

@@ -34,32 +34,25 @@ teardown() {
 }
 
 # ============================================================================
-# FILE-LEVEL SETUP/TEARDOWN HELPERS
+# FILE-LEVEL SETUP/TEARDOWN
 # ============================================================================
-# Use these in test files that can share a single `wk init` across all tests.
-# Tests using file-level setup should NOT define their own setup()/teardown().
-#
-# Example usage in a test file:
+# Default setup functions are provided below. Most test files can simply:
 #
 #   load '../helpers/common'
 #
-#   setup_file() {
-#       file_setup           # Creates temp dir, sets HOME
-#       init_project test    # Initialize once for all tests
-#   }
-#
-#   teardown_file() {
-#       file_teardown        # Cleanup temp dir
-#   }
-#
-#   setup() {
-#       test_setup           # Reset to file temp dir before each test
-#   }
-#
 #   @test "my test" {
-#       # No init needed - already done in setup_file
 #       create_issue task "Test"
 #       ...
+#   }
+#
+# The defaults create a temp directory, initialize a project with prefix "test",
+# and clean up after all tests complete.
+#
+# To customize, override setup_file() in your test file:
+#
+#   setup_file() {
+#       file_setup
+#       init_project_once myprefix  # Custom prefix
 #   }
 # ============================================================================
 
@@ -163,4 +156,26 @@ is_blocked() {
 is_ready() {
     local id="$1"
     "$WK_BIN" list 2>/dev/null | grep -q "$id"
+}
+
+# ============================================================================
+# DEFAULT SETUP/TEARDOWN FUNCTIONS
+# ============================================================================
+# These provide sensible defaults so most test files don't need boilerplate.
+# Override in your test file if you need custom behavior.
+
+# Default file-level setup: create temp dir and init project
+setup_file() {
+    file_setup
+    init_project_once test
+}
+
+# Default file-level teardown: cleanup temp dir
+teardown_file() {
+    file_teardown
+}
+
+# Default per-test setup: reset to shared temp dir
+setup() {
+    test_setup
 }

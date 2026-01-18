@@ -1,22 +1,9 @@
 #!/usr/bin/env bats
 load '../../helpers/common'
 
+
 # Tests verifying all documented --flags actually work
 # Based on REQUIREMENTS.md command reference
-
-setup_file() {
-    file_setup
-    init_project_once test
-}
-
-teardown_file() {
-    file_teardown
-}
-
-setup() {
-    test_setup
-}
-
 @test "init flags: --prefix and --path" {
     local tmpdir
     tmpdir="$(mktemp -d)"

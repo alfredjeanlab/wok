@@ -1,6 +1,7 @@
 #!/usr/bin/env bats
 load '../../helpers/common'
 
+
 setup() {
     TEST_DIR="$(mktemp -d)"
     cd "$TEST_DIR" || exit 1

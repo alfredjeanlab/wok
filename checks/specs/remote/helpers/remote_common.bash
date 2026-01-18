@@ -11,7 +11,7 @@ PORT_RANGE_START=17800
 PORT_RANGE_END=18999
 
 # Polling interval for wait functions (milliseconds)
-POLL_INTERVAL_MS=50
+POLL_INTERVAL_MS=10
 
 # ============================================================================
 # PORT MANAGEMENT
@@ -42,7 +42,7 @@ wait_port_released() {
         if ! nc -z 127.0.0.1 "$port" 2>/dev/null; then
             return 0
         fi
-        sleep 0.05
+        sleep 0.01
         ((attempt++))
     done
 
@@ -89,7 +89,7 @@ wait_server_ready() {
         if nc -z 127.0.0.1 "$port" 2>/dev/null; then
             return 0
         fi
-        sleep 0.05
+        sleep 0.01
         ((attempt++))
     done
 
@@ -185,7 +185,7 @@ wait_daemon_connected() {
         if echo "$output" | grep -q "connected"; then
             return 0
         fi
-        sleep 0.05
+        sleep 0.01
         ((attempt++))
     done
 
@@ -206,7 +206,7 @@ wait_daemon_disconnected() {
         if echo "$output" | grep -qE "disconnected|offline|not running"; then
             return 0
         fi
-        sleep 0.05
+        sleep 0.01
         ((attempt++))
     done
 
@@ -258,7 +258,7 @@ wait_synced() {
         if [ "${pending:-1}" = "0" ]; then
             return 0
         fi
-        sleep 0.05
+        sleep 0.01
         ((attempt++))
     done
 
@@ -306,7 +306,7 @@ teardown_remote() {
     fi
 
     # Brief wait for process to exit
-    sleep 0.05
+    sleep 0.01
 
     # Cleanup test directory
     cd / || exit 1
@@ -330,7 +330,7 @@ wait_for_issue() {
         if "$WK_BIN" list --all 2>/dev/null | grep -q "$title"; then
             return 0
         fi
-        sleep 0.05
+        sleep 0.01
         ((attempt++))
     done
 
@@ -352,7 +352,7 @@ wait_for_status() {
         if [ "$status" = "$expected" ]; then
             return 0
         fi
-        sleep 0.05
+        sleep 0.01
         ((attempt++))
     done
 

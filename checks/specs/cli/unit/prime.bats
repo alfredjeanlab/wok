@@ -1,6 +1,7 @@
 #!/usr/bin/env bats
 load '../../helpers/common'
 
+
 # Prime command tests
 # Prime outputs the onboarding template for context priming
 # Always outputs template regardless of work directory

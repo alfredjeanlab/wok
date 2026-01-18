@@ -1,6 +1,18 @@
 #!/usr/bin/env bats
 load '../../helpers/common'
 
+# Per-test isolation - each test calls init_project
+setup() {
+    TEST_DIR="$(mktemp -d)"
+    cd "$TEST_DIR" || exit 1
+    export HOME="$TEST_DIR"
+}
+
+teardown() {
+    cd / || exit 1
+    rm -rf "$TEST_DIR"
+}
+
 @test "identical titles get unique IDs" {
     init_project
     id1=$(create_issue task "Duplicate title")

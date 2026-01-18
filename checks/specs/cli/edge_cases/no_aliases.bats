@@ -1,21 +1,8 @@
 #!/usr/bin/env bats
 load '../../helpers/common'
 
+
 # Tests verifying only canonical command names work - no aliases or unsupported commands.
-
-setup_file() {
-    file_setup
-    init_project_once test
-}
-
-teardown_file() {
-    file_teardown
-}
-
-setup() {
-    test_setup
-}
-
 @test "common aliases do not exist" {
     local aliases=(
         "create:Test task"    # use: new
