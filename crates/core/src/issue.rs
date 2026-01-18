@@ -334,7 +334,7 @@ impl Event {
 
 /// Relation types for dependencies between issues.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(rename_all = "snake_case")]
+#[serde(rename_all = "kebab-case")]
 pub enum Relation {
     /// The from_id blocks to_id (to_id cannot proceed until from_id is done).
     Blocks,

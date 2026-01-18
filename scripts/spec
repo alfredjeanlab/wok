@@ -12,7 +12,6 @@
 #   --filter <regex>   Filter tests by name
 #   --file <path>      Run specific test file (relative to checks/specs/)
 #   --filter-tags <t>  Filter by bats tags (e.g., todo:implement)
-#   -j, --jobs <n>     Number of parallel jobs (default: 4 if parallel available, else 1)
 #   --timeout <secs>   Test timeout in seconds (default: 5)
 #
 # Examples:
@@ -85,12 +84,6 @@ if [ -z "${WK_REMOTE_BIN:-}" ]; then
     fi
 fi
 
-# Auto-detect parallel jobs
-PARALLEL_JOBS=1
-if command -v parallel &>/dev/null || command -v rush &>/dev/null; then
-    PARALLEL_JOBS=4
-fi
-
 # Default test timeout (seconds) - prevents hung tests from blocking CI
 DEFAULT_TIMEOUT=5
 
@@ -111,10 +104,6 @@ while [ $# -gt 0 ]; do
             ;;
         --file)
             FILE="$2"
-            shift 2
-            ;;
-        -j|--jobs)
-            PARALLEL_JOBS="$2"
             shift 2
             ;;
         --timeout)
@@ -158,10 +147,9 @@ echo "BATS: $BATS"
 echo "BATS_LIB_PATH: $BATS_LIB_PATH"
 echo "WK_BIN: $WK_BIN"
 echo "WK_REMOTE_BIN: $WK_REMOTE_BIN"
-echo "Parallel jobs: $PARALLEL_JOBS"
 echo ""
 
 # Export timeout for bats to enforce
 export BATS_TEST_TIMEOUT="$DEFAULT_TIMEOUT"
 
-exec "$BATS" -j "$PARALLEL_JOBS" --recursive --timing "${BATS_ARGS[@]+"${BATS_ARGS[@]}"}" "${TARGETS[@]}"
+exec "$BATS" --recursive --timing "${BATS_ARGS[@]+"${BATS_ARGS[@]}"}" "${TARGETS[@]}"

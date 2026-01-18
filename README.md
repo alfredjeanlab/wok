@@ -71,7 +71,6 @@ Install required tools (macOS):
 ```bash
 curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 brew install bats      # BATS test framework
-brew install parallel  # GNU Parallel for parallel test execution
 ```
 
 ### Building and Testing

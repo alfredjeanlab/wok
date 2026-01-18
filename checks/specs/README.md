@@ -6,7 +6,6 @@ A portable test suite that validates the `wk` CLI against REQUIREMENTS.md.
 
 - Bash 4.0+
 - BATS (system-installed or downloaded locally)
-- **Optional:** GNU parallel or [rush](https://github.com/shenwei356/rush) for parallel test execution
 
 ## Setup
 
@@ -42,24 +41,6 @@ make bats-check
 
 # Test with specific binary
 WK_BIN=crates/cli/target/release/wk make spec
-```
-
-## Performance
-
-The test suite uses file-level setup to reduce overhead and supports parallel execution.
-
-| Mode | Time | Notes |
-|------|------|-------|
-| Serial | ~50s | Default without parallel binary |
-| Parallel (4 jobs) | ~15s | Requires GNU parallel or rush |
-
-To install parallel for faster tests:
-```bash
-# macOS
-brew install parallel
-
-# Ubuntu/Debian
-sudo apt install parallel
 ```
 
 ## Test Structure

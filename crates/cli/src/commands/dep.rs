@@ -1,19 +1,34 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Alfred Jean LLC
 
+use std::path::Path;
+
+use wk_core::OpPayload;
+
+use crate::config::{find_work_dir, get_db_path, Config};
 use crate::db::Database;
 use crate::error::Result;
 use crate::models::{Action, Event, Relation, UserRelation};
 
-use super::open_db;
+use super::queue_op;
 
 pub fn add(from_id: &str, rel: &str, to_ids: &[String]) -> Result<()> {
-    let (db, _) = open_db()?;
-    add_impl(&db, from_id, rel, to_ids)
+    let work_dir = find_work_dir()?;
+    let config = Config::load(&work_dir)?;
+    let db_path = get_db_path(&work_dir, &config);
+    let db = Database::open(&db_path)?;
+    add_impl(&db, &config, &work_dir, from_id, rel, to_ids)
 }
 
-/// Internal implementation that accepts db for testing.
-pub(crate) fn add_impl(db: &Database, from_id: &str, rel: &str, to_ids: &[String]) -> Result<()> {
+/// Internal implementation that accepts db/config for testing.
+pub(crate) fn add_impl(
+    db: &Database,
+    config: &Config,
+    work_dir: &Path,
+    from_id: &str,
+    rel: &str,
+    to_ids: &[String],
+) -> Result<()> {
     // Verify source issue exists
     db.get_issue(from_id)?;
 
@@ -31,6 +46,17 @@ pub(crate) fn add_impl(db: &Database, from_id: &str, rel: &str, to_ids: &[String
                     .with_values(None, Some(format!("blocks {}", to_id)));
                 db.log_event(&event)?;
 
+                // Queue AddDep op for sync
+                queue_op(
+                    work_dir,
+                    config,
+                    OpPayload::add_dep(
+                        from_id.to_string(),
+                        to_id.to_string(),
+                        wk_core::issue::Relation::Blocks,
+                    ),
+                )?;
+
                 println!("{} blocks {}", from_id, to_id);
             }
             UserRelation::BlockedBy => {
@@ -40,6 +66,17 @@ pub(crate) fn add_impl(db: &Database, from_id: &str, rel: &str, to_ids: &[String
                 let event = Event::new(from_id.to_string(), Action::Related)
                     .with_values(None, Some(format!("blocked by {}", to_id)));
                 db.log_event(&event)?;
+
+                // Queue AddDep op for sync (reversed direction)
+                queue_op(
+                    work_dir,
+                    config,
+                    OpPayload::add_dep(
+                        to_id.to_string(),
+                        from_id.to_string(),
+                        wk_core::issue::Relation::Blocks,
+                    ),
+                )?;
 
                 println!("{} blocked by {}", from_id, to_id);
             }
@@ -54,6 +91,26 @@ pub(crate) fn add_impl(db: &Database, from_id: &str, rel: &str, to_ids: &[String
                     .with_values(None, Some(format!("tracks {}", to_id)));
                 db.log_event(&event)?;
 
+                // Queue AddDep ops for sync (bidirectional)
+                queue_op(
+                    work_dir,
+                    config,
+                    OpPayload::add_dep(
+                        from_id.to_string(),
+                        to_id.to_string(),
+                        wk_core::issue::Relation::Tracks,
+                    ),
+                )?;
+                queue_op(
+                    work_dir,
+                    config,
+                    OpPayload::add_dep(
+                        to_id.to_string(),
+                        from_id.to_string(),
+                        wk_core::issue::Relation::TrackedBy,
+                    ),
+                )?;
+
                 println!("{} tracks {}", from_id, to_id);
             }
             UserRelation::TrackedBy => {
@@ -65,6 +122,26 @@ pub(crate) fn add_impl(db: &Database, from_id: &str, rel: &str, to_ids: &[String
                     .with_values(None, Some(format!("tracked by {}", to_id)));
                 db.log_event(&event)?;
 
+                // Queue AddDep ops for sync (bidirectional, reversed)
+                queue_op(
+                    work_dir,
+                    config,
+                    OpPayload::add_dep(
+                        to_id.to_string(),
+                        from_id.to_string(),
+                        wk_core::issue::Relation::Tracks,
+                    ),
+                )?;
+                queue_op(
+                    work_dir,
+                    config,
+                    OpPayload::add_dep(
+                        from_id.to_string(),
+                        to_id.to_string(),
+                        wk_core::issue::Relation::TrackedBy,
+                    ),
+                )?;
+
                 println!("{} tracked by {}", from_id, to_id);
             }
         }
@@ -74,13 +151,18 @@ pub(crate) fn add_impl(db: &Database, from_id: &str, rel: &str, to_ids: &[String
 }
 
 pub fn remove(from_id: &str, rel: &str, to_ids: &[String]) -> Result<()> {
-    let (db, _) = open_db()?;
-    remove_impl(&db, from_id, rel, to_ids)
+    let work_dir = find_work_dir()?;
+    let config = Config::load(&work_dir)?;
+    let db_path = get_db_path(&work_dir, &config);
+    let db = Database::open(&db_path)?;
+    remove_impl(&db, &config, &work_dir, from_id, rel, to_ids)
 }
 
-/// Internal implementation that accepts db for testing.
+/// Internal implementation that accepts db/config for testing.
 pub(crate) fn remove_impl(
     db: &Database,
+    config: &Config,
+    work_dir: &Path,
     from_id: &str,
     rel: &str,
     to_ids: &[String],
@@ -96,6 +178,17 @@ pub(crate) fn remove_impl(
                     .with_values(None, Some(format!("blocks {}", to_id)));
                 db.log_event(&event)?;
 
+                // Queue RemoveDep op for sync
+                queue_op(
+                    work_dir,
+                    config,
+                    OpPayload::remove_dep(
+                        from_id.to_string(),
+                        to_id.to_string(),
+                        wk_core::issue::Relation::Blocks,
+                    ),
+                )?;
+
                 println!("Removed: {} blocks {}", from_id, to_id);
             }
             UserRelation::BlockedBy => {
@@ -105,6 +198,17 @@ pub(crate) fn remove_impl(
                 let event = Event::new(from_id.to_string(), Action::Unrelated)
                     .with_values(None, Some(format!("blocked by {}", to_id)));
                 db.log_event(&event)?;
+
+                // Queue RemoveDep op for sync (reversed direction)
+                queue_op(
+                    work_dir,
+                    config,
+                    OpPayload::remove_dep(
+                        to_id.to_string(),
+                        from_id.to_string(),
+                        wk_core::issue::Relation::Blocks,
+                    ),
+                )?;
 
                 println!("Removed: {} blocked by {}", from_id, to_id);
             }
@@ -116,6 +220,26 @@ pub(crate) fn remove_impl(
                     .with_values(None, Some(format!("tracks {}", to_id)));
                 db.log_event(&event)?;
 
+                // Queue RemoveDep ops for sync (bidirectional)
+                queue_op(
+                    work_dir,
+                    config,
+                    OpPayload::remove_dep(
+                        from_id.to_string(),
+                        to_id.to_string(),
+                        wk_core::issue::Relation::Tracks,
+                    ),
+                )?;
+                queue_op(
+                    work_dir,
+                    config,
+                    OpPayload::remove_dep(
+                        to_id.to_string(),
+                        from_id.to_string(),
+                        wk_core::issue::Relation::TrackedBy,
+                    ),
+                )?;
+
                 println!("Removed: {} tracks {}", from_id, to_id);
             }
             UserRelation::TrackedBy => {
@@ -126,6 +250,26 @@ pub(crate) fn remove_impl(
                 let event = Event::new(from_id.to_string(), Action::Unrelated)
                     .with_values(None, Some(format!("tracked by {}", to_id)));
                 db.log_event(&event)?;
+
+                // Queue RemoveDep ops for sync (bidirectional, reversed)
+                queue_op(
+                    work_dir,
+                    config,
+                    OpPayload::remove_dep(
+                        to_id.to_string(),
+                        from_id.to_string(),
+                        wk_core::issue::Relation::Tracks,
+                    ),
+                )?;
+                queue_op(
+                    work_dir,
+                    config,
+                    OpPayload::remove_dep(
+                        from_id.to_string(),
+                        to_id.to_string(),
+                        wk_core::issue::Relation::TrackedBy,
+                    ),
+                )?;
 
                 println!("Removed: {} tracked by {}", from_id, to_id);
             }

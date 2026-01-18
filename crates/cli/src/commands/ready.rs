@@ -115,9 +115,8 @@ pub(crate) fn run_impl(
     format: OutputFormat,
 ) -> Result<()> {
     // Parse filter groups
-    let type_groups = parse_filter_groups(&issue_type, |s| {
-        s.parse::<IssueType>().map_err(Into::into)
-    })?;
+    let type_groups =
+        parse_filter_groups(&issue_type, |s| s.parse::<IssueType>().map_err(Into::into))?;
     let label_groups = parse_filter_groups(&label, |s| Ok(s.to_string()))?;
 
     // Ready = unblocked todo items only

@@ -142,6 +142,13 @@ impl<T: Transport> SyncClient<T> {
         self.last_hlc
     }
 
+    /// Set the last known HLC directly.
+    ///
+    /// Used when initializing from persisted state or processing snapshots.
+    pub fn set_last_hlc(&mut self, hlc: Hlc) {
+        self.last_hlc = Some(hlc);
+    }
+
     /// Update last HLC if the given HLC is greater.
     fn update_last_hlc(&mut self, hlc: Hlc) {
         if let Some(ref mut last) = self.last_hlc {

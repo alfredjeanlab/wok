@@ -125,7 +125,9 @@ impl From<wk_core::Error> for Error {
             wk_core::Error::InvalidIssueType(s) => Error::InvalidIssueType(s),
             wk_core::Error::InvalidStatus(s) => Error::InvalidStatus(s),
             wk_core::Error::InvalidRelation(s) => Error::InvalidRelation(s),
-            wk_core::Error::InvalidAction(s) => Error::InvalidInput(format!("invalid action: {}", s)),
+            wk_core::Error::InvalidAction(s) => {
+                Error::InvalidInput(format!("invalid action: {}", s))
+            }
             wk_core::Error::InvalidInput(s) => Error::InvalidInput(s),
             wk_core::Error::Database(e) => Error::Database(e),
             wk_core::Error::Io(e) => Error::Io(e),

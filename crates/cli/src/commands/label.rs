@@ -1,30 +1,50 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Alfred Jean LLC
 
+use std::path::Path;
+
+use wk_core::OpPayload;
+
+use crate::config::{find_work_dir, get_db_path, Config};
 use crate::db::Database;
 use crate::error::Result;
 use crate::models::{Action, Event};
 use crate::validate::{validate_label, validate_label_count};
 
-use super::open_db;
+use super::queue_op;
 
 pub fn add(ids: &[String], label: &str) -> Result<()> {
-    let (db, _) = open_db()?;
-    add_impl(&db, ids, label)
+    let work_dir = find_work_dir()?;
+    let config = Config::load(&work_dir)?;
+    let db_path = get_db_path(&work_dir, &config);
+    let db = Database::open(&db_path)?;
+    add_impl(&db, &config, &work_dir, ids, label)
 }
 
-/// Internal implementation that accepts db for testing.
-pub(crate) fn add_impl(db: &Database, ids: &[String], label: &str) -> Result<()> {
+/// Internal implementation that accepts db/config for testing.
+pub(crate) fn add_impl(
+    db: &Database,
+    config: &Config,
+    work_dir: &Path,
+    ids: &[String],
+    label: &str,
+) -> Result<()> {
     // Validate label once (applies to all)
     validate_label(label)?;
 
     for id in ids {
-        add_single(db, id, label)?;
+        add_single(db, config, work_dir, id, label)?;
     }
     Ok(())
 }
 
-fn add_single(db: &Database, id: &str, label: &str) -> Result<()> {
+fn add_single(
+    db: &Database,
+    config: &Config,
+    work_dir: &Path,
+    id: &str,
+    label: &str,
+) -> Result<()> {
     // Verify issue exists
     db.get_issue(id)?;
 
@@ -38,25 +58,47 @@ fn add_single(db: &Database, id: &str, label: &str) -> Result<()> {
         Event::new(id.to_string(), Action::Labeled).with_values(None, Some(label.to_string()));
     db.log_event(&event)?;
 
+    // Queue AddLabel op for sync
+    queue_op(
+        work_dir,
+        config,
+        OpPayload::add_label(id.to_string(), label.to_string()),
+    )?;
+
     println!("Labeled {} with {}", id, label);
 
     Ok(())
 }
 
 pub fn remove(ids: &[String], label: &str) -> Result<()> {
-    let (db, _) = open_db()?;
-    remove_impl(&db, ids, label)
+    let work_dir = find_work_dir()?;
+    let config = Config::load(&work_dir)?;
+    let db_path = get_db_path(&work_dir, &config);
+    let db = Database::open(&db_path)?;
+    remove_impl(&db, &config, &work_dir, ids, label)
 }
 
-/// Internal implementation that accepts db for testing.
-pub(crate) fn remove_impl(db: &Database, ids: &[String], label: &str) -> Result<()> {
+/// Internal implementation that accepts db/config for testing.
+pub(crate) fn remove_impl(
+    db: &Database,
+    config: &Config,
+    work_dir: &Path,
+    ids: &[String],
+    label: &str,
+) -> Result<()> {
     for id in ids {
-        remove_single(db, id, label)?;
+        remove_single(db, config, work_dir, id, label)?;
     }
     Ok(())
 }
 
-fn remove_single(db: &Database, id: &str, label: &str) -> Result<()> {
+fn remove_single(
+    db: &Database,
+    config: &Config,
+    work_dir: &Path,
+    id: &str,
+    label: &str,
+) -> Result<()> {
     // Verify issue exists
     db.get_issue(id)?;
 
@@ -66,6 +108,13 @@ fn remove_single(db: &Database, id: &str, label: &str) -> Result<()> {
         let event = Event::new(id.to_string(), Action::Unlabeled)
             .with_values(None, Some(label.to_string()));
         db.log_event(&event)?;
+
+        // Queue RemoveLabel op for sync
+        queue_op(
+            work_dir,
+            config,
+            OpPayload::remove_label(id.to_string(), label.to_string()),
+        )?;
 
         println!("Removed label {} from {}", label, id);
     } else {

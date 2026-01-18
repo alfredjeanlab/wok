@@ -109,7 +109,7 @@ load '../helpers/remote_common'
     child_id=$(create_issue task "Child task")
 
     # Create dependency
-    run "$WK_BIN" dep "$child_id" --on "$parent_id"
+    run "$WK_BIN" dep "$child_id" tracked-by "$parent_id"
     assert_success
 
     run "$WK_BIN" remote sync

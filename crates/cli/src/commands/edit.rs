@@ -78,7 +78,7 @@ pub(crate) fn run_impl(
                 queue_op(
                     work_dir,
                     config,
-                    OpPayload::set_type(id.to_string(), new_type.into()),
+                    OpPayload::set_type(id.to_string(), new_type),
                 )?;
 
                 println!("Updated type of {} to: {}", id, new_type.as_str());

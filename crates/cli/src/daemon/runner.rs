@@ -20,7 +20,7 @@ use std::time::{Duration, Instant};
 use std::path::PathBuf;
 
 use tokio::net::UnixListener;
-use wk_core::{Database, Hlc, Merge, Op, OpPayload};
+use wk_core::{Database, Hlc, Merge, Op, OpPayload, Oplog};
 
 use crate::config::{get_db_path, Config, RemoteType};
 use crate::error::{Error, Result};
@@ -28,8 +28,8 @@ use crate::sync::{SyncClient, SyncConfig, Transport, WebSocketTransport};
 use crate::wal::Wal;
 use crate::worktree::{self, OplogWorktree};
 
-/// Snapshot data: (issues, tags) received from server
-type SnapshotData = (Vec<wk_core::Issue>, Vec<(String, String)>);
+/// Snapshot data: (issues, tags, since_hlc) received from server
+type SnapshotData = (Vec<wk_core::Issue>, Vec<(String, String)>, Hlc);
 
 use super::ipc::{framing_async, DaemonRequest, DaemonResponse, DaemonStatus};
 use super::lifecycle::{get_lock_path, get_pid_path, get_socket_path};
@@ -49,6 +49,8 @@ enum SyncBackend<T: Transport> {
         client: SyncClient<T>,
         /// Path to the SQLite cache database.
         db_path: PathBuf,
+        /// Path to the client-side oplog for deduplication.
+        oplog_path: PathBuf,
     },
 }
 
@@ -114,6 +116,12 @@ async fn run_daemon_async(daemon_dir: &Path, config: &Config) -> Result<()> {
     let transport = WebSocketTransport::new();
     let mut backend = init_backend(daemon_dir, config, transport)?;
 
+    // Extract client-side oplog path from backend
+    let client_oplog_path = match &backend {
+        SyncBackend::Git { worktree, .. } => worktree.oplog_path.clone(),
+        SyncBackend::WebSocket { oplog_path, .. } => oplog_path.clone(),
+    };
+
     // Daemon state
     let shutdown = Arc::new(AtomicBool::new(false));
     let start_time = Instant::now();
@@ -137,6 +145,7 @@ async fn run_daemon_async(daemon_dir: &Path, config: &Config) -> Result<()> {
             SyncBackend::WebSocket {
                 ref mut client,
                 ref db_path,
+                ..
             } => {
                 let is_connected = client.is_connected();
                 tokio::select! {
@@ -166,7 +175,7 @@ async fn run_daemon_async(daemon_dir: &Path, config: &Config) -> Result<()> {
                     result = async { client.recv().await }, if is_connected => {
                         match result {
                             Ok(Some(msg)) => {
-                                if let Err(e) = handle_server_message(&msg, db_path) {
+                                if let Err(e) = handle_server_message(&msg, db_path, &client_oplog_path) {
                                     eprintln!("Error handling server message: {}", e);
                                 }
                             }
@@ -183,11 +192,11 @@ async fn run_daemon_async(daemon_dir: &Path, config: &Config) -> Result<()> {
 
                     // Reconnection timer (when disconnected)
                     _ = tokio::time::sleep(Duration::from_secs(5)), if !is_connected => {
-                        if let SyncBackend::WebSocket { client, db_path } = &mut backend {
+                        if let SyncBackend::WebSocket { client, db_path, .. } = &mut backend {
                             if client.connect_with_retry().await.is_ok() {
                                 connected = true;
                                 // Sync on connect
-                                if let Err(e) = sync_on_reconnect(client, db_path).await {
+                                if let Err(e) = sync_on_reconnect(client, db_path, &client_oplog_path).await {
                                     eprintln!("Sync on reconnect failed: {}", e);
                                 }
                             }
@@ -267,9 +276,22 @@ fn init_backend<T: Transport>(
                 max_delay_secs: remote.reconnect_max_delay_secs,
                 initial_delay_ms: 100,
             };
-            let client = SyncClient::with_transport(sync_config, transport, &queue_path)?;
+            let mut client = SyncClient::with_transport(sync_config, transport, &queue_path)?;
+
+            // Initialize client's last_hlc from persisted SERVER state
+            // This ensures the client uses the correct baseline for sync requests
+            // We use server_hlc (not last_hlc) to avoid requesting sync based on local ops
+            if let Some(server_hlc) = crate::commands::read_server_hlc(daemon_dir) {
+                client.set_last_hlc(server_hlc);
+            }
+
             let db_path = get_db_path(daemon_dir, config);
-            Ok(SyncBackend::WebSocket { client, db_path })
+            let oplog_path = daemon_dir.join("client_oplog.jsonl");
+            Ok(SyncBackend::WebSocket {
+                client,
+                db_path,
+                oplog_path,
+            })
         }
     }
 }
@@ -326,16 +348,33 @@ async fn handle_ipc_request_async<T: Transport>(
 }
 
 /// Handle a message received from the server.
-fn handle_server_message(msg: &wk_core::protocol::ServerMessage, db_path: &Path) -> Result<()> {
+fn handle_server_message(
+    msg: &wk_core::protocol::ServerMessage,
+    db_path: &Path,
+    oplog_path: &Path,
+) -> Result<()> {
     use wk_core::protocol::ServerMessage;
+
+    let daemon_dir = oplog_path
+        .parent()
+        .ok_or_else(|| Error::Sync("invalid oplog path - no parent directory".to_string()))?;
 
     match msg {
         ServerMessage::Op(op) => {
-            apply_op_to_cache(op, db_path)?;
+            apply_op_to_cache(op, db_path, oplog_path)?;
+            // Persist SERVER HLC for future sync requests
+            let _ = crate::commands::update_server_hlc(daemon_dir, op.id);
+            // Also update local HLC to incorporate received HLC
+            let _ = crate::commands::update_last_hlc(daemon_dir, op.id);
         }
         ServerMessage::SyncResponse { ops } => {
             for op in ops {
-                apply_op_to_cache(op, db_path)?;
+                apply_op_to_cache(op, db_path, oplog_path)?;
+            }
+            // Persist max SERVER HLC from sync response
+            if let Some(max_hlc) = ops.iter().map(|op| op.id).max() {
+                let _ = crate::commands::update_server_hlc(daemon_dir, max_hlc);
+                let _ = crate::commands::update_last_hlc(daemon_dir, max_hlc);
             }
         }
         // Ignore other message types (Pong, Error, SnapshotResponse, etc.)
@@ -346,7 +385,21 @@ fn handle_server_message(msg: &wk_core::protocol::ServerMessage, db_path: &Path)
 }
 
 /// Apply a received operation to the local cache database.
-fn apply_op_to_cache(op: &Op, db_path: &Path) -> Result<()> {
+fn apply_op_to_cache(op: &Op, db_path: &Path, oplog_path: &Path) -> Result<()> {
+    // Load oplog and check for duplicates
+    let mut oplog =
+        Oplog::open(oplog_path).map_err(|e| Error::Sync(format!("failed to open oplog: {}", e)))?;
+
+    let is_new = oplog
+        .append(op)
+        .map_err(|e| Error::Sync(format!("failed to append to oplog: {}", e)))?;
+
+    if !is_new {
+        // Already seen this operation - skip
+        return Ok(());
+    }
+
+    // Apply to database
     let mut db =
         Database::open(db_path).map_err(|e| Error::Sync(format!("failed to open db: {}", e)))?;
     db.apply(op)
@@ -355,7 +408,31 @@ fn apply_op_to_cache(op: &Op, db_path: &Path) -> Result<()> {
 }
 
 /// Perform sync on reconnect: flush queue and request catch-up.
-async fn sync_on_reconnect<T: Transport>(client: &mut SyncClient<T>, db_path: &Path) -> Result<()> {
+async fn sync_on_reconnect<T: Transport>(
+    client: &mut SyncClient<T>,
+    db_path: &Path,
+    oplog_path: &Path,
+) -> Result<()> {
+    // Add pending ops to oplog BEFORE sending (matching sync_websocket behavior)
+    // This ensures we recognize them as duplicates when server broadcasts them back
+    let daemon_dir = oplog_path
+        .parent()
+        .ok_or_else(|| Error::Sync("invalid oplog path - no parent directory".to_string()))?;
+    let queue_path = daemon_dir.join("sync_queue.jsonl");
+
+    if let Ok(queue) = crate::sync::OfflineQueue::open(&queue_path) {
+        if let Ok(pending_ops) = queue.peek_all() {
+            if !pending_ops.is_empty() {
+                if let Ok(mut oplog) = Oplog::open(oplog_path) {
+                    for op in &pending_ops {
+                        // Ignore duplicate status - we just want them in the oplog
+                        let _ = oplog.append(op);
+                    }
+                }
+            }
+        }
+    }
+
     // Flush any queued offline operations
     if let Ok(flushed) = client.flush_queue().await {
         if flushed > 0 {
@@ -369,7 +446,7 @@ async fn sync_on_reconnect<T: Transport>(client: &mut SyncClient<T>, db_path: &P
 
         // Receive and apply sync response
         if let Ok(Some(msg)) = client.recv().await {
-            handle_server_message(&msg, db_path)?;
+            handle_server_message(&msg, db_path, oplog_path)?;
         }
     }
 
@@ -392,17 +469,25 @@ async fn perform_sync_async<T: Transport>(backend: &mut SyncBackend<T>) -> Resul
             wal,
             db_path,
         } => sync_git(worktree, wal, db_path),
-        SyncBackend::WebSocket { client, db_path } => sync_websocket(client, db_path).await,
+        SyncBackend::WebSocket {
+            client,
+            db_path,
+            oplog_path,
+        } => sync_websocket(client, db_path, oplog_path).await,
     }
 }
 
 /// Convert a snapshot issue to synthetic operations for HLC-aware merge.
-fn snapshot_issue_to_ops(issue: &wk_core::Issue) -> Vec<Op> {
+///
+/// Uses a unique index to create distinct HLCs for CreateIssue ops since
+/// the oplog deduplicates by HLC, not by payload.
+fn snapshot_issue_to_ops(issue: &wk_core::Issue, index: u32) -> Vec<Op> {
     let mut ops = Vec::new();
 
-    // CreateIssue with minimal HLC (first-write-wins handles duplicates)
+    // CreateIssue with unique synthetic HLC (using index to differentiate)
+    // The wall_ms=0 ensures these are considered "oldest" and real ops win
     ops.push(Op::new(
-        Hlc::min(),
+        Hlc::new(0, index, 0),
         OpPayload::CreateIssue {
             id: issue.id.clone(),
             issue_type: issue.issue_type,
@@ -448,7 +533,11 @@ fn snapshot_issue_to_ops(issue: &wk_core::Issue) -> Vec<Op> {
 }
 
 /// Perform WebSocket sync: connect if needed, flush queue, request sync.
-async fn sync_websocket<T: Transport>(client: &mut SyncClient<T>, db_path: &Path) -> Result<usize> {
+async fn sync_websocket<T: Transport>(
+    client: &mut SyncClient<T>,
+    db_path: &Path,
+    oplog_path: &Path,
+) -> Result<usize> {
     use wk_core::protocol::ServerMessage;
     use wk_core::Merge;
 
@@ -464,6 +553,33 @@ async fn sync_websocket<T: Transport>(client: &mut SyncClient<T>, db_path: &Path
     // each op sent, so if we check after, new clients would request sync
     // instead of snapshot and miss earlier ops from other clients.
     let sync_since = client.last_hlc();
+
+    // Add queued operations to oplog BEFORE sending (for deduplication when server broadcasts back)
+    // Derive queue path from oplog path (both are in the same daemon directory)
+    let daemon_dir = oplog_path
+        .parent()
+        .ok_or_else(|| Error::Sync("invalid oplog path - no parent directory".to_string()))?;
+    let queue_path = daemon_dir.join("sync_queue.jsonl");
+
+    // Read operations from queue without dequeuing
+    let queue = crate::sync::OfflineQueue::open(&queue_path)
+        .map_err(|e| Error::Sync(format!("failed to open queue: {}", e)))?;
+    let pending_ops = queue
+        .peek_all()
+        .map_err(|e| Error::Sync(format!("failed to read queue: {}", e)))?;
+
+    // Add pending operations to client oplog before sending to server
+    // This ensures that when the server broadcasts them back, we recognize them as duplicates
+    if !pending_ops.is_empty() {
+        let mut oplog = Oplog::open(oplog_path)
+            .map_err(|e| Error::Sync(format!("failed to open oplog for pending ops: {}", e)))?;
+        for op in &pending_ops {
+            // Ignore duplicate status - we just want them in the oplog
+            let _ = oplog
+                .append(op)
+                .map_err(|e| Error::Sync(format!("failed to append pending op to oplog: {}", e)))?;
+        }
+    }
 
     // Flush the offline queue to the server
     let flushed = client
@@ -498,10 +614,14 @@ async fn sync_websocket<T: Transport>(client: &mut SyncClient<T>, db_path: &Path
                     ops_received += ops.len();
                     break;
                 }
-                Ok(Some(ServerMessage::SnapshotResponse { issues, tags, .. })) => {
-                    // Snapshot contains full issues and tags
+                Ok(Some(ServerMessage::SnapshotResponse {
+                    issues,
+                    tags,
+                    since,
+                })) => {
+                    // Snapshot contains full issues, tags, and high-water HLC
                     ops_received += issues.len();
-                    snapshot_data = Some((issues, tags));
+                    snapshot_data = Some((issues, tags, since));
                     break;
                 }
                 Ok(Some(ServerMessage::Op(op))) => {
@@ -528,30 +648,61 @@ async fn sync_websocket<T: Transport>(client: &mut SyncClient<T>, db_path: &Path
 
     // Apply received ops to cache
     if !received_ops.is_empty() {
+        let daemon_dir = oplog_path
+            .parent()
+            .ok_or_else(|| Error::Sync("invalid oplog path - no parent directory".to_string()))?;
+
+        let mut oplog = Oplog::open(oplog_path)
+            .map_err(|e| Error::Sync(format!("failed to open oplog: {}", e)))?;
         let mut db = wk_core::Database::open(db_path)
             .map_err(|e| Error::Sync(format!("failed to open database: {}", e)))?;
 
         received_ops.sort();
-        db.apply_all(&received_ops)
-            .map_err(|e| Error::Sync(format!("failed to apply ops: {}", e)))?;
+        for op in &received_ops {
+            // Only apply if new (not a duplicate)
+            if oplog
+                .append(op)
+                .map_err(|e| Error::Sync(format!("failed to append to oplog: {}", e)))?
+            {
+                db.apply(op)
+                    .map_err(|e| Error::Sync(format!("failed to apply op: {}", e)))?;
+            }
+        }
+
+        // Persist the max HLC from received ops for future sync requests
+        if let Some(max_hlc) = received_ops.iter().map(|op| op.id).max() {
+            let _ = crate::commands::update_server_hlc(daemon_dir, max_hlc);
+            let _ = crate::commands::update_last_hlc(daemon_dir, max_hlc);
+            client.set_last_hlc(max_hlc);
+        }
     }
 
     // Apply snapshot data if received
     // Convert snapshot to ops and apply through Merge trait for HLC resolution
-    if let Some((issues, tags)) = snapshot_data {
+    if let Some((issues, tags, since)) = snapshot_data {
+        let daemon_dir = oplog_path
+            .parent()
+            .ok_or_else(|| Error::Sync("invalid oplog path - no parent directory".to_string()))?;
+
+        let mut oplog = Oplog::open(oplog_path)
+            .map_err(|e| Error::Sync(format!("failed to open oplog: {}", e)))?;
         let mut db = wk_core::Database::open(db_path)
             .map_err(|e| Error::Sync(format!("failed to open database: {}", e)))?;
 
         // Convert snapshot to ops
         let mut all_ops: Vec<Op> = Vec::new();
-        for issue in &issues {
-            all_ops.extend(snapshot_issue_to_ops(issue));
+        for (index, issue) in issues.iter().enumerate() {
+            #[allow(clippy::cast_possible_truncation)]
+            all_ops.extend(snapshot_issue_to_ops(issue, index as u32));
         }
 
-        // Add label ops (idempotent, HLC doesn't matter)
-        for (issue_id, label) in &tags {
+        // Add label ops with unique synthetic HLCs
+        // Start counter after issue ops to avoid collisions
+        let label_offset = issues.len() as u32;
+        for (index, (issue_id, label)) in tags.iter().enumerate() {
+            #[allow(clippy::cast_possible_truncation)]
             all_ops.push(Op::new(
-                Hlc::min(),
+                Hlc::new(0, label_offset + index as u32, 0),
                 OpPayload::AddLabel {
                     issue_id: issue_id.clone(),
                     label: label.clone(),
@@ -559,10 +710,26 @@ async fn sync_websocket<T: Transport>(client: &mut SyncClient<T>, db_path: &Path
             ));
         }
 
-        // Sort and apply through Merge trait
+        // Sort and apply through Merge trait with deduplication
         all_ops.sort();
-        db.apply_all(&all_ops)
-            .map_err(|e| Error::Sync(format!("failed to apply snapshot: {}", e)))?;
+        for op in &all_ops {
+            // Only apply if new (not a duplicate)
+            if oplog
+                .append(op)
+                .map_err(|e| Error::Sync(format!("failed to append to oplog: {}", e)))?
+            {
+                db.apply(op)
+                    .map_err(|e| Error::Sync(format!("failed to apply op: {}", e)))?;
+            }
+        }
+
+        // Persist the snapshot's high-water HLC for future sync requests
+        // This ensures new operations will have timestamps higher than what the server has seen
+        let _ = crate::commands::update_server_hlc(daemon_dir, since);
+        let _ = crate::commands::update_last_hlc(daemon_dir, since);
+
+        // Update client's last_hlc so subsequent sync requests use the correct baseline
+        client.set_last_hlc(since);
     }
 
     Ok(flushed + ops_received)

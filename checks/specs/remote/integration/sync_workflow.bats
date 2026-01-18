@@ -179,7 +179,7 @@ load '../helpers/remote_common'
     feature_id=$(create_issue feature "Parent feature")
     local task1_id
     task1_id=$(create_issue task "Task 1")
-    run "$WK_BIN" dep "$task1_id" --on "$feature_id"
+    run "$WK_BIN" dep "$task1_id" tracked-by "$feature_id"
     assert_success
     run "$WK_BIN" remote sync
     assert_success
@@ -197,7 +197,7 @@ load '../helpers/remote_common'
 
     local task2_id
     task2_id=$(create_issue task "Task 2")
-    run "$WK_BIN" dep "$task2_id" --on "$b_feature"
+    run "$WK_BIN" dep "$task2_id" tracked-by "$b_feature"
     assert_success
     run "$WK_BIN" remote sync
     assert_success
@@ -322,7 +322,7 @@ load '../helpers/remote_common'
     local b_id
     b_id=$("$WK_BIN" list --all 2>/dev/null | grep "Type change test" | grep -oE '[a-z]+-[a-z0-9]+(-[0-9]+)?' | head -1)
 
-    run "$WK_BIN" edit "$b_id" --type bug
+    run "$WK_BIN" edit "$b_id" type bug
     assert_success
     run "$WK_BIN" remote sync
     assert_success
