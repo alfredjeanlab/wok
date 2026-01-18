@@ -32,6 +32,6 @@ jobs:
           git clone --depth 1 https://github.com/bats-core/bats-assert checks/specs/test_helper/bats-assert
 
       - name: Run ${{ matrix.suite }} specs
-        run: make spec-${{ matrix.suite }}
-        env:
-          PATH: ${{ github.workspace }}/target/release:${{ env.PATH }}
+        run: |
+          export PATH="${{ github.workspace }}/target/release:$PATH"
+          make spec-${{ matrix.suite }}
