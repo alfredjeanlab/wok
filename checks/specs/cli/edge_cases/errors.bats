@@ -1,182 +1,144 @@
 #!/usr/bin/env bats
 load '../../helpers/common'
 
-# Commands without initialization
+# Error handling tests - uses per-test setup for isolation
 
-@test "list without init fails with helpful message" {
+setup() {
+    TEST_DIR="$(mktemp -d)"
+    cd "$TEST_DIR" || exit 1
+    export HOME="$TEST_DIR"
+}
+
+teardown() {
+    cd / || exit 1
+    rm -rf "$TEST_DIR"
+}
+
+@test "commands without initialization fail with helpful message" {
+    [ ! -d ".wok" ]
+
     run "$WK_BIN" list
     assert_failure
-    # Should mention init or .wok
-    assert_output --partial "init" || assert_output --partial ".wok" || true
-}
 
-@test "new without init fails" {
     run "$WK_BIN" new "Test"
     assert_failure
-}
 
-@test "show without init fails" {
     run "$WK_BIN" show "test-abc"
     assert_failure
 }
 
-# Invalid issue IDs
-
-@test "show with invalid ID fails" {
+@test "invalid issue IDs fail" {
     init_project
+
     run "$WK_BIN" show "invalid-id-format"
     assert_failure
-}
 
-@test "start with invalid ID fails" {
-    init_project
     run "$WK_BIN" start "not-an-id"
     assert_failure
-}
 
-@test "dep with invalid from-id fails" {
-    init_project
     b=$(create_issue task "Task B")
     run "$WK_BIN" dep "invalid" blocks "$b"
     assert_failure
-}
 
-@test "dep with invalid to-id fails" {
-    init_project
     a=$(create_issue task "Task A")
     run "$WK_BIN" dep "$a" blocks "invalid"
     assert_failure
 }
 
-# Missing required arguments
-
-@test "new without title fails" {
+@test "missing required arguments fail" {
     init_project
+
+    # new without title
     run "$WK_BIN" new
     assert_failure
-}
 
-@test "note without content fails" {
-    init_project
+    # note without content
     id=$(create_issue task "Test")
     run "$WK_BIN" note "$id"
     assert_failure
-}
 
-@test "dep without relationship fails" {
-    init_project
+    # dep without relationship
     a=$(create_issue task "A")
     b=$(create_issue task "B")
     run "$WK_BIN" dep "$a" "$b"
     assert_failure
-}
 
-@test "close without reason fails" {
-    init_project
-    id=$(create_issue task "Test")
-    run "$WK_BIN" close "$id"
+    # close without reason
+    id2=$(create_issue task "Test2")
+    run "$WK_BIN" close "$id2"
+    assert_failure
+
+    # reopen without reason (from done)
+    id3=$(create_issue task "Test3")
+    "$WK_BIN" start "$id3"
+    "$WK_BIN" done "$id3"
+    run "$WK_BIN" reopen "$id3"
     assert_failure
 }
 
-@test "reopen without reason fails" {
+@test "invalid values fail" {
     init_project
-    id=$(create_issue task "Test")
-    "$WK_BIN" start "$id"
-    "$WK_BIN" done "$id"
-    run "$WK_BIN" reopen "$id"
-    assert_failure
-}
 
-# Invalid values
-
-@test "new with invalid type fails" {
-    init_project
+    # new with invalid type
     run "$WK_BIN" new invalid "Test"
     assert_failure
-}
 
-@test "edit with invalid type fails" {
-    init_project
+    # edit with invalid type
     id=$(create_issue task "Test")
     run "$WK_BIN" edit "$id" --type invalid
     assert_failure
-}
 
-@test "dep with invalid relationship fails" {
-    init_project
+    # dep with invalid relationship
     a=$(create_issue task "A")
     b=$(create_issue task "B")
     run "$WK_BIN" dep "$a" requires "$b"
     assert_failure
-}
 
-@test "list with invalid status fails" {
-    init_project
+    # list with invalid status
     run "$WK_BIN" list --status invalid
     assert_failure
-}
 
-@test "list with invalid type fails" {
-    init_project
+    # list with invalid type
     run "$WK_BIN" list --type invalid
     assert_failure
 }
 
-# Exit codes
-
-@test "success returns exit code 0" {
+@test "exit codes: success returns 0, not found and invalid return non-zero" {
     init_project
+
+    # success returns exit code 0
     run "$WK_BIN" new "Test"
     [ "$status" -eq 0 ]
-}
 
-@test "not found returns non-zero exit code" {
-    init_project
+    # not found returns non-zero exit code
     run "$WK_BIN" show "test-nonexistent"
     [ "$status" -ne 0 ]
-}
 
-@test "invalid command returns non-zero exit code" {
+    # invalid command returns non-zero exit code
     run "$WK_BIN" nonexistent
     [ "$status" -ne 0 ]
 }
 
-# Removed commands (sync/daemon consolidated into remote)
-
-@test "help does not list sync as a command" {
+@test "removed commands (sync/daemon) are not available" {
+    # help does not list sync as a command
     run "$WK_BIN" help
     assert_success
-    # Command listing format: "  sync        Description..."
     refute_line --regexp '^  sync[[:space:]]'
-}
-
-@test "help does not list daemon as a command" {
-    run "$WK_BIN" help
-    assert_success
-    # Command listing format: "  daemon      Description..."
     refute_line --regexp '^  daemon[[:space:]]'
-}
 
-@test "sync command is not recognized" {
+    # Commands are not recognized
     run "$WK_BIN" sync
     assert_failure
-}
 
-@test "daemon command is not recognized" {
     run "$WK_BIN" daemon
     assert_failure
 }
 
-# Empty prefix validation
-
 @test "new fails when project has no prefix configured" {
-    # Create a workspace with a database but no prefix
     mkdir -p workspace
     "$WK_BIN" init --path workspace --prefix ws
-    # Create a workspace link without a prefix
     run "$WK_BIN" init --workspace workspace
     assert_success
-    # Try to create an issue - should fail because no prefix
     run "$WK_BIN" new "Test task"
     assert_failure
     assert_output --partial "no prefix configured"

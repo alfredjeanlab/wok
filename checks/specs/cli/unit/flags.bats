@@ -3,8 +3,6 @@ load '../../helpers/common'
 
 # Tests verifying all documented --flags actually work
 # Based on REQUIREMENTS.md command reference
-#
-# Using file-level setup since most tests can share a single init.
 
 setup_file() {
     file_setup
@@ -19,57 +17,49 @@ setup() {
     test_setup
 }
 
-# init flags (these need separate directories since they test init)
-
-@test "init --prefix creates project with custom prefix" {
+@test "init flags: --prefix and --path" {
     local tmpdir
     tmpdir="$(mktemp -d)"
     cd "$tmpdir" || exit 1
     export HOME="$tmpdir"
+
+    # --prefix creates project with custom prefix
     run "$WK_BIN" init --prefix myproj
     assert_success
     id=$(create_issue task "Test task")
     [[ "$id" == myproj-* ]]
-    rm -rf "$tmpdir"
-}
+    rm -rf .wok
 
-@test "init --path creates project in specified path" {
-    local tmpdir
-    tmpdir="$(mktemp -d)"
-    cd "$tmpdir" || exit 1
-    export HOME="$tmpdir"
+    # --path creates project in specified path
     mkdir -p subdir
     run "$WK_BIN" init --path subdir --prefix test
     assert_success
     [ -d "subdir/.wok" ]
+
     rm -rf "$tmpdir"
 }
 
-# new flags
-
-@test "new --label adds label to new issue" {
+@test "new flags: --label and --note" {
+    # --label adds label to new issue
     id=$(create_issue task "Test task" --label "mylabel")
     run "$WK_BIN" show "$id"
     assert_success
     assert_output --partial "mylabel"
-}
 
-@test "new --label multiple times adds all labels" {
+    # --label multiple times adds all labels
     id=$(create_issue task "Test task" --label "label1" --label "label2")
     run "$WK_BIN" show "$id"
     assert_success
     assert_output --partial "label1"
     assert_output --partial "label2"
-}
 
-@test "new --note adds initial note" {
+    # --note adds initial note
     id=$(create_issue task "Test task" --note "Initial note content")
     run "$WK_BIN" show "$id"
     assert_success
     assert_output --partial "Initial note content"
-}
 
-@test "new --label and --note work together" {
+    # --label and --note work together
     id=$(create_issue task "Test task" --label "mylabel" --note "My note")
     run "$WK_BIN" show "$id"
     assert_success
@@ -77,334 +67,238 @@ setup() {
     assert_output --partial "My note"
 }
 
-# done flags
-
-@test "done --reason allows todo to done transition" {
-    id=$(create_issue task "Test task")
+@test "done/close flags: --reason records in log" {
+    # done --reason allows todo to done transition
+    id=$(create_issue task "Test done")
     run "$WK_BIN" done "$id" --reason "Already fixed upstream"
     assert_success
-}
-
-@test "done --reason records reason in log" {
-    id=$(create_issue task "Test task")
-    "$WK_BIN" done "$id" --reason "Already fixed upstream"
     run "$WK_BIN" log "$id"
-    assert_success
     assert_output --partial "Already fixed"
-}
 
-# close flags
-
-@test "close --reason closes issue with reason" {
-    id=$(create_issue task "Test task")
+    # close --reason closes issue with reason
+    id=$(create_issue task "Test close")
     run "$WK_BIN" close "$id" --reason "Duplicate issue"
     assert_success
-}
-
-@test "close --reason records reason in log" {
-    id=$(create_issue task "Test task")
-    "$WK_BIN" close "$id" --reason "Duplicate issue"
     run "$WK_BIN" log "$id"
-    assert_success
     assert_output --partial "Duplicate"
 }
 
-# reopen flags
-
-@test "reopen --reason reopens closed issue with reason" {
-    id=$(create_issue task "Test task")
+@test "reopen flags: --reason records in log" {
+    # reopen --reason reopens closed issue with reason
+    id=$(create_issue task "Test reopen")
     "$WK_BIN" start "$id"
     "$WK_BIN" done "$id"
     run "$WK_BIN" reopen "$id" --reason "Found regression"
     assert_success
-}
-
-@test "reopen --reason records reason in log" {
-    id=$(create_issue task "Test task")
-    "$WK_BIN" start "$id"
-    "$WK_BIN" done "$id"
-    "$WK_BIN" reopen "$id" --reason "Found regression"
     run "$WK_BIN" log "$id"
-    assert_success
     assert_output --partial "regression"
 }
 
-# edit positional args
-
-@test "edit title changes issue title" {
+@test "edit positional args: title and type" {
+    # edit title changes issue title
     id=$(create_issue task "Original title")
     run "$WK_BIN" edit "$id" title "New title"
     assert_success
     run "$WK_BIN" show "$id"
     assert_output --partial "New title"
-}
 
-@test "edit type changes issue type" {
+    # edit type changes issue type
     id=$(create_issue task "Test issue")
     run "$WK_BIN" edit "$id" type bug
     assert_success
     run "$WK_BIN" show "$id"
     assert_output --partial "[bug]"
-}
 
-@test "edit title and type work sequentially" {
+    # edit title and type work sequentially
     id=$(create_issue task "Original")
-    run "$WK_BIN" edit "$id" title "Changed"
-    assert_success
-    run "$WK_BIN" edit "$id" type feature
-    assert_success
+    "$WK_BIN" edit "$id" title "Changed"
+    "$WK_BIN" edit "$id" type feature
     run "$WK_BIN" show "$id"
     assert_output --partial "Changed"
     assert_output --partial "[feature]"
 }
 
-# list flags
-
-@test "list --status todo shows only todo issues" {
-    id1=$(create_issue task "Todo task")
-    id2=$(create_issue task "Started task")
+@test "list --status filters by status" {
+    id1=$(create_issue task "StatusFlag Todo")
+    id2=$(create_issue task "StatusFlag Started")
+    id3=$(create_issue task "StatusFlag Done")
+    id4=$(create_issue task "StatusFlag Closed")
     "$WK_BIN" start "$id2"
+    "$WK_BIN" start "$id3"
+    "$WK_BIN" done "$id3"
+    "$WK_BIN" close "$id4" --reason "Won't fix"
+
     run "$WK_BIN" list --status todo
     assert_success
-    assert_output --partial "Todo task"
-    refute_output --partial "Started task"
-}
+    assert_output --partial "StatusFlag Todo"
+    refute_output --partial "StatusFlag Started"
 
-@test "list --status in_progress shows only in_progress issues" {
-    id1=$(create_issue task "Todo task")
-    id2=$(create_issue task "Started task")
-    "$WK_BIN" start "$id2"
     run "$WK_BIN" list --status in_progress
     assert_success
-    assert_output --partial "Started task"
-    refute_output --partial "Todo task"
-}
+    assert_output --partial "StatusFlag Started"
+    refute_output --partial "StatusFlag Todo"
 
-@test "list --status done shows only done issues" {
-    id1=$(create_issue task "Todo task")
-    id2=$(create_issue task "Done task")
-    "$WK_BIN" start "$id2"
-    "$WK_BIN" done "$id2"
     run "$WK_BIN" list --status done
     assert_success
-    assert_output --partial "Done task"
-    refute_output --partial "Todo task"
-}
+    assert_output --partial "StatusFlag Done"
+    refute_output --partial "StatusFlag Todo"
 
-@test "list --status closed shows only closed issues" {
-    id1=$(create_issue task "Open task")
-    id2=$(create_issue task "Closed task")
-    "$WK_BIN" close "$id2" --reason "Won't fix"
     run "$WK_BIN" list --status closed
     assert_success
-    assert_output --partial "Closed task"
-    refute_output --partial "Open task"
+    assert_output --partial "StatusFlag Closed"
+    refute_output --partial "StatusFlag Todo"
 }
 
-@test "list --type feature shows only features" {
-    create_issue task "My task"
-    create_issue feature "My feature"
+@test "list --type filters by type (including short flag)" {
+    create_issue task "TypeFlag My task"
+    create_issue feature "TypeFlag My feature"
+    create_issue bug "TypeFlag My bug"
+
     run "$WK_BIN" list --type feature --all
     assert_success
-    assert_output --partial "My feature"
-    refute_output --partial "My task"
-}
+    assert_output --partial "TypeFlag My feature"
+    refute_output --partial "TypeFlag My task"
 
-@test "list --type task shows only tasks" {
-    create_issue task "My task"
-    create_issue bug "My bug"
     run "$WK_BIN" list --type task --all
     assert_success
-    assert_output --partial "My task"
-    refute_output --partial "My bug"
-}
+    assert_output --partial "TypeFlag My task"
+    refute_output --partial "TypeFlag My bug"
 
-@test "list --type bug shows only bugs" {
-    create_issue task "My task"
-    create_issue bug "My bug"
     run "$WK_BIN" list --type bug --all
     assert_success
-    assert_output --partial "My bug"
-    refute_output --partial "My task"
-}
+    assert_output --partial "TypeFlag My bug"
+    refute_output --partial "TypeFlag My task"
 
-@test "list -t bug shows only bugs (short form)" {
-    create_issue task "My task"
-    create_issue bug "My bug"
+    # -t short form works
     run "$WK_BIN" list -t bug --all
     assert_success
-    assert_output --partial "My bug"
-    refute_output --partial "My task"
+    assert_output --partial "TypeFlag My bug"
+    refute_output --partial "TypeFlag My task"
+
+    # comma-separated types
+    run "$WK_BIN" list -t bug,task --all
+    assert_success
+    assert_output --partial "TypeFlag My task"
+    assert_output --partial "TypeFlag My bug"
+    refute_output --partial "TypeFlag My feature"
 }
 
-@test "list --label filters by label" {
-    create_issue task "Labeled task" --label "findme"
-    create_issue task "Unlabeled task"
+@test "list --label, --all, --blocked filters" {
+    create_issue task "LabelFlag Labeled task" --label "findme"
+    create_issue task "LabelFlag Unlabeled task"
+    id1=$(create_issue task "BlockFlag Blocker")
+    id2=$(create_issue task "BlockFlag Blocked")
+    "$WK_BIN" dep "$id1" blocks "$id2"
+
+    # --label filters by label
     run "$WK_BIN" list --label "findme" --all
     assert_success
-    assert_output --partial "Labeled task"
-    refute_output --partial "Unlabeled task"
-}
+    assert_output --partial "LabelFlag Labeled task"
+    refute_output --partial "LabelFlag Unlabeled task"
 
-@test "list --all includes blocked issues" {
-    id1=$(create_issue task "Blocker")
-    id2=$(create_issue task "Blocked")
-    "$WK_BIN" dep "$id1" blocks "$id2"
+    # --all includes blocked issues
     run "$WK_BIN" list --all
     assert_success
-    assert_output --partial "Blocker"
-    assert_output --partial "Blocked"
-}
+    assert_output --partial "BlockFlag Blocker"
+    assert_output --partial "BlockFlag Blocked"
 
-@test "list --blocked shows only blocked issues" {
-    id1=$(create_issue task "Blocker")
-    id2=$(create_issue task "Blocked")
-    "$WK_BIN" dep "$id1" blocks "$id2"
+    # --blocked shows only blocked issues
     run "$WK_BIN" list --blocked
     assert_success
-    assert_output --partial "Blocked"
-    refute_output --partial "Blocker"
-}
+    assert_output --partial "BlockFlag Blocked"
+    refute_output --partial "BlockFlag Blocker"
 
-@test "list -b short flag is not supported" {
+    # -b short flag is not supported
     run "$WK_BIN" list -b
     assert_failure
-}
 
-# list without flags shows all open issues (blocked and unblocked)
-
-@test "list without flags shows blocked issues" {
-    id1=$(create_issue task "Ready task")
-    id2=$(create_issue task "Blocked task")
-    "$WK_BIN" dep "$id1" blocks "$id2"
+    # list without flags shows blocked issues
     run "$WK_BIN" list
     assert_success
-    assert_output --partial "Ready task"
-    assert_output --partial "Blocked task"
+    assert_output --partial "BlockFlag Blocker"
+    assert_output --partial "BlockFlag Blocked"
 }
 
-# log flags
+@test "list combined filters: --status --type --label" {
+    create_issue task "CombFlag Todo task"
+    id=$(create_issue bug "CombFlag Todo bug")
+    "$WK_BIN" start "$id"
+    id2=$(create_issue task "CombFlag Tagged todo" --label "mylabel")
+    id3=$(create_issue task "CombFlag Tagged started" --label "mylabel")
+    "$WK_BIN" start "$id3"
+
+    # --status --type combined filtering
+    run "$WK_BIN" list --status in_progress --type bug --all
+    assert_success
+    assert_output --partial "CombFlag Todo bug"
+    refute_output --partial "CombFlag Todo task"
+
+    # --label --status combined filtering
+    run "$WK_BIN" list --label "mylabel" --status in_progress --all
+    assert_success
+    assert_output --partial "CombFlag Tagged started"
+    refute_output --partial "CombFlag Tagged todo"
+}
 
 @test "log --limit limits output" {
-    id=$(create_issue task "Test task")
+    id=$(create_issue task "LogLimit task")
     "$WK_BIN" note "$id" "Note 1"
     "$WK_BIN" note "$id" "Note 2"
     "$WK_BIN" note "$id" "Note 3"
+    "$WK_BIN" start "$id"
+
+    # --limit limits output
     run "$WK_BIN" log "$id" --limit 2
     assert_success
-    # Should have limited output (exact behavior depends on implementation)
-}
 
-@test "log --limit 1 shows only most recent event" {
-    id=$(create_issue task "Test task")
-    "$WK_BIN" start "$id"
+    # --limit 1 shows only most recent event
     run "$WK_BIN" log "$id" --limit 1
     assert_success
-    # Should show the started event (most recent)
     assert_output --partial "started"
 }
 
-# Combined flag tests
+@test "ready filters: --type, --label, and combined" {
+    create_issue task "ReadyFlag Ready task"
+    create_issue bug "ReadyFlag Ready bug"
+    create_issue task "ReadyFlag Labeled task" --label "urgent"
+    create_issue task "ReadyFlag Unlabeled task"
+    create_issue bug "ReadyFlag Labeled bug" --label "team:alpha"
+    create_issue task "ReadyFlag Other labeled task" --label "team:alpha"
+    a=$(create_issue bug "ReadyFlag Blocker bug" --label "team:alpha")
+    b=$(create_issue bug "ReadyFlag Blocked bug" --label "team:alpha")
+    "$WK_BIN" dep "$a" blocks "$b"
 
-@test "list --status --type combined filtering" {
-    create_issue task "Todo task"
-    id=$(create_issue bug "Todo bug")
-    "$WK_BIN" start "$id"
-    run "$WK_BIN" list --status in_progress --type bug --all
-    assert_success
-    assert_output --partial "Todo bug"
-    refute_output --partial "Todo task"
-}
-
-@test "list --label --status combined filtering" {
-    id1=$(create_issue task "Tagged todo" --label "mylabel")
-    id2=$(create_issue task "Tagged started" --label "mylabel")
-    "$WK_BIN" start "$id2"
-    run "$WK_BIN" list --label "mylabel" --status in_progress --all
-    assert_success
-    assert_output --partial "Tagged started"
-    refute_output --partial "Tagged todo"
-}
-
-# list -t type filter (new short flag)
-
-@test "list -t filters by type (short flag)" {
-    create_issue task "My task"
-    create_issue bug "My bug"
-    run "$WK_BIN" list -t bug --all
-    assert_success
-    assert_output --partial "My bug"
-    refute_output --partial "My task"
-}
-
-@test "list -t with comma-separated types" {
-    create_issue task "My task"
-    create_issue bug "My bug"
-    create_issue feature "My feature"
-    run "$WK_BIN" list -t bug,task --all
-    assert_success
-    assert_output --partial "My task"
-    assert_output --partial "My bug"
-    refute_output --partial "My feature"
-}
-
-# ready command filters
-
-@test "ready --type filters ready items by type" {
-    create_issue task "Ready task"
-    create_issue bug "Ready bug"
+    # --type filters ready items
     run "$WK_BIN" ready --type bug
     assert_success
-    assert_output --partial "Ready bug"
-    refute_output --partial "Ready task"
-}
+    assert_output --partial "ReadyFlag Ready bug"
+    refute_output --partial "ReadyFlag Ready task"
 
-@test "ready -t filters ready items by type (short flag)" {
-    create_issue task "Ready task"
-    create_issue bug "Ready bug"
+    # -t short flag works
     run "$WK_BIN" ready -t bug
     assert_success
-    assert_output --partial "Ready bug"
-    refute_output --partial "Ready task"
-}
+    assert_output --partial "ReadyFlag Ready bug"
+    refute_output --partial "ReadyFlag Ready task"
 
-@test "ready --label filters ready items by label" {
-    id1=$(create_issue task "Labeled task" --label "urgent")
-    create_issue task "Unlabeled task"
+    # --label filters ready items
     run "$WK_BIN" ready --label urgent
     assert_success
-    assert_output --partial "Labeled task"
-    refute_output --partial "Unlabeled task"
-}
+    assert_output --partial "ReadyFlag Labeled task"
+    refute_output --partial "ReadyFlag Unlabeled task"
 
-@test "ready --type --label combined filtering" {
-    create_issue bug "Labeled bug" --label "team:alpha"
-    create_issue task "Labeled task" --label "team:alpha"
-    create_issue bug "Unlabeled bug"
+    # --type --label combined filtering
     run "$WK_BIN" ready --type bug --label "team:alpha"
     assert_success
-    assert_output --partial "Labeled bug"
-    refute_output --partial "Labeled task"
-    refute_output --partial "Unlabeled bug"
+    assert_output --partial "ReadyFlag Labeled bug"
+    assert_output --partial "ReadyFlag Blocker bug"
+    refute_output --partial "ReadyFlag Other labeled task"
+    refute_output --partial "ReadyFlag Blocked bug"
 }
 
-@test "ready excludes blocked even with filters" {
-    a=$(create_issue bug "Blocker bug" --label "team:alpha")
-    b=$(create_issue bug "Blocked bug" --label "team:alpha")
-    "$WK_BIN" dep "$a" blocks "$b"
-    run "$WK_BIN" ready --type bug --label "team:alpha"
-    assert_success
-    assert_output --partial "Blocker bug"
-    refute_output --partial "Blocked bug"
-}
-
-@test "ready does not accept --all flag" {
+@test "ready rejects --all and --blocked flags" {
     run "$WK_BIN" ready --all
     assert_failure
-}
 
-@test "ready does not accept --blocked flag" {
     run "$WK_BIN" ready --blocked
     assert_failure
 }
-
