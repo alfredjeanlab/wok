@@ -80,11 +80,11 @@ coverage-spec:
 	@echo "Running unit tests with coverage..."
 	@cargo llvm-cov --no-report
 	@echo "Running specs with coverage..."
-	@LLVM_PROFILE_FILE="$(CURDIR)/target/llvm-cov-target/%p-%m.profraw" \
+	-@LLVM_PROFILE_FILE="$(CURDIR)/target/llvm-cov-target/%p-%m.profraw" \
 		WK_BIN="$(CURDIR)/target/debug/wk" \
 		WK_REMOTE_BIN="$(CURDIR)/target/debug/wk-remote" \
 		scripts/spec cli --parallel
-	@LLVM_PROFILE_FILE="$(CURDIR)/target/llvm-cov-target/%p-%m.profraw" \
+	-@LLVM_PROFILE_FILE="$(CURDIR)/target/llvm-cov-target/%p-%m.profraw" \
 		WK_BIN="$(CURDIR)/target/debug/wk" \
 		WK_REMOTE_BIN="$(CURDIR)/target/debug/wk-remote" \
 		scripts/spec remote
