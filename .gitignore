@@ -12,6 +12,7 @@ checks/specs/bats/bats-support/
 coverage.out
 coverage/
 *.profraw
+checks/benchmarks/results/
 
 # Build artifacts
 target/
