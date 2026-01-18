@@ -15,6 +15,7 @@ load '../helpers/remote_common'
 [remote]
 url = "ws://127.0.0.1:19999"
 EOF
+    configure_fast_timeouts
 
     # Create issues - should be stored locally
     create_issue task "Offline issue 1"
@@ -48,6 +49,7 @@ EOF
 [remote]
 url = "ws://127.0.0.1:$port"
 EOF
+    configure_fast_timeouts
 
     # Create issues offline
     create_issue task "Queue flush test"
@@ -59,10 +61,11 @@ EOF
     # Start server
     local data_dir="$TEST_DIR/server_data"
     mkdir -p "$data_dir"
-    "$WK_REMOTE_BIN" --bind "127.0.0.1:$port" --data "$data_dir" &
+    "$WK_REMOTE_BIN" --bind "127.0.0.1:$port" --data "$data_dir" >"$TEST_DIR/server.log" 2>&1 &
     SERVER_PID=$!
     SERVER_PORT=$port
     SERVER_URL="ws://127.0.0.1:$port"
+    disown "$SERVER_PID" 2>/dev/null || true
 
     wait_server_ready "$port"
 

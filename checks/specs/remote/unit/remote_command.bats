@@ -48,6 +48,7 @@ load '../helpers/remote_common'
 [remote]
 url = "ws://127.0.0.1:19999"
 EOF
+    configure_fast_timeouts
 
     run "$WK_BIN" remote sync
     # Should not crash, but report error

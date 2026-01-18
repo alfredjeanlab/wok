@@ -223,6 +223,7 @@ load '../helpers/remote_common'
     mkdir -p "$dir_a"
     cd "$dir_a"
     init_remote_project "prja"
+    configure_fast_timeouts
 
     # Create and sync some issues
     local id1
@@ -232,6 +233,10 @@ load '../helpers/remote_common'
     wait_synced
     run "$WK_BIN" remote stop
     assert_success
+
+    # Remember server info for restart BEFORE stopping
+    local port="$SERVER_PORT"
+    local data_dir="$TEST_DIR/server_data"
 
     # Stop server (simulate offline)
     stop_server
@@ -247,8 +252,9 @@ load '../helpers/remote_common'
     # Stop any daemon
     "$WK_BIN" remote stop 2>/dev/null || true
 
-    # Restart server
-    start_server
+    # Restart server on same port (so client config remains valid)
+    SERVER_PORT="$port"
+    restart_server "$data_dir"
 
     # Sync should succeed and merge
     run "$WK_BIN" remote sync

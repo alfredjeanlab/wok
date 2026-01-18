@@ -51,12 +51,48 @@ wait_port_released() {
 }
 
 # ============================================================================
+# PROCESS HELPERS
+# ============================================================================
+
+# Kill a process gracefully (SIGTERM), then force (SIGKILL) if still running
+# Usage: kill_with_timeout PID [timeout_ms]
+# timeout_ms defaults to 1000 (1 second)
+kill_with_timeout() {
+    local pid="$1"
+    local timeout_ms="${2:-1000}"
+
+    # Check if process exists
+    if ! kill -0 "$pid" 2>/dev/null; then
+        return 0
+    fi
+
+    # Send SIGTERM for graceful shutdown
+    kill "$pid" 2>/dev/null || return 0
+
+    # Wait for exit with timeout (in 10ms increments)
+    local attempts=$((timeout_ms / 10))
+    local i
+    for ((i = 0; i < attempts; i++)); do
+        if ! kill -0 "$pid" 2>/dev/null; then
+            return 0
+        fi
+        sleep 0.01
+    done
+
+    # Force kill if still running
+    if kill -0 "$pid" 2>/dev/null; then
+        kill -9 "$pid" 2>/dev/null || true
+        sleep 0.05
+    fi
+}
+
+# ============================================================================
 # SERVER MANAGEMENT
 # ============================================================================
 
 # Start wk-remote server
 # Usage: start_server [data_dir]
-# Exports: SERVER_PID, SERVER_PORT, SERVER_URL
+# Exports: SERVER_PID, SERVER_PORT, SERVER_URL, SERVER_LOG
 start_server() {
     local data_dir="${1:-$TEST_DIR/server_data}"
 
@@ -64,12 +100,14 @@ start_server() {
 
     SERVER_PORT=$(find_free_port)
     SERVER_URL="ws://127.0.0.1:$SERVER_PORT"
+    SERVER_LOG="${TEST_DIR}/server.log"
 
-    # Start server in background
-    "$WK_REMOTE_BIN" --bind "127.0.0.1:$SERVER_PORT" --data "$data_dir" &
+    # Start server in background, redirect output to log file
+    "$WK_REMOTE_BIN" --bind "127.0.0.1:$SERVER_PORT" --data "$data_dir" >"$SERVER_LOG" 2>&1 &
     SERVER_PID=$!
+    disown "$SERVER_PID" 2>/dev/null || true
 
-    export SERVER_PID SERVER_PORT SERVER_URL
+    export SERVER_PID SERVER_PORT SERVER_URL SERVER_LOG
 
     # Wait for server to be ready (accepting connections)
     wait_server_ready "$SERVER_PORT" || {
@@ -101,29 +139,52 @@ wait_server_ready() {
 # Usage: stop_server
 stop_server() {
     if [ -n "${SERVER_PID:-}" ]; then
-        # Send SIGTERM for graceful shutdown
-        kill "$SERVER_PID" 2>/dev/null || true
+        local port="${SERVER_PORT:-}"
 
-        # Wait briefly for exit, then force kill if still running
-        local i
-        for i in 1 2 3 4 5; do
-            if ! kill -0 "$SERVER_PID" 2>/dev/null; then
-                break
-            fi
-            sleep 0.1
-        done
-
-        # Force kill if still running
-        if kill -0 "$SERVER_PID" 2>/dev/null; then
-            kill -9 "$SERVER_PID" 2>/dev/null || true
-        fi
+        # Kill server with 500ms timeout before force kill
+        kill_with_timeout "$SERVER_PID" 500 2>/dev/null || true
 
         # Brief wait for port release (don't block long)
-        if [ -n "${SERVER_PORT:-}" ]; then
-            wait_port_released "$SERVER_PORT" 20 || true
+        if [ -n "$port" ]; then
+            wait_port_released "$port" 20 || true
         fi
         unset SERVER_PID SERVER_PORT SERVER_URL
     fi
+}
+
+# Restart server on the same port (preserves client configuration)
+# Usage: restart_server [data_dir]
+# Uses previously bound port, or finds a new one if none set
+restart_server() {
+    local data_dir="${1:-$TEST_DIR/server_data}"
+    local port="${SERVER_PORT:-}"
+
+    # Stop current server if running
+    stop_server
+
+    # If we had a port, wait for it to be released then reuse it
+    if [ -n "$port" ]; then
+        wait_port_released "$port" 50 || true
+        SERVER_PORT="$port"
+    else
+        SERVER_PORT=$(find_free_port)
+    fi
+
+    SERVER_URL="ws://127.0.0.1:$SERVER_PORT"
+    SERVER_LOG="${TEST_DIR}/server.log"
+
+    # Start server in background, redirect output to log file
+    "$WK_REMOTE_BIN" --bind "127.0.0.1:$SERVER_PORT" --data "$data_dir" >>"$SERVER_LOG" 2>&1 &
+    SERVER_PID=$!
+    disown "$SERVER_PID" 2>/dev/null || true
+
+    export SERVER_PID SERVER_PORT SERVER_URL SERVER_LOG
+
+    # Wait for server to be ready
+    wait_server_ready "$SERVER_PORT" || {
+        kill "$SERVER_PID" 2>/dev/null || true
+        return 1
+    }
 }
 
 # ============================================================================
@@ -166,6 +227,23 @@ init_second_client() {
 
 [remote]
 url = "$url"
+EOF
+}
+
+# ============================================================================
+# TEST TIMEOUT CONFIGURATION
+# ============================================================================
+
+# Configure fast timeouts for testing
+# Must be called after init_remote_project to append to the [remote] section
+# Usage: configure_fast_timeouts
+configure_fast_timeouts() {
+    cat >> .wok/config.toml << 'EOF'
+reconnect_max_retries = 2
+reconnect_max_delay_secs = 1
+connect_timeout_secs = 1
+heartbeat_interval_ms = 100
+heartbeat_timeout_ms = 100
 EOF
 }
 
@@ -278,35 +356,52 @@ setup_remote() {
     export HOME="$TEST_DIR"
 }
 
+# Stop a daemon by its PID file
+# Usage: stop_daemon_by_pidfile PIDFILE
+stop_daemon_by_pidfile() {
+    local pidfile="$1"
+    local daemon_pid
+
+    if [ ! -f "$pidfile" ]; then
+        return 0
+    fi
+
+    daemon_pid=$(cat "$pidfile" 2>/dev/null || true)
+    if [ -z "$daemon_pid" ] || ! kill -0 "$daemon_pid" 2>/dev/null; then
+        return 0
+    fi
+
+    # Try graceful stop with short timeout (500ms)
+    kill "$daemon_pid" 2>/dev/null || return 0
+
+    local i
+    for ((i = 0; i < 50; i++)); do
+        if ! kill -0 "$daemon_pid" 2>/dev/null; then
+            return 0
+        fi
+        sleep 0.01
+    done
+
+    # Force kill if still running
+    if kill -0 "$daemon_pid" 2>/dev/null; then
+        kill -9 "$daemon_pid" 2>/dev/null || true
+        sleep 0.05
+    fi
+}
+
 # Teardown for remote tests - call this from teardown()
 # Stops server and cleans up
-# Uses short timeouts to avoid blocking if daemon is unresponsive
+# Uses short timeouts to avoid blocking if processes are unresponsive
 teardown_remote() {
     # Stop server if running
     stop_server
 
-    # Try graceful daemon stop with short timeout if available, else force kill
-    local stopped=false
-    if command -v timeout >/dev/null 2>&1; then
-        if timeout 1 "$WK_BIN" remote stop 2>/dev/null; then
-            stopped=true
-        fi
+    # Find and stop ALL daemons in test directory (handles multi-client tests)
+    if [ -n "${TEST_DIR:-}" ] && [ -d "$TEST_DIR" ]; then
+        while IFS= read -r -d '' pidfile; do
+            stop_daemon_by_pidfile "$pidfile"
+        done < <(find "$TEST_DIR" -name 'daemon.pid' -print0 2>/dev/null)
     fi
-
-    # Force kill by PID if graceful stop failed or wasn't attempted
-    if [ "$stopped" = false ]; then
-        local daemon_pid_file="${TEST_DIR}/.wok/daemon.pid"
-        if [ -f "$daemon_pid_file" ]; then
-            local pid
-            pid=$(cat "$daemon_pid_file" 2>/dev/null || true)
-            if [ -n "$pid" ]; then
-                kill -9 "$pid" 2>/dev/null || true
-            fi
-        fi
-    fi
-
-    # Brief wait for process to exit
-    sleep 0.01
 
     # Cleanup test directory
     cd / || exit 1

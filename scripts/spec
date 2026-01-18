@@ -154,6 +154,8 @@ done
 if [ "$SUITE" = "remote" ]; then
     # Force sequential for remote tests regardless of --parallel flag
     BATS_ARGS+=("--jobs" "1")
+    # Use longer timeout for remote tests (network operations)
+    DEFAULT_TIMEOUT=10
 elif [ "$PARALLEL" = "auto" ]; then
     JOBS=$(calc_parallel_jobs)
     BATS_ARGS+=("--jobs" "$JOBS")
