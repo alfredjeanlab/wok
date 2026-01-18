@@ -3,7 +3,7 @@
 SHELL := /bin/bash
 SPECS_DIR := checks/specs
 
-.PHONY: help install check validate spec spec-cli spec-remote spec-todo quality stress stress-docker bench coverage license
+.PHONY: help install check validate spec spec-cli spec-remote spec-todo quality stress stress-docker bench coverage coverage-spec license
 
 help:
 	@echo "Targets:"
@@ -14,7 +14,8 @@ help:
 	@echo "  make stress      - Run stress tests (native)"
 	@echo "  make stress-docker - Run stress tests in Docker (recommended)"
 	@echo "  make bench       - Run benchmarks"
-	@echo "  make coverage    - Generate code coverage report"
+	@echo "  make coverage    - Generate code coverage report (unit tests)"
+	@echo "  make coverage-spec - Generate coverage from unit tests + specs"
 	@echo "  make license     - Add license headers to source files"
 	@echo ""
 	@echo "Spec Targets:"
@@ -73,6 +74,22 @@ FMT := --html
 coverage:
 	@cargo llvm-cov clean --workspace
 	@if [ -t 1 ] && [ "$(FMT)" = "--html" ]; then cargo llvm-cov $(FMT) --open; else cargo llvm-cov $(FMT); fi
+
+coverage-spec:
+	@cargo llvm-cov clean --workspace
+	@echo "Running unit tests with coverage..."
+	@cargo llvm-cov --no-report
+	@echo "Running specs with coverage..."
+	@LLVM_PROFILE_FILE="$(CURDIR)/target/llvm-cov-target/%p-%m.profraw" \
+		WK_BIN="$(CURDIR)/target/debug/wk" \
+		WK_REMOTE_BIN="$(CURDIR)/target/debug/wk-remote" \
+		scripts/spec cli --parallel
+	@LLVM_PROFILE_FILE="$(CURDIR)/target/llvm-cov-target/%p-%m.profraw" \
+		WK_BIN="$(CURDIR)/target/debug/wk" \
+		WK_REMOTE_BIN="$(CURDIR)/target/debug/wk-remote" \
+		scripts/spec remote
+	@echo "Generating coverage report..."
+	@if [ -t 1 ] && [ "$(FMT)" = "--html" ]; then cargo llvm-cov report $(FMT) --open; else cargo llvm-cov report $(FMT); fi
 
 license:
 	@scripts/license
