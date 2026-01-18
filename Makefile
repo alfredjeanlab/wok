@@ -45,11 +45,13 @@ quality:
 	@checks/quality/evaluate.sh
 
 # Run specs via script (pass ARGS for options like --filter, --file)
+# Runs CLI parallel, then remote sequential
 spec:
-	@scripts/spec $(ARGS)
+	@scripts/spec cli --parallel $(ARGS)
+	@scripts/spec remote $(ARGS)
 
 spec-cli:
-	@scripts/spec cli $(ARGS)
+	@scripts/spec cli --parallel $(ARGS)
 
 spec-remote:
 	@scripts/spec remote $(ARGS)

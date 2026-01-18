@@ -13,6 +13,7 @@
 #   --file <path>      Run specific test file (relative to checks/specs/)
 #   --filter-tags <t>  Filter by bats tags (e.g., todo:implement)
 #   --timeout <secs>   Test timeout in seconds (default: 5)
+#   --parallel, -p     Run tests in parallel (80% of CPUs, min 1)
 #
 # Examples:
 #   scripts/spec --filter "short flag"      # Run tests matching "short flag"
@@ -87,9 +88,37 @@ fi
 # Default test timeout (seconds) - prevents hung tests from blocking CI
 DEFAULT_TIMEOUT=5
 
+# Detect CPU count cross-platform (returns 1 on failure)
+detect_cpus() {
+    local cpus=1
+    if command -v nproc >/dev/null 2>&1; then
+        cpus=$(nproc 2>/dev/null) || cpus=1
+    elif command -v sysctl >/dev/null 2>&1; then
+        cpus=$(sysctl -n hw.ncpu 2>/dev/null) || cpus=1
+    elif [ -f /proc/cpuinfo ]; then
+        cpus=$(grep -c ^processor /proc/cpuinfo 2>/dev/null) || cpus=1
+    fi
+    # Ensure valid positive integer
+    if ! [[ "$cpus" =~ ^[0-9]+$ ]] || [ "$cpus" -lt 1 ]; then
+        echo "Warning: Could not detect CPU count, defaulting to 1" >&2
+        cpus=1
+    fi
+    echo "$cpus"
+}
+
+# Calculate parallel jobs: 80% of CPUs, minimum 1
+calc_parallel_jobs() {
+    local cpus
+    cpus=$(detect_cpus)
+    local jobs=$(( cpus * 80 / 100 ))
+    [ "$jobs" -lt 1 ] && jobs=1
+    echo "$jobs"
+}
+
 # Parse arguments
 SUITE=""
 FILE=""
+PARALLEL=""
 BATS_ARGS=()
 
 while [ $# -gt 0 ]; do
@@ -110,12 +139,26 @@ while [ $# -gt 0 ]; do
             DEFAULT_TIMEOUT="$2"
             shift 2
             ;;
+        --parallel|-p)
+            PARALLEL="auto"
+            shift
+            ;;
         *)
             BATS_ARGS+=("$1")
             shift
             ;;
     esac
 done
+
+# Add parallel jobs (remote tests excluded - port conflicts)
+if [ "$SUITE" = "remote" ]; then
+    # Force sequential for remote tests regardless of --parallel flag
+    BATS_ARGS+=("--jobs" "1")
+elif [ "$PARALLEL" = "auto" ]; then
+    JOBS=$(calc_parallel_jobs)
+    BATS_ARGS+=("--jobs" "$JOBS")
+    echo "Parallel: $JOBS jobs (80% of $(detect_cpus) CPUs)"
+fi
 
 # Build test targets
 if [ -n "$FILE" ]; then
