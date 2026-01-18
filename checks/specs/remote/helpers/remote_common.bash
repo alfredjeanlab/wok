@@ -101,10 +101,26 @@ wait_server_ready() {
 # Usage: stop_server
 stop_server() {
     if [ -n "${SERVER_PID:-}" ]; then
+        # Send SIGTERM for graceful shutdown
         kill "$SERVER_PID" 2>/dev/null || true
-        wait "$SERVER_PID" 2>/dev/null || true
+
+        # Wait briefly for exit, then force kill if still running
+        local i
+        for i in 1 2 3 4 5; do
+            if ! kill -0 "$SERVER_PID" 2>/dev/null; then
+                break
+            fi
+            sleep 0.1
+        done
+
+        # Force kill if still running
+        if kill -0 "$SERVER_PID" 2>/dev/null; then
+            kill -9 "$SERVER_PID" 2>/dev/null || true
+        fi
+
+        # Brief wait for port release (don't block long)
         if [ -n "${SERVER_PORT:-}" ]; then
-            wait_port_released "$SERVER_PORT" || true
+            wait_port_released "$SERVER_PORT" 20 || true
         fi
         unset SERVER_PID SERVER_PORT SERVER_URL
     fi
@@ -264,15 +280,33 @@ setup_remote() {
 
 # Teardown for remote tests - call this from teardown()
 # Stops server and cleans up
+# Uses short timeouts to avoid blocking if daemon is unresponsive
 teardown_remote() {
     # Stop server if running
     stop_server
 
-    # Stop any daemon that might be running
-    "$WK_BIN" remote stop 2>/dev/null || true
+    # Try graceful daemon stop with short timeout if available, else force kill
+    local stopped=false
+    if command -v timeout >/dev/null 2>&1; then
+        if timeout 1 "$WK_BIN" remote stop 2>/dev/null; then
+            stopped=true
+        fi
+    fi
 
-    # Wait a moment for processes to exit
-    sleep 0.1
+    # Force kill by PID if graceful stop failed or wasn't attempted
+    if [ "$stopped" = false ]; then
+        local daemon_pid_file="${TEST_DIR}/.wok/daemon.pid"
+        if [ -f "$daemon_pid_file" ]; then
+            local pid
+            pid=$(cat "$daemon_pid_file" 2>/dev/null || true)
+            if [ -n "$pid" ]; then
+                kill -9 "$pid" 2>/dev/null || true
+            fi
+        fi
+    fi
+
+    # Brief wait for process to exit
+    sleep 0.05
 
     # Cleanup test directory
     cd / || exit 1

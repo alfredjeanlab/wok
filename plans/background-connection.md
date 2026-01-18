@@ -1,5 +1,7 @@
 # Background Connection Fix
 
+**Root Feature:** `wok-a5c1`
+
 ## Problem Summary
 
 The daemon blocks IPC handling during WebSocket connection attempts:
