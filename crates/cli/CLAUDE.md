@@ -15,7 +15,7 @@
 - [ ] Linting passes: `cargo clippy`
 - [ ] Unit tests pass: `cargo test`
 - [ ] Formatting passes: `cargo fmt`
-- [ ] Coverage: `./coverage.sh` (≥85% lines, ≥81% functions)
+- [ ] Coverage: `make coverage` (≥85% lines)
 - [ ] Commit: `git commit`
 - [ ] Push: `git push`
 

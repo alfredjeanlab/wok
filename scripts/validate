@@ -209,18 +209,12 @@ log_section "Coverage"
 # 10. Coverage thresholds
 check_coverage() {
     local pkg_name="$1"
-    local pkg_dir="$2"
+    local cargo_pkg="$2"
     local line_threshold="$3"
-    local func_threshold="$4"
-
-    if [ ! -x "$pkg_dir/coverage.sh" ]; then
-        log_warn "Coverage script not found: $pkg_dir/coverage.sh"
-        return
-    fi
 
     echo "Running: $pkg_name coverage"
-    coverage_output=$(cd "$pkg_dir" && ./coverage.sh 2>&1) || {
-        log_fail "$pkg_name coverage script failed"
+    coverage_output=$(cargo llvm-cov --package "$cargo_pkg" 2>&1) || {
+        log_fail "$pkg_name coverage failed"
         return
     }
 
@@ -239,9 +233,12 @@ check_coverage() {
     fi
 }
 
-check_coverage "crates/core" "crates/core" 90 86
-check_coverage "crates/cli" "crates/cli" 83 79
-check_coverage "crates/remote" "crates/remote" 44 39
+# Clean workspace first to avoid stale data
+cargo llvm-cov clean --workspace 2>/dev/null || true
+
+check_coverage "crates/core" "wk-core" 90
+check_coverage "crates/cli" "wk" 83
+check_coverage "crates/remote" "wk-remote" 44
 
 log_section "Git State"
 

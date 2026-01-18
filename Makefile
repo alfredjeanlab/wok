@@ -3,7 +3,7 @@
 SHELL := /bin/bash
 SPECS_DIR := checks/specs
 
-.PHONY: help install check validate spec spec-cli spec-remote spec-todo quality stress stress-docker bench license
+.PHONY: help install check validate spec spec-cli spec-remote spec-todo quality stress stress-docker bench coverage license
 
 help:
 	@echo "Targets:"
@@ -14,6 +14,7 @@ help:
 	@echo "  make stress      - Run stress tests (native)"
 	@echo "  make stress-docker - Run stress tests in Docker (recommended)"
 	@echo "  make bench       - Run benchmarks"
+	@echo "  make coverage    - Generate code coverage report"
 	@echo "  make license     - Add license headers to source files"
 	@echo ""
 	@echo "Spec Targets:"
@@ -67,6 +68,11 @@ stress-docker:
 
 bench:
 	@checks/benchmarks/run.sh $(ARGS)
+
+FMT := --html
+coverage:
+	@cargo llvm-cov clean --workspace
+	@if [ -t 1 ] && [ "$(FMT)" = "--html" ]; then cargo llvm-cov $(FMT) --open; else cargo llvm-cov $(FMT); fi
 
 license:
 	@scripts/license
