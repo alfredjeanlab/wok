@@ -36,9 +36,15 @@ jobs:
       - name: Generate dashboard
         run: |
           mkdir -p docs/reports/quality
-          # Copy latest metrics
-          cp reports/quality/*/metrics.json docs/reports/quality/latest.json
-          cp reports/quality/*/summary.md docs/reports/quality/latest.md
+          # Copy latest metrics (sorted by modification time, newest first)
+          LATEST_JSON=$(ls -t reports/quality/*.json 2>/dev/null | head -1)
+          LATEST_MD=$(ls -t reports/quality/*.md 2>/dev/null | head -1)
+          if [ -n "$LATEST_JSON" ]; then
+            cp "$LATEST_JSON" docs/reports/quality/latest.json
+          fi
+          if [ -n "$LATEST_MD" ]; then
+            cp "$LATEST_MD" docs/reports/quality/latest.md
+          fi
           # Append to history
           ./scripts/append-quality-history.sh
 
