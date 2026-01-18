@@ -60,66 +60,73 @@ fn ai_assistant_enum_variants_are_distinct() {
     assert_ne!(AiAssistant::Cursor, AiAssistant::Unknown);
 }
 
-#[test]
-fn detects_codex_via_env() {
-    // Save current value if any
-    let prev = std::env::var_os("CODEX_ENV");
-    std::env::set_var("CODEX_ENV", "1");
-    let result = detect_ai_assistant();
-    // Restore
-    match prev {
-        Some(v) => std::env::set_var("CODEX_ENV", v),
-        None => std::env::remove_var("CODEX_ENV"),
+/// Helper to save and restore environment variables
+fn with_env_vars<F, R>(vars: &[&str], f: F) -> R
+where
+    F: FnOnce() -> R,
+{
+    // Save current values
+    let saved: Vec<_> = vars.iter().map(|v| (*v, std::env::var_os(v))).collect();
+
+    // Clear all vars
+    for var in vars {
+        std::env::remove_var(var);
     }
-    assert_eq!(result, Some(AiAssistant::Codex));
+
+    let result = f();
+
+    // Restore all vars
+    for (var, value) in saved {
+        match value {
+            Some(v) => std::env::set_var(var, v),
+            None => std::env::remove_var(var),
+        }
+    }
+
+    result
 }
 
+/// Combined test for all environment-based detection to avoid race conditions.
+/// These tests must run sequentially since they modify shared environment variables.
 #[test]
-fn detects_aider_via_env() {
-    let prev = std::env::var_os("AIDER_MODEL");
-    std::env::set_var("AIDER_MODEL", "gpt-4");
-    let result = detect_ai_assistant();
-    match prev {
-        Some(v) => std::env::set_var("AIDER_MODEL", v),
-        None => std::env::remove_var("AIDER_MODEL"),
-    }
-    assert_eq!(result, Some(AiAssistant::Aider));
-}
+fn env_detection_tests() {
+    let ai_vars = &[
+        "CLAUDE_CODE",
+        "CLAUDE_CODE_ENTRY",
+        "CODEX_ENV",
+        "AIDER_MODEL",
+        "CURSOR_TRACE_ID",
+    ];
 
-#[test]
-fn detects_cursor_via_env() {
-    let prev = std::env::var_os("CURSOR_TRACE_ID");
-    std::env::set_var("CURSOR_TRACE_ID", "trace123");
-    let result = detect_ai_assistant();
-    match prev {
-        Some(v) => std::env::set_var("CURSOR_TRACE_ID", v),
-        None => std::env::remove_var("CURSOR_TRACE_ID"),
-    }
-    assert_eq!(result, Some(AiAssistant::Cursor));
-}
+    // Test: detects Codex via CODEX_ENV
+    with_env_vars(ai_vars, || {
+        std::env::set_var("CODEX_ENV", "1");
+        assert_eq!(detect_ai_assistant(), Some(AiAssistant::Codex));
+    });
 
-#[test]
-fn is_human_interactive_false_when_ai_env_set() {
-    let prev = std::env::var_os("CLAUDE_CODE");
-    std::env::set_var("CLAUDE_CODE", "1");
-    let result = is_human_interactive();
-    match prev {
-        Some(v) => std::env::set_var("CLAUDE_CODE", v),
-        None => std::env::remove_var("CLAUDE_CODE"),
-    }
-    assert!(!result);
-}
+    // Test: detects Aider via AIDER_MODEL
+    with_env_vars(ai_vars, || {
+        std::env::set_var("AIDER_MODEL", "gpt-4");
+        assert_eq!(detect_ai_assistant(), Some(AiAssistant::Aider));
+    });
 
-#[test]
-fn is_human_interactive_false_in_ci() {
-    let prev = std::env::var_os("CI");
-    std::env::set_var("CI", "true");
-    let result = is_human_interactive();
-    match prev {
-        Some(v) => std::env::set_var("CI", v),
-        None => std::env::remove_var("CI"),
-    }
-    assert!(!result);
+    // Test: detects Cursor via CURSOR_TRACE_ID
+    with_env_vars(ai_vars, || {
+        std::env::set_var("CURSOR_TRACE_ID", "trace123");
+        assert_eq!(detect_ai_assistant(), Some(AiAssistant::Cursor));
+    });
+
+    // Test: is_human_interactive returns false when AI env is set
+    with_env_vars(ai_vars, || {
+        std::env::set_var("CLAUDE_CODE", "1");
+        assert!(!is_human_interactive());
+    });
+
+    // Test: is_human_interactive returns false in CI
+    with_env_vars(&["CI"], || {
+        std::env::set_var("CI", "true");
+        assert!(!is_human_interactive());
+    });
 }
 
 #[test]

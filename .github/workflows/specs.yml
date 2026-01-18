@@ -34,4 +34,4 @@ jobs:
       - name: Run ${{ matrix.suite }} specs
         run: make spec-${{ matrix.suite }}
         env:
-          PATH: ${{ github.workspace }}/target/release:$PATH
+          PATH: ${{ github.workspace }}/target/release:${{ env.PATH }}
