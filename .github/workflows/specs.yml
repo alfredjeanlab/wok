@@ -21,10 +21,10 @@ jobs:
       - name: Build release binary
         run: cargo build --release
 
-      - name: Install BATS
+      - name: Install BATS and build tools
         run: |
           sudo apt-get update
-          sudo apt-get install -y bats
+          sudo apt-get install -y bats build-essential
 
       - name: Setup BATS libraries
         run: |
