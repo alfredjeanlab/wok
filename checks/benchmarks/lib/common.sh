@@ -66,6 +66,7 @@ restore_db() {
 run_benchmark() {
     local name="$1"
     shift
+    local cmd="$*"  # Join args into single string for --shell=none
 
     local output_file="$RESULTS_DIR/${name}.json"
     mkdir -p "$RESULTS_DIR"
@@ -76,7 +77,7 @@ run_benchmark() {
         --min-runs 30 \
         --shell=none \
         --export-json "$output_file" \
-        "$@"
+        "$cmd"
 
     success "Results saved to: $output_file"
 }
@@ -86,6 +87,7 @@ run_benchmark() {
 run_benchmark_cold() {
     local name="$1"
     shift
+    local cmd="$*"  # Join args into single string for --shell=none
 
     local output_file="$RESULTS_DIR/${name}.json"
     mkdir -p "$RESULTS_DIR"
@@ -96,7 +98,7 @@ run_benchmark_cold() {
         --min-runs 20 \
         --shell=none \
         --export-json "$output_file" \
-        "$@"
+        "$cmd"
 
     success "Results saved to: $output_file"
 }
