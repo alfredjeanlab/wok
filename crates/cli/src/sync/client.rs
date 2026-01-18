@@ -133,6 +133,13 @@ impl<T: Transport> SyncClient<T> {
         self.state
     }
 
+    /// Mark the client as connected.
+    ///
+    /// Used when creating a client with an already-connected transport.
+    pub fn set_connected(&mut self) {
+        self.state = ConnectionState::Connected;
+    }
+
     /// Check if connected.
     pub fn is_connected(&self) -> bool {
         self.state == ConnectionState::Connected && self.transport.is_connected()

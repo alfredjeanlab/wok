@@ -198,13 +198,6 @@ async fn run_daemon_async(daemon_dir: &Path, config: &Config) -> Result<()> {
                 let heartbeat_interval_ms = sync_config.heartbeat_interval_ms;
                 let heartbeat_timeout_ms = sync_config.heartbeat_timeout_ms;
                 let heartbeat_enabled = heartbeat_interval_ms > 0 && is_connected;
-
-                // Debug: Log heartbeat config on first pass
-                static LOGGED: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
-                if !LOGGED.swap(true, std::sync::atomic::Ordering::Relaxed) {
-                    eprintln!("Heartbeat config: interval={}ms, timeout={}ms, enabled={}",
-                        heartbeat_interval_ms, heartbeat_timeout_ms, heartbeat_enabled);
-                }
                 let has_pending_ping = pending_ping_id.is_some();
                 // Calculate remaining timeout based on when ping was sent
                 let pong_timeout_remaining = if let Some(sent) = last_ping_sent {
@@ -248,6 +241,9 @@ async fn run_daemon_async(daemon_dir: &Path, config: &Config) -> Result<()> {
                                     &queue_path_clone,
                                 ) {
                                     Ok(mut new_client) => {
+                                        // Mark the client as connected (transport is already connected)
+                                        new_client.set_connected();
+
                                         // Initialize client's last_hlc from persisted SERVER state
                                         if let Some(server_hlc) = crate::commands::read_server_hlc(daemon_dir) {
                                             new_client.set_last_hlc(server_hlc);
@@ -333,7 +329,6 @@ async fn run_daemon_async(daemon_dir: &Path, config: &Config) -> Result<()> {
 
                     // Heartbeat interval timer - send ping when interval elapses
                     _ = tokio::time::sleep(Duration::from_millis(heartbeat_interval_ms)), if heartbeat_enabled && !has_pending_ping => {
-                        eprintln!("DEBUG: Heartbeat interval fired, sending ping");
                         // Generate a unique ping ID
                         let ping_id = std::time::SystemTime::now()
                             .duration_since(std::time::UNIX_EPOCH)
@@ -342,16 +337,7 @@ async fn run_daemon_async(daemon_dir: &Path, config: &Config) -> Result<()> {
 
                         // Send ping
                         let ping_sent = if let SyncBackend::WebSocket { client: Some(c), .. } = &mut backend {
-                            match c.ping(ping_id).await {
-                                Ok(()) => {
-                                    eprintln!("DEBUG: Ping sent successfully");
-                                    true
-                                }
-                                Err(e) => {
-                                    eprintln!("DEBUG: Ping failed: {}", e);
-                                    false
-                                }
-                            }
+                            c.ping(ping_id).await.is_ok()
                         } else {
                             false
                         };
@@ -370,7 +356,7 @@ async fn run_daemon_async(daemon_dir: &Path, config: &Config) -> Result<()> {
 
                     // Pong timeout timer - detect dead connection
                     _ = tokio::time::sleep(pong_timeout_remaining), if heartbeat_enabled && has_pending_ping => {
-                        eprintln!("DEBUG: Heartbeat timeout - connection presumed dead");
+                        eprintln!("Heartbeat timeout - connection presumed dead");
                         handle_connection_lost(
                             &mut backend,
                             &connection_state,
