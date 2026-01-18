@@ -252,15 +252,6 @@ async fn run_daemon_async(daemon_dir: &Path, config: &Config) -> Result<()> {
                                     manager.spawn_connect_task();
                                 }
                             }
-                            ConnectionEvent::Disconnected => {
-                                // Clear client and trigger reconnection
-                                if let SyncBackend::WebSocket { client, .. } = &mut backend {
-                                    *client = None;
-                                }
-                                if let Some(ref manager) = connection_manager {
-                                    manager.spawn_connect_task();
-                                }
-                            }
                         }
                     }
 

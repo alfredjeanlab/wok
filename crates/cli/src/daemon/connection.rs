@@ -108,11 +108,6 @@ pub enum ConnectionEvent {
         /// Error message.
         error: String,
     },
-    /// Connection was lost.
-    ///
-    /// Currently not sent but reserved for explicit disconnect notifications.
-    #[allow(dead_code)] // Part of API design for future disconnect handling
-    Disconnected,
 }
 
 impl std::fmt::Debug for ConnectionEvent {
@@ -124,7 +119,6 @@ impl std::fmt::Debug for ConnectionEvent {
                 .field("attempts", attempts)
                 .field("error", error)
                 .finish(),
-            Self::Disconnected => write!(f, "Disconnected"),
         }
     }
 }
