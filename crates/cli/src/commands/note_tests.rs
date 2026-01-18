@@ -141,7 +141,14 @@ fn test_run_impl_add_note() {
     let ctx = TestContext::new();
     ctx.create_issue("test-1", IssueType::Task, "Test issue");
 
-    let result = run_impl(&ctx.db, "test-1", "A new note", false);
+    let result = run_impl(
+        &ctx.db,
+        &ctx.config,
+        &ctx.work_dir,
+        "test-1",
+        "A new note",
+        false,
+    );
     assert!(result.is_ok());
 
     let notes = ctx.db.get_notes("test-1").unwrap();
@@ -154,7 +161,14 @@ fn test_run_impl_replace_note() {
     ctx.create_issue("test-1", IssueType::Task, "Test issue")
         .add_note("test-1", "Original note");
 
-    let result = run_impl(&ctx.db, "test-1", "Replaced note", true);
+    let result = run_impl(
+        &ctx.db,
+        &ctx.config,
+        &ctx.work_dir,
+        "test-1",
+        "Replaced note",
+        true,
+    );
     assert!(result.is_ok());
 
     let notes = ctx.db.get_notes("test-1").unwrap();
@@ -166,7 +180,14 @@ fn test_run_impl_replace_note() {
 fn test_run_impl_nonexistent_issue() {
     let ctx = TestContext::new();
 
-    let result = run_impl(&ctx.db, "nonexistent", "A note", false);
+    let result = run_impl(
+        &ctx.db,
+        &ctx.config,
+        &ctx.work_dir,
+        "nonexistent",
+        "A note",
+        false,
+    );
     assert!(result.is_err());
 }
 
@@ -176,7 +197,14 @@ fn test_run_impl_replace_no_existing_note() {
     ctx.create_issue("test-1", IssueType::Task, "Test issue");
 
     // Try to replace when there's no note
-    let result = run_impl(&ctx.db, "test-1", "New note", true);
+    let result = run_impl(
+        &ctx.db,
+        &ctx.config,
+        &ctx.work_dir,
+        "test-1",
+        "New note",
+        true,
+    );
     assert!(result.is_err());
 }
 
@@ -186,7 +214,14 @@ fn test_run_impl_closed_issue_rejected() {
     ctx.create_issue("test-1", IssueType::Task, "Test issue")
         .set_status("test-1", Status::Closed);
 
-    let result = run_impl(&ctx.db, "test-1", "Should fail", false);
+    let result = run_impl(
+        &ctx.db,
+        &ctx.config,
+        &ctx.work_dir,
+        "test-1",
+        "Should fail",
+        false,
+    );
     assert!(result.is_err());
 
     let err = result.unwrap_err();
@@ -205,7 +240,14 @@ fn test_run_impl_closed_issue_replace_rejected() {
         .add_note("test-1", "Original note")
         .set_status("test-1", Status::Closed);
 
-    let result = run_impl(&ctx.db, "test-1", "Should fail", true);
+    let result = run_impl(
+        &ctx.db,
+        &ctx.config,
+        &ctx.work_dir,
+        "test-1",
+        "Should fail",
+        true,
+    );
     assert!(result.is_err());
 
     let err = result.unwrap_err();
