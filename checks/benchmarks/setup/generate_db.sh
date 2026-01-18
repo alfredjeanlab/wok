@@ -172,9 +172,9 @@ generate_db() {
 
     # Verify count before exporting
     local issue_count
-    issue_count=$(sqlite3 .work/issues.db "SELECT COUNT(*) FROM issues;")
+    issue_count=$(sqlite3 .wok/issues.db "SELECT COUNT(*) FROM issues;")
 
-    sqlite3 .work/issues.db ".dump" > "$sql_file"
+    sqlite3 .wok/issues.db ".dump" > "$sql_file"
 
     popd > /dev/null
     rm -rf "$work_dir"

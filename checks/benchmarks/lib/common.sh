@@ -45,11 +45,11 @@ setup_db() {
         return 1
     fi
 
-    rm -rf .work
-    mkdir -p .work
-    sqlite3 .work/issues.db < "$sql_file"
+    rm -rf .wok
+    mkdir -p .wok
+    sqlite3 .wok/issues.db < "$sql_file"
 
-    cat > .work/config.toml << EOF
+    cat > .wok/config.toml << EOF
 prefix = "bench"
 EOF
 }
@@ -66,7 +66,7 @@ restore_db() {
 run_benchmark() {
     local name="$1"
     shift
-    local cmd="$*"  # Join args into single string for --shell=none
+    local cmd="$*"  # Join args into single command string
 
     local output_file="$RESULTS_DIR/${name}.json"
     mkdir -p "$RESULTS_DIR"
@@ -87,7 +87,7 @@ run_benchmark() {
 run_benchmark_cold() {
     local name="$1"
     shift
-    local cmd="$*"  # Join args into single string for --shell=none
+    local cmd="$*"  # Join args into single command string
 
     local output_file="$RESULTS_DIR/${name}.json"
     mkdir -p "$RESULTS_DIR"
@@ -105,6 +105,7 @@ run_benchmark_cold() {
 
 # Run a comparative benchmark with multiple commands
 # Usage: run_comparison <name> <cmd1> <cmd2> ...
+# Note: Uses shell to parse commands, since each arg is a full command string
 run_comparison() {
     local name="$1"
     shift
@@ -116,7 +117,6 @@ run_comparison() {
     hyperfine \
         --warmup 3 \
         --min-runs 30 \
-        --shell=none \
         --export-json "$output_file" \
         "$@"
 
