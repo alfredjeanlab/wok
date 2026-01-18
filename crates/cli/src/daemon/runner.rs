@@ -20,6 +20,7 @@ use std::time::{Duration, Instant};
 use std::path::PathBuf;
 
 use tokio::net::UnixListener;
+use tokio::sync::mpsc;
 use wk_core::{Database, Hlc, Merge, Op, OpPayload, Oplog};
 
 use crate::config::{get_db_path, Config, RemoteType};
@@ -31,6 +32,9 @@ use crate::worktree::{self, OplogWorktree};
 /// Snapshot data: (issues, tags, since_hlc) received from server
 type SnapshotData = (Vec<wk_core::Issue>, Vec<(String, String)>, Hlc);
 
+use super::connection::{
+    ConnectionConfig, ConnectionEvent, ConnectionManager, SharedConnectionState,
+};
 use super::ipc::{framing_async, DaemonRequest, DaemonResponse, DaemonStatus};
 use super::lifecycle::{get_lock_path, get_pid_path, get_socket_path};
 
@@ -45,8 +49,16 @@ enum SyncBackend<T: Transport> {
         db_path: PathBuf,
     },
     /// WebSocket remote backend.
+    ///
+    /// The client is optional because the connection is established asynchronously
+    /// in the background. The daemon remains responsive to IPC while connecting.
     WebSocket {
-        client: SyncClient<T>,
+        /// The sync client, present when connected.
+        client: Option<SyncClient<T>>,
+        /// Sync configuration for creating new clients.
+        sync_config: SyncConfig,
+        /// Path to the offline queue for pending operations.
+        queue_path: PathBuf,
         /// Path to the SQLite cache database.
         db_path: PathBuf,
         /// Path to the client-side oplog for deduplication.
@@ -60,7 +72,8 @@ struct DaemonState<'a, T: Transport> {
     backend: &'a mut SyncBackend<T>,
     remote_url: &'a str,
     last_sync: &'a mut Option<u64>,
-    connected: bool,
+    /// Shared connection state for lock-free status queries.
+    connection_state: &'a Arc<SharedConnectionState>,
     pid: u32,
     start_time: Instant,
 }
@@ -102,7 +115,7 @@ async fn run_daemon_async(daemon_dir: &Path, config: &Config) -> Result<()> {
     // Create Unix socket listener (tokio async)
     let listener = UnixListener::bind(&socket_path)?;
 
-    // Signal ready
+    // Signal ready - IMPORTANT: do this early so IPC is responsive immediately
     println!("READY");
     let _ = std::io::stdout().flush();
 
@@ -112,9 +125,11 @@ async fn run_daemon_async(daemon_dir: &Path, config: &Config) -> Result<()> {
         .as_ref()
         .ok_or_else(|| Error::Config("no remote config".to_string()))?;
 
-    // Initialize backend based on remote type
-    let transport = WebSocketTransport::new();
-    let mut backend = init_backend(daemon_dir, config, transport)?;
+    // Create shared connection state for lock-free status queries
+    let connection_state = Arc::new(SharedConnectionState::new());
+
+    // Initialize backend based on remote type (no connection attempt yet)
+    let mut backend = init_backend(daemon_dir, config)?;
 
     // Extract client-side oplog path from backend
     let client_oplog_path = match &backend {
@@ -126,14 +141,32 @@ async fn run_daemon_async(daemon_dir: &Path, config: &Config) -> Result<()> {
     let shutdown = Arc::new(AtomicBool::new(false));
     let start_time = Instant::now();
     let mut last_sync: Option<u64> = None;
-    let mut connected = matches!(&backend, SyncBackend::Git { .. });
 
-    // For WebSocket backend, attempt initial connection
-    if let SyncBackend::WebSocket { ref mut client, .. } = backend {
-        if client.connect_with_retry().await.is_ok() {
-            connected = true;
-        }
+    // For Git backend, we're always "connected" (no live connection needed)
+    if matches!(&backend, SyncBackend::Git { .. }) {
+        connection_state.set(super::connection::STATE_CONNECTED);
     }
+
+    // Set up connection manager for WebSocket backend
+    let (mut connection_rx, connection_manager): (
+        mpsc::Receiver<ConnectionEvent>,
+        Option<ConnectionManager>,
+    ) = if let SyncBackend::WebSocket { sync_config, .. } = &backend {
+        let conn_config = ConnectionConfig {
+            url: sync_config.url.clone(),
+            max_retries: sync_config.max_retries,
+            max_delay_secs: sync_config.max_delay_secs,
+            initial_delay_ms: sync_config.initial_delay_ms,
+        };
+        let (manager, rx) = ConnectionManager::new(conn_config, Arc::clone(&connection_state));
+        // Start initial connection attempt in background
+        manager.spawn_connect_task();
+        (rx, Some(manager))
+    } else {
+        // Git backend doesn't need connection manager
+        let (_tx, rx) = mpsc::channel(1);
+        (rx, None)
+    };
 
     // Main async loop using tokio::select!
     loop {
@@ -145,11 +178,18 @@ async fn run_daemon_async(daemon_dir: &Path, config: &Config) -> Result<()> {
             SyncBackend::WebSocket {
                 ref mut client,
                 ref db_path,
+                ref sync_config,
+                ref queue_path,
                 ..
             } => {
-                let is_connected = client.is_connected();
+                let is_connected = client.as_ref().is_some_and(|c| c.is_connected());
+                let db_path_clone = db_path.clone();
+                let oplog_path_clone = client_oplog_path.clone();
+                let sync_config_clone = sync_config.clone();
+                let queue_path_clone = queue_path.clone();
+
                 tokio::select! {
-                    // Accept IPC connections
+                    // Accept IPC connections - ALWAYS responsive
                     result = listener.accept() => {
                         if let Ok((stream, _)) = result {
                             let mut state = DaemonState {
@@ -157,47 +197,87 @@ async fn run_daemon_async(daemon_dir: &Path, config: &Config) -> Result<()> {
                                 backend: &mut backend,
                                 remote_url: &remote.url,
                                 last_sync: &mut last_sync,
-                                connected,
+                                connection_state: &connection_state,
                                 pid,
                                 start_time,
                             };
                             if let Err(e) = handle_ipc_request_async(stream, &mut state).await {
                                 eprintln!("IPC error: {}", e);
                             }
-                            // Update connected status after IPC (sync may have connected)
-                            if let SyncBackend::WebSocket { client, .. } = &state.backend {
-                                connected = client.is_connected();
+                        }
+                    }
+
+                    // Handle connection events from background task
+                    Some(event) = connection_rx.recv() => {
+                        match event {
+                            ConnectionEvent::Connected(transport) => {
+                                // Create a new SyncClient with the connected transport
+                                match SyncClient::with_transport(
+                                    sync_config_clone,
+                                    transport,
+                                    &queue_path_clone,
+                                ) {
+                                    Ok(mut new_client) => {
+                                        // Initialize client's last_hlc from persisted SERVER state
+                                        if let Some(server_hlc) = crate::commands::read_server_hlc(daemon_dir) {
+                                            new_client.set_last_hlc(server_hlc);
+                                        }
+
+                                        // Update backend with new client
+                                        if let SyncBackend::WebSocket { client, .. } = &mut backend {
+                                            *client = Some(new_client);
+                                        }
+
+                                        // Sync on connect
+                                        if let SyncBackend::WebSocket { client: Some(c), db_path, .. } = &mut backend {
+                                            if let Err(e) = sync_on_reconnect(c, db_path, &oplog_path_clone).await {
+                                                eprintln!("Sync on reconnect failed: {}", e);
+                                            }
+                                        }
+                                    }
+                                    Err(e) => {
+                                        eprintln!("Failed to create client: {}", e);
+                                        // Trigger reconnection
+                                        if let Some(ref manager) = connection_manager {
+                                            manager.spawn_connect_task();
+                                        }
+                                    }
+                                }
+                            }
+                            ConnectionEvent::Failed { attempts, error } => {
+                                eprintln!("Connection failed after {} attempts: {}", attempts, error);
+                                // Connection manager has given up, wait a bit then try again
+                                tokio::time::sleep(Duration::from_secs(5)).await;
+                                if let Some(ref manager) = connection_manager {
+                                    manager.spawn_connect_task();
+                                }
                             }
                         }
                     }
 
-                    // Handle WebSocket events (when connected)
-                    result = async { client.recv().await }, if is_connected => {
+                    // Handle WebSocket events (only when connected)
+                    result = async {
+                        if let SyncBackend::WebSocket { client: Some(c), .. } = &mut backend {
+                            c.recv().await
+                        } else {
+                            // Never ready if no client
+                            std::future::pending().await
+                        }
+                    }, if is_connected => {
                         match result {
                             Ok(Some(msg)) => {
-                                if let Err(e) = handle_server_message(&msg, db_path, &client_oplog_path) {
+                                if let Err(e) = handle_server_message(&msg, &db_path_clone, &oplog_path_clone) {
                                     eprintln!("Error handling server message: {}", e);
                                 }
                             }
-                            Ok(None) => {
-                                // Connection closed
-                                connected = false;
-                            }
-                            Err(_) => {
-                                // Connection error
-                                connected = false;
-                            }
-                        }
-                    }
-
-                    // Reconnection timer (when disconnected)
-                    _ = tokio::time::sleep(Duration::from_secs(5)), if !is_connected => {
-                        if let SyncBackend::WebSocket { client, db_path, .. } = &mut backend {
-                            if client.connect_with_retry().await.is_ok() {
-                                connected = true;
-                                // Sync on connect
-                                if let Err(e) = sync_on_reconnect(client, db_path, &client_oplog_path).await {
-                                    eprintln!("Sync on reconnect failed: {}", e);
+                            Ok(None) | Err(_) => {
+                                // Connection closed or error - clear client and reconnect
+                                if let SyncBackend::WebSocket { client, .. } = &mut backend {
+                                    *client = None;
+                                }
+                                connection_state.set(super::connection::STATE_DISCONNECTED);
+                                if let Some(ref manager) = connection_manager {
+                                    manager.spawn_connect_task();
                                 }
                             }
                         }
@@ -214,7 +294,7 @@ async fn run_daemon_async(daemon_dir: &Path, config: &Config) -> Result<()> {
                                 backend: &mut backend,
                                 remote_url: &remote.url,
                                 last_sync: &mut last_sync,
-                                connected,
+                                connection_state: &connection_state,
                                 pid,
                                 start_time,
                             };
@@ -228,6 +308,11 @@ async fn run_daemon_async(daemon_dir: &Path, config: &Config) -> Result<()> {
         }
     }
 
+    // Cancel any pending connection attempts
+    if let Some(ref manager) = connection_manager {
+        manager.cancel();
+    }
+
     // Cleanup
     drop(lock_file);
     let _ = fs::remove_file(&socket_path);
@@ -237,11 +322,10 @@ async fn run_daemon_async(daemon_dir: &Path, config: &Config) -> Result<()> {
 }
 
 /// Initialize the appropriate backend based on remote type.
-fn init_backend<T: Transport>(
-    daemon_dir: &Path,
-    config: &Config,
-    transport: T,
-) -> Result<SyncBackend<T>> {
+///
+/// For WebSocket backends, the client is None initially. The connection
+/// is established asynchronously by the ConnectionManager.
+fn init_backend(daemon_dir: &Path, config: &Config) -> Result<SyncBackend<WebSocketTransport>> {
     let remote = config
         .remote
         .as_ref()
@@ -276,19 +360,15 @@ fn init_backend<T: Transport>(
                 max_delay_secs: remote.reconnect_max_delay_secs,
                 initial_delay_ms: 100,
             };
-            let mut client = SyncClient::with_transport(sync_config, transport, &queue_path)?;
-
-            // Initialize client's last_hlc from persisted SERVER state
-            // This ensures the client uses the correct baseline for sync requests
-            // We use server_hlc (not last_hlc) to avoid requesting sync based on local ops
-            if let Some(server_hlc) = crate::commands::read_server_hlc(daemon_dir) {
-                client.set_last_hlc(server_hlc);
-            }
 
             let db_path = get_db_path(daemon_dir, config);
             let oplog_path = daemon_dir.join("client_oplog.jsonl");
+
+            // Client starts as None - connection established asynchronously
             Ok(SyncBackend::WebSocket {
-                client,
+                client: None,
+                sync_config,
+                queue_path,
                 db_path,
                 oplog_path,
             })
@@ -307,8 +387,10 @@ async fn handle_ipc_request_async<T: Transport>(
         DaemonRequest::Status => {
             let pending_ops = get_pending_ops_count(state.backend);
             let uptime_secs = state.start_time.elapsed().as_secs();
+            // Use shared connection state for accurate status
+            let connected = state.connection_state.is_connected();
             DaemonResponse::Status(DaemonStatus::new(
-                state.connected,
+                connected,
                 state.remote_url.to_string(),
                 pending_ops,
                 *state.last_sync,
@@ -318,7 +400,7 @@ async fn handle_ipc_request_async<T: Transport>(
         }
         DaemonRequest::SyncNow => {
             // Perform sync based on backend type
-            match perform_sync_async(state.backend).await {
+            match perform_sync_async(state.backend, state.connection_state).await {
                 Ok(ops_synced) => {
                     *state.last_sync = Some(
                         std::time::SystemTime::now()
@@ -457,12 +539,28 @@ async fn sync_on_reconnect<T: Transport>(
 fn get_pending_ops_count<T: Transport>(backend: &SyncBackend<T>) -> usize {
     match backend {
         SyncBackend::Git { wal, .. } => wal.count().unwrap_or(0),
-        SyncBackend::WebSocket { client, .. } => client.pending_ops_count().unwrap_or(0),
+        SyncBackend::WebSocket {
+            client, queue_path, ..
+        } => {
+            // If we have a client, use its count; otherwise read from queue directly
+            if let Some(c) = client {
+                c.pending_ops_count().unwrap_or(0)
+            } else {
+                // Read directly from offline queue when no client available
+                crate::sync::OfflineQueue::open(queue_path)
+                    .ok()
+                    .and_then(|q| q.len().ok())
+                    .unwrap_or(0)
+            }
+        }
     }
 }
 
 /// Perform a sync operation based on the backend type (async version).
-async fn perform_sync_async<T: Transport>(backend: &mut SyncBackend<T>) -> Result<usize> {
+async fn perform_sync_async<T: Transport>(
+    backend: &mut SyncBackend<T>,
+    connection_state: &Arc<SharedConnectionState>,
+) -> Result<usize> {
     match backend {
         SyncBackend::Git {
             worktree,
@@ -473,7 +571,22 @@ async fn perform_sync_async<T: Transport>(backend: &mut SyncBackend<T>) -> Resul
             client,
             db_path,
             oplog_path,
-        } => sync_websocket(client, db_path, oplog_path).await,
+            ..
+        } => {
+            if let Some(c) = client {
+                sync_websocket(c, db_path, oplog_path, connection_state).await
+            } else {
+                // Not connected yet - report connection status
+                if connection_state.is_connecting() {
+                    Err(Error::Sync(format!(
+                        "connecting to server (attempt {})",
+                        connection_state.attempt()
+                    )))
+                } else {
+                    Err(Error::Sync("not connected to server".to_string()))
+                }
+            }
+        }
     }
 }
 
@@ -532,21 +645,22 @@ fn snapshot_issue_to_ops(issue: &wk_core::Issue, index: u32) -> Vec<Op> {
     ops
 }
 
-/// Perform WebSocket sync: connect if needed, flush queue, request sync.
+/// Perform WebSocket sync: flush queue, request sync.
+///
+/// The client must already be connected. Connection is established asynchronously
+/// by the ConnectionManager, not by this function.
 async fn sync_websocket<T: Transport>(
     client: &mut SyncClient<T>,
     db_path: &Path,
     oplog_path: &Path,
+    _connection_state: &Arc<SharedConnectionState>,
 ) -> Result<usize> {
     use wk_core::protocol::ServerMessage;
     use wk_core::Merge;
 
-    // Connect if not already connected
+    // Verify we're connected (caller should ensure this)
     if !client.is_connected() {
-        client
-            .connect_with_retry()
-            .await
-            .map_err(|e| Error::Sync(format!("failed to connect: {}", e)))?;
+        return Err(Error::Sync("not connected to server".to_string()));
     }
 
     // Save last_hlc BEFORE flushing - flush_queue updates last_hlc with
