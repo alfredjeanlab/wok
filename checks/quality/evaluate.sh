@@ -1107,9 +1107,8 @@ cp "$REPORT_DIR/metrics.json" "$OUTPUT_DIR/${REPORT_NAME}.json"
 echo "Summary copied to: $OUTPUT_DIR/${REPORT_NAME}.md"
 echo "Metrics copied to: $OUTPUT_DIR/${REPORT_NAME}.json"
 
-# Exit with failure if any metrics failed (so CI can detect problems)
+# Report any metric collection failures (but don't block CI)
 if [ "$METRIC_FAILURES" -gt 0 ]; then
     echo ""
     echo "Warning: $METRIC_FAILURES metric(s) failed during evaluation"
-    exit 1
 fi

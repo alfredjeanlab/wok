@@ -195,3 +195,21 @@ check_wk_binary() {
 
     success "Using wk binary: $(command -v "$WK_BIN")"
 }
+
+# Aggregate all benchmark results into latest.json
+# Usage: generate_latest_json
+generate_latest_json() {
+    local output_file="$RESULTS_DIR/latest.json"
+    local temp_file="$RESULTS_DIR/latest.json.tmp"
+
+    info "Generating latest.json..."
+
+    # Remove old latest.json if it exists to avoid including it in the glob
+    rm -f "$output_file"
+
+    # Combine all individual result files into one
+    jq -s '{ results: [.[].results[]] | unique_by(.command) }' "$RESULTS_DIR"/*.json > "$temp_file"
+    mv "$temp_file" "$output_file"
+
+    success "Generated: $output_file"
+}

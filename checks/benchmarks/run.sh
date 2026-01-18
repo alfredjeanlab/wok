@@ -112,6 +112,8 @@ run_all() {
     run_combined_benchmarks
     run_output_benchmarks
 
+    generate_latest_json
+
     success "All benchmarks complete!"
     info "Results in: $RESULTS_DIR"
 }
