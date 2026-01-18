@@ -111,16 +111,47 @@ fn parse_operator(s: &str) -> Result<(CompareOp, &str)> {
         }
     }
 
+    // Try word-based operators (case-insensitive, shell-friendly)
+    if let Some((op, rest)) = try_parse_word_operator(s) {
+        return Ok((op, rest));
+    }
+
     // Extract what looks like an operator for error message
     let op_end = s
-        .find(|c: char| c.is_whitespace() || c.is_alphanumeric())
-        .unwrap_or(s.len().min(3));
+        .find(|c: char| c.is_whitespace())
+        .unwrap_or(s.len().min(5));
     let bad_op = if op_end > 0 { &s[..op_end] } else { "(none)" };
 
     Err(Error::InvalidInput(format!(
         "unknown operator '{bad_op}'. Valid operators: {}",
         CompareOp::valid_symbols()
     )))
+}
+
+/// Try to parse a word-based operator (lt, lte, gt, gte, eq, ne).
+/// These are shell-friendly alternatives to <, <=, >, >=, =, !=.
+fn try_parse_word_operator(s: &str) -> Option<(CompareOp, &str)> {
+    // Find word boundary (whitespace or end)
+    let word_end = s
+        .find(|c: char| c.is_whitespace())
+        .unwrap_or(s.len());
+
+    if word_end == 0 {
+        return None;
+    }
+
+    let word = &s[..word_end];
+    let rest = &s[word_end..];
+
+    match word.to_lowercase().as_str() {
+        "lt" => Some((CompareOp::Lt, rest)),
+        "lte" => Some((CompareOp::Le, rest)),
+        "gt" => Some((CompareOp::Gt, rest)),
+        "gte" => Some((CompareOp::Ge, rest)),
+        "eq" => Some((CompareOp::Eq, rest)),
+        "ne" => Some((CompareOp::Ne, rest)),
+        _ => None,
+    }
 }
 
 /// Parse a value (duration or date).

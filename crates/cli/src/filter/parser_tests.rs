@@ -5,6 +5,7 @@
 
 use super::*;
 use chrono::Duration;
+use yare::parameterized;
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Field parsing
@@ -115,6 +116,26 @@ fn parse_operator_unknown_error() {
     let err = parse_filter("age << 3d").unwrap_err();
     let msg = err.to_string();
     assert!(msg.contains("unknown operator"));
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Word-based operators (shell-friendly aliases)
+// ─────────────────────────────────────────────────────────────────────────────
+
+#[parameterized(
+    lt = { "age lt 3d", CompareOp::Lt },
+    lte = { "age lte 3d", CompareOp::Le },
+    gt = { "age gt 3d", CompareOp::Gt },
+    gte = { "age gte 3d", CompareOp::Ge },
+    eq = { "age eq 3d", CompareOp::Eq },
+    ne = { "age ne 3d", CompareOp::Ne },
+    lt_upper = { "age LT 3d", CompareOp::Lt },
+    gte_upper = { "age GTE 3d", CompareOp::Ge },
+    lt_mixed = { "age Lt 3d", CompareOp::Lt },
+)]
+fn parse_operator_word(input: &str, expected: CompareOp) {
+    let expr = parse_filter(input).unwrap();
+    assert_eq!(expr.op, expected);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

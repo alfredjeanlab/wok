@@ -67,7 +67,7 @@ stress-docker:
 	@checks/stress/docker-run.sh $(ARGS)
 
 bench:
-	@checks/benchmarks/run.sh $(ARGS)
+	@checks/benchmarks/run.sh $(if $(ARGS),$(ARGS),all)
 
 FMT := --html
 coverage:

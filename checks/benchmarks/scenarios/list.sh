@@ -95,8 +95,8 @@ benchmark_filter_time() {
     setup_db large
     # Note: Since we just created the DB, all issues are "recent"
     # These benchmarks test filter expression parsing and evaluation overhead
-    run_benchmark "filter_age_recent" "$WK_BIN" list --filter "age < 1d" --all
-    run_benchmark "filter_age_old" "$WK_BIN" list --filter "age > 7d" --all
+    run_benchmark "filter_age_recent" "$WK_BIN" list --filter "\"age < 1d\"" --all
+    run_benchmark "filter_age_old" "$WK_BIN" list --filter "\"age > 7d\"" --all
 }
 
 # Run all filter benchmarks

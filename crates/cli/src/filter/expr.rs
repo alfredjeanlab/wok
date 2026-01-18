@@ -64,7 +64,7 @@ pub enum CompareOp {
 impl CompareOp {
     /// Returns valid operator symbols for error messages.
     pub fn valid_symbols() -> &'static str {
-        "<, <=, >, >=, =, !="
+        "<, <=, >, >=, =, != (or: lt, lte, gt, gte, eq, ne)"
     }
 }
 

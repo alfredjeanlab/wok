@@ -318,3 +318,40 @@ load '../../helpers/common'
         assert_output --partial "ClosedSyn Issue"
     done
 }
+
+@test "list --filter with word operators (shell-friendly)" {
+    # Word operators are shell-friendly alternatives to < > = etc.
+    old_id=$(create_issue task "WordOp Old")
+    sleep 0.2
+    new_id=$(create_issue task "WordOp New")
+
+    # lt = less than (<)
+    run "$WK_BIN" list --filter "age lt 100ms"
+    assert_success
+    assert_output --partial "WordOp New"
+    refute_output --partial "WordOp Old"
+
+    # gte = greater than or equal (>=)
+    run "$WK_BIN" list --filter "age gte 100ms"
+    assert_success
+    assert_output --partial "WordOp Old"
+    refute_output --partial "WordOp New"
+
+    # gt = greater than (>)
+    run "$WK_BIN" list --filter "age gt 50ms"
+    assert_success
+    assert_output --partial "WordOp Old"
+
+    # lte = less than or equal (<=)
+    run "$WK_BIN" list --filter "age lte 1d"
+    assert_success
+    assert_output --partial "WordOp New"
+    assert_output --partial "WordOp Old"
+
+    # Case insensitive
+    run "$WK_BIN" list --filter "age LT 1d"
+    assert_success
+
+    run "$WK_BIN" list --filter "age GT 0ms"
+    assert_success
+}
