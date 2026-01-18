@@ -193,10 +193,10 @@ load '../helpers/remote_common'
     id=$(create_issue task "Real-time test")
 
     # Wait for propagation (no explicit sync on B)
-    sleep 2
+    cd "$dir_b"
+    wait_for_issue "Real-time test"
 
     # B should see the issue without calling sync
-    cd "$dir_b"
     run "$WK_BIN" list --all
     assert_success
     assert_output --partial "Real-time test"
@@ -230,14 +230,9 @@ load '../helpers/remote_common'
     run "$WK_BIN" start "$b_id"
     assert_success
 
-    # Wait for propagation
-    sleep 2
-
-    # A should see status change without explicit sync
+    # Wait for propagation - A should see status change without explicit sync
     cd "$dir_a"
-    local status
-    status=$(get_status "$id")
-    [ "$status" = "(in_progress)" ]
+    wait_for_status "$id" "(in_progress)"
 }
 
 # ============================================================================

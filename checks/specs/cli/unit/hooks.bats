@@ -6,7 +6,7 @@ load '../../helpers/common'
 # ============================================================================
 
 @test "hooks shows help with no subcommand" {
-    run timeout 5 "$WK_BIN" hooks
+    run timeout 3 "$WK_BIN" hooks
     # Should show usage, not hang waiting for input (exit 2 for missing subcommand is OK)
     [ "$status" -ne 124 ]  # Not killed by timeout
     assert_output --partial "Usage"
@@ -161,25 +161,25 @@ load '../../helpers/common'
 
 @test "hooks install defaults to non-interactive when not a TTY" {
     # Run in subshell with stdin from /dev/null (non-TTY)
-    run timeout 5 bash -c 'echo "" | "$WK_BIN" hooks install local'
+    run timeout 3 bash -c 'echo "" | "$WK_BIN" hooks install local'
     assert_success
     [ -f ".claude/settings.local.json" ]
 }
 
 @test "hooks install defaults to non-interactive under CLAUDE_CODE env" {
-    CLAUDE_CODE=1 run timeout 5 "$WK_BIN" hooks install local
+    CLAUDE_CODE=1 run timeout 3 "$WK_BIN" hooks install local
     assert_success
     [ -f ".claude/settings.local.json" ]
 }
 
 @test "hooks install defaults to non-interactive under CODEX_ENV" {
-    CODEX_ENV=1 run timeout 5 "$WK_BIN" hooks install local
+    CODEX_ENV=1 run timeout 3 "$WK_BIN" hooks install local
     assert_success
     [ -f ".claude/settings.local.json" ]
 }
 
 @test "hooks install defaults to non-interactive under AIDER_MODEL env" {
-    AIDER_MODEL=gpt-4 run timeout 5 "$WK_BIN" hooks install local
+    AIDER_MODEL=gpt-4 run timeout 3 "$WK_BIN" hooks install local
     assert_success
     [ -f ".claude/settings.local.json" ]
 }
@@ -250,14 +250,14 @@ load '../../helpers/common'
     # This should NOT hang - it should either:
     # 1. Auto-detect non-TTY and use default scope
     # 2. Show help and exit
-    run timeout 5 bash -c '"$WK_BIN" hooks install < /dev/null'
+    run timeout 3 bash -c '"$WK_BIN" hooks install < /dev/null'
     # Should complete within timeout (success or failure, but not hang)
     [ $status -ne 124 ]  # 124 = timeout killed the process
 }
 
 @test "hooks command never hangs in CI environment" {
     # Simulate CI by setting common CI env vars
-    CI=true GITHUB_ACTIONS=true run timeout 5 "$WK_BIN" hooks install local
+    CI=true GITHUB_ACTIONS=true run timeout 3 "$WK_BIN" hooks install local
     assert_success
 }
 

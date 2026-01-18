@@ -319,6 +319,47 @@ teardown_remote() {
 # ISSUE SYNC VERIFICATION
 # ============================================================================
 
+# Wait for an issue with given title to appear in list
+# Usage: wait_for_issue TITLE [max_attempts]
+wait_for_issue() {
+    local title="$1"
+    local max_attempts="${2:-100}"
+    local attempt=0
+
+    while [ $attempt -lt $max_attempts ]; do
+        if "$WK_BIN" list --all 2>/dev/null | grep -q "$title"; then
+            return 0
+        fi
+        sleep 0.05
+        ((attempt++))
+    done
+
+    echo "Error: Issue '$title' not found after $max_attempts attempts" >&2
+    return 1
+}
+
+# Wait for an issue to have a specific status
+# Usage: wait_for_status ID EXPECTED_STATUS [max_attempts]
+wait_for_status() {
+    local id="$1"
+    local expected="$2"
+    local max_attempts="${3:-100}"
+    local attempt=0
+
+    while [ $attempt -lt $max_attempts ]; do
+        local status
+        status=$(get_status "$id" 2>/dev/null) || true
+        if [ "$status" = "$expected" ]; then
+            return 0
+        fi
+        sleep 0.05
+        ((attempt++))
+    done
+
+    echo "Error: Issue '$id' status not '$expected' after $max_attempts attempts (got: $status)" >&2
+    return 1
+}
+
 # Create an issue and wait for it to sync
 # Usage: id=$(create_and_sync TYPE TITLE [extra args])
 create_and_sync() {
