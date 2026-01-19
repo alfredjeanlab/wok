@@ -3,7 +3,7 @@
 SHELL := /bin/bash
 SPECS_DIR := checks/specs
 
-.PHONY: help install check validate spec spec-cli spec-remote spec-todo quality stress stress-docker bench coverage coverage-spec license
+.PHONY: help install check validate spec spec-cli spec-remote spec-todo quality stress stress-docker bench coverage coverage-spec license lint-policy
 
 help:
 	@echo "Targets:"
@@ -32,13 +32,16 @@ help:
 install:
 	@scripts/install
 
-check:
+check: lint-policy
 	cargo fmt --check
 	cargo clippy -- -D warnings
 	cargo check
 	cargo audit
 	cargo build --workspace
 	cargo test
+
+lint-policy:
+	@scripts/lint-policy
 
 validate:
 	@scripts/validate
