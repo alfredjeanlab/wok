@@ -14,7 +14,7 @@ mod runner;
 
 pub use lifecycle::{
     detect_daemon, ensure_compatible_daemon, get_daemon_status, notify_daemon_sync, request_sync,
-    spawn_daemon, stop_daemon, wait_daemon_connected,
+    spawn_daemon, stop_daemon_forcefully, wait_daemon_connected,
 };
 pub use runner::run_daemon;
 

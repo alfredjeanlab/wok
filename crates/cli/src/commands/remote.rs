@@ -11,8 +11,8 @@ use chrono::{DateTime, Utc};
 
 use crate::config::{find_work_dir, get_daemon_dir, Config};
 use crate::daemon::{
-    detect_daemon, ensure_compatible_daemon, get_daemon_status, request_sync, stop_daemon,
-    wait_daemon_connected,
+    detect_daemon, ensure_compatible_daemon, get_daemon_status, request_sync,
+    stop_daemon_forcefully, wait_daemon_connected,
 };
 use crate::error::{Error, Result};
 use crate::mode::OperatingMode;
@@ -98,8 +98,8 @@ pub fn stop() -> Result<()> {
                 return Ok(());
             }
 
-            // Stop the daemon
-            match stop_daemon(&daemon_dir) {
+            // Stop the daemon (forcefully if graceful shutdown times out)
+            match stop_daemon_forcefully(&daemon_dir) {
                 Ok(()) => {
                     println!("Daemon stopped.");
                 }

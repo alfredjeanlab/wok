@@ -173,8 +173,9 @@ pub fn stop_daemon(daemon_dir: &Path) -> Result<()> {
     }
 
     let mut stream = UnixStream::connect(&socket_path)?;
-    let _ = stream.set_read_timeout(Some(Duration::from_secs(5)));
-    let _ = stream.set_write_timeout(Some(Duration::from_secs(5)));
+    // Short timeout for IPC - if daemon doesn't respond quickly, it's likely hung
+    let _ = stream.set_read_timeout(Some(Duration::from_secs(2)));
+    let _ = stream.set_write_timeout(Some(Duration::from_secs(2)));
 
     framing::write_request(&mut stream, &DaemonRequest::Shutdown)?;
 
@@ -437,9 +438,9 @@ pub fn stop_daemon_forcefully(daemon_dir: &Path) -> Result<()> {
     // Try graceful shutdown first
     match stop_daemon(daemon_dir) {
         Ok(()) => {
-            // Wait for daemon to actually exit
+            // Wait for daemon to actually exit (short timeout to avoid hanging)
             if let Some(pid) = pid {
-                wait_for_process_exit(pid, Duration::from_secs(3));
+                wait_for_process_exit(pid, Duration::from_secs(1));
             }
             cleanup_stale_files(daemon_dir);
             return Ok(());
