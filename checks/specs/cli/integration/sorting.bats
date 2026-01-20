@@ -1,6 +1,19 @@
 #!/usr/bin/env bats
 load '../../helpers/common'
 
+# Per-test isolation - each test gets its own project to avoid parallel interference
+setup() {
+    TEST_DIR="$(mktemp -d)"
+    cd "$TEST_DIR" || exit 1
+    export HOME="$TEST_DIR"
+    init_project "test"
+}
+
+teardown() {
+    cd / || exit 1
+    rm -rf "$TEST_DIR"
+}
+
 # Ready command sort tests
 
 @test "ready: recent high-priority before recent low-priority" {
