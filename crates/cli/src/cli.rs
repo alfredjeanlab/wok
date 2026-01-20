@@ -10,6 +10,7 @@ pub enum OutputFormat {
     #[default]
     Text,
     Json,
+    Ids,
 }
 
 // Custom help template that groups commands into sections
@@ -245,7 +246,7 @@ pub enum Command {
         #[arg(long)]
         all: bool,
 
-        /// Output format (text, json)
+        /// Output format (text, json, ids)
         #[arg(long, short, value_enum, default_value = "text")]
         format: OutputFormat,
     },

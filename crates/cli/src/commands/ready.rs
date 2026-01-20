@@ -223,6 +223,11 @@ pub(crate) fn run_impl(
             };
             println!("{}", serde_json::to_string_pretty(&output)?);
         }
+        OutputFormat::Ids => {
+            for issue in &ready_issues {
+                println!("{}", issue.id);
+            }
+        }
     }
 
     Ok(())

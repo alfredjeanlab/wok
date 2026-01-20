@@ -400,3 +400,53 @@ load '../../helpers/common'
     local count=$(echo "$output" | grep -c "^\- \[")
     [ "$count" -eq 20 ]
 }
+
+@test "list --format ids outputs one ID per line" {
+    id1=$(create_issue task "IDFormat Issue 1")
+    id2=$(create_issue task "IDFormat Issue 2")
+    run "$WK_BIN" list --format ids
+    assert_success
+    assert_output --partial "$id1"
+    assert_output --partial "$id2"
+    # Verify no other content (no type, status, or title)
+    [[ ! "$output" =~ "task" ]]
+    [[ ! "$output" =~ "todo" ]]
+    [[ ! "$output" =~ "IDFormat" ]]
+}
+
+@test "list --format ids works with filters" {
+    id=$(create_issue task "FilterID Task")
+    create_issue bug "FilterID Bug"
+    run "$WK_BIN" list --type task --format ids
+    assert_success
+    assert_output --partial "$id"
+    [[ ! "$output" =~ "FilterID Bug" ]]
+}
+
+@test "list --format ids respects limit" {
+    for i in {1..15}; do
+        create_issue task "LimitID Issue $i" --label "test:limit-ids"
+    done
+    run "$WK_BIN" list --label "test:limit-ids" --format ids --limit 10
+    assert_success
+    local count=$(echo "$output" | wc -l | tr -d ' ')
+    [ "$count" -eq 10 ]
+}
+
+@test "list -f ids works as short flag" {
+    id=$(create_issue task "ShortFlagID Issue")
+    run "$WK_BIN" list -f ids
+    assert_success
+    assert_output --partial "$id"
+}
+
+@test "list --format ids can be piped to other commands" {
+    id=$(create_issue task "Pipe Test Issue")
+    # Verify output is clean for command substitution
+    run "$WK_BIN" list --format ids
+    assert_success
+    # Output should be just IDs (alphanumeric with hyphens), one per line
+    while IFS= read -r line; do
+        [[ "$line" =~ ^[a-z0-9-]+$ ]]
+    done <<< "$output"
+}
