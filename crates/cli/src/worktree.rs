@@ -312,13 +312,44 @@ fn add_worktree(repo_path: &Path, worktree_path: &Path, branch: &str) -> Result<
     Ok(())
 }
 
+/// Sets up default git author/committer environment variables.
+/// This ensures git commands work even when no user is configured
+/// (e.g., in CI environments or when HOME points to an empty directory).
+fn setup_git_env(cmd: &mut Command) {
+    // Set defaults if not present or empty in environment
+    if std::env::var("GIT_AUTHOR_NAME")
+        .map(|v| v.is_empty())
+        .unwrap_or(true)
+    {
+        cmd.env("GIT_AUTHOR_NAME", "wk");
+    }
+    if std::env::var("GIT_AUTHOR_EMAIL")
+        .map(|v| v.is_empty())
+        .unwrap_or(true)
+    {
+        cmd.env("GIT_AUTHOR_EMAIL", "wk@localhost");
+    }
+    if std::env::var("GIT_COMMITTER_NAME")
+        .map(|v| v.is_empty())
+        .unwrap_or(true)
+    {
+        cmd.env("GIT_COMMITTER_NAME", "wk");
+    }
+    if std::env::var("GIT_COMMITTER_EMAIL")
+        .map(|v| v.is_empty())
+        .unwrap_or(true)
+    {
+        cmd.env("GIT_COMMITTER_EMAIL", "wk@localhost");
+    }
+}
+
 /// Runs a git command in the given directory.
 fn run_git(dir: &Path, args: &[&str]) -> Result<String> {
-    let output = Command::new("git")
-        .current_dir(dir)
-        .args(args)
-        .output()
-        .map_err(Error::Io)?;
+    let mut cmd = Command::new("git");
+    cmd.current_dir(dir).args(args);
+    setup_git_env(&mut cmd);
+
+    let output = cmd.output().map_err(Error::Io)?;
 
     if output.status.success() {
         Ok(String::from_utf8_lossy(&output.stdout).to_string())
@@ -332,8 +363,8 @@ fn run_git(dir: &Path, args: &[&str]) -> Result<String> {
 fn run_git_trimmed(dir: &Path, args: &[&str], stdin_data: Option<&str>) -> Result<String> {
     use std::io::Write;
 
-    let mut child = Command::new("git")
-        .current_dir(dir)
+    let mut cmd = Command::new("git");
+    cmd.current_dir(dir)
         .args(args)
         .stdin(if stdin_data.is_some() {
             Stdio::piped()
@@ -341,9 +372,10 @@ fn run_git_trimmed(dir: &Path, args: &[&str], stdin_data: Option<&str>) -> Resul
             Stdio::null()
         })
         .stdout(Stdio::piped())
-        .stderr(Stdio::piped())
-        .spawn()
-        .map_err(Error::Io)?;
+        .stderr(Stdio::piped());
+    setup_git_env(&mut cmd);
+
+    let mut child = cmd.spawn().map_err(Error::Io)?;
 
     if let Some(data) = stdin_data {
         if let Some(mut stdin) = child.stdin.take() {
