@@ -41,13 +41,12 @@ EOF
     assert_success
 
     # Configure with a port we'll start later
-    local port
-    port=$(find_free_port)
+    SERVER_PORT=$(find_free_port)
 
     cat >> .wok/config.toml << EOF
 
 [remote]
-url = "ws://127.0.0.1:$port"
+url = "ws://127.0.0.1:$SERVER_PORT"
 EOF
     configure_fast_timeouts
 
@@ -58,16 +57,8 @@ EOF
     "$WK_BIN" remote sync 2>/dev/null || true
     "$WK_BIN" remote stop 2>/dev/null || true
 
-    # Start server
-    local data_dir="$TEST_DIR/server_data"
-    mkdir -p "$data_dir"
-    "$WK_REMOTE_BIN" --bind "127.0.0.1:$port" --data "$data_dir" >"$TEST_DIR/server.log" 2>&1 &
-    SERVER_PID=$!
-    SERVER_PORT=$port
-    SERVER_URL="ws://127.0.0.1:$port"
-    disown "$SERVER_PID" 2>/dev/null || true
-
-    wait_server_ready "$port"
+    # Start server using helper (SERVER_PORT already set, will be reused)
+    start_server "$TEST_DIR/server_data"
 
     # Sync should now succeed
     run "$WK_BIN" remote sync

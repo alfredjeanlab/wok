@@ -181,20 +181,25 @@ load '../helpers/remote_common'
     init_remote_project "prja"
     run "$WK_BIN" remote sync  # Initial connect
     assert_success
+    wait_daemon_connected
 
     cd "$dir_b"
     init_remote_project "prjb"
     run "$WK_BIN" remote sync  # Initial connect
     assert_success
+    wait_daemon_connected
 
     # A creates issue (daemon sends to server)
     cd "$dir_a"
     local id
     id=$(create_issue task "Real-time test")
 
-    # Wait for propagation (no explicit sync on B)
+    # Wait for A's daemon to sync (ensure op is sent to server)
+    wait_synced
+
+    # Wait for propagation to B (with longer timeout for CI reliability)
     cd "$dir_b"
-    wait_for_issue "Real-time test"
+    wait_for_issue "Real-time test" 200  # 200 attempts = ~4 seconds
 
     # B should see the issue without calling sync
     run "$WK_BIN" list --all

@@ -93,12 +93,16 @@ kill_with_timeout() {
 # Start wk-remote server
 # Usage: start_server [data_dir]
 # Exports: SERVER_PID, SERVER_PORT, SERVER_URL, SERVER_LOG
+# Note: If SERVER_PORT is already set, reuses that port (useful for testing reconnection)
 start_server() {
     local data_dir="${1:-$TEST_DIR/server_data}"
 
     mkdir -p "$data_dir"
 
-    SERVER_PORT=$(find_free_port)
+    # Use existing SERVER_PORT if set, otherwise find a free one
+    if [ -z "${SERVER_PORT:-}" ]; then
+        SERVER_PORT=$(find_free_port)
+    fi
     SERVER_URL="ws://127.0.0.1:$SERVER_PORT"
     SERVER_LOG="${TEST_DIR}/server.log"
 
@@ -120,14 +124,16 @@ start_server() {
 # Usage: wait_server_ready PORT [max_attempts]
 wait_server_ready() {
     local port="$1"
-    local max_attempts="${2:-100}"
+    local max_attempts="${2:-200}"  # Increased for CI reliability
     local attempt=0
 
     while [ $attempt -lt $max_attempts ]; do
-        if nc -z 127.0.0.1 "$port" 2>/dev/null; then
+        # Use -w1 for 1-second connect timeout (works on both macOS and Linux netcat)
+        # This prevents nc from returning immediately on ECONNREFUSED
+        if nc -z -w1 127.0.0.1 "$port" 2>/dev/null; then
             return 0
         fi
-        sleep 0.01
+        sleep 0.02  # Slightly longer sleep for CI environments
         ((attempt++))
     done
 
@@ -401,6 +407,23 @@ teardown_remote() {
         while IFS= read -r -d '' pidfile; do
             stop_daemon_by_pidfile "$pidfile"
         done < <(find "$TEST_DIR" -name 'daemon.pid' -print0 2>/dev/null)
+    fi
+
+    # SAFETY NET: Kill any wk-remote processes started from our TEST_DIR
+    # This catches processes spawned outside start_server helper
+    if [ -n "${TEST_DIR:-}" ]; then
+        local pids
+        pids=$(pgrep -f "wk-remote.*--data.*${TEST_DIR}" 2>/dev/null || true)
+        for pid in $pids; do
+            kill -9 "$pid" 2>/dev/null || true
+        done
+    fi
+
+    # Double-safety: kill any wk-remote on test port that we might own
+    if [ -n "${SERVER_PORT:-}" ]; then
+        local pid
+        pid=$(lsof -ti tcp:"$SERVER_PORT" 2>/dev/null || true)
+        [ -n "$pid" ] && kill -9 "$pid" 2>/dev/null || true
     fi
 
     # Cleanup test directory

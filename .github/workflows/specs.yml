@@ -36,3 +36,14 @@ jobs:
         run: |
           export PATH="${{ github.workspace }}/target/release:$PATH"
           make spec-${{ matrix.suite }}
+
+      - name: Cleanup orphan processes
+        if: always()
+        run: |
+          # Kill any remaining wk processes to prevent job hang
+          pkill -9 -f wk-remote 2>/dev/null || true
+          pkill -9 -f 'wk.*daemon' 2>/dev/null || true
+          # Brief wait for processes to exit
+          sleep 1
+          # Verify cleanup (informational only)
+          pgrep -f wk-remote && echo "WARNING: wk-remote processes still running" || echo "No orphan wk-remote processes"
