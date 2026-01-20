@@ -1,5 +1,7 @@
 # Plan: Add `--format ids` to List Command
 
+**Root Feature:** `wok-3f81`
+
 ## Overview
 
 Add a `--format ids` option to the `wk list` command that outputs only issue IDs, one per line. This enables command composition patterns like `wk close $(wk list --format ids --status done)`.
