@@ -57,13 +57,15 @@ load '../../helpers/common'
 
 @test "ready --format json excludes blocked and respects filters" {
     a=$(create_issue task "Blocker JSON ready")
+    "$WK_BIN" label "$a" "test:json-blocked"
     b=$(create_issue task "Blocked JSON ready")
+    "$WK_BIN" label "$b" "test:json-blocked"
     "$WK_BIN" dep "$a" blocks "$b"
     id=$(create_issue task "Labeled ready")
     "$WK_BIN" label "$id" "team:backend"
 
-    # Blocked issues excluded
-    run "$WK_BIN" ready --format json
+    # Blocked issues excluded (filter by test label to avoid 5-issue limit interference)
+    run "$WK_BIN" ready --label "test:json-blocked" --format json
     assert_success
     blocked_present=$(echo "$output" | jq --arg b "$b" '[.issues[].id] | contains([$b])')
     [ "$blocked_present" = "false" ]
@@ -90,9 +92,11 @@ load '../../helpers/common'
 @test "ready sorts recent high-priority before recent low-priority" {
     id1=$(create_issue task "ReadySort Low priority recent")
     "$WK_BIN" label "$id1" "priority:3"
+    "$WK_BIN" label "$id1" "test:sort-recent"
     id2=$(create_issue task "ReadySort High priority recent")
     "$WK_BIN" label "$id2" "priority:1"
-    run "$WK_BIN" ready
+    "$WK_BIN" label "$id2" "test:sort-recent"
+    run "$WK_BIN" ready --label "test:sort-recent"
     assert_success
     # High priority should appear before low priority
     high_line=$(echo "$output" | grep -n "ReadySort High priority recent" | cut -d: -f1)
@@ -115,8 +119,10 @@ load '../../helpers/common'
     id=$(create_issue task "ReadyPref Dual tagged")
     "$WK_BIN" label "$id" "p:0"
     "$WK_BIN" label "$id" "priority:4"
+    "$WK_BIN" label "$id" "test:pref-priority"
     id2=$(create_issue task "ReadyPref Default priority issue")
-    run "$WK_BIN" ready
+    "$WK_BIN" label "$id2" "test:pref-priority"
+    run "$WK_BIN" ready --label "test:pref-priority"
     assert_success
     # Dual tagged (priority:4) should appear after default (priority:2)
     dual_line=$(echo "$output" | grep -n "ReadyPref Dual tagged" | cut -d: -f1)
@@ -128,12 +134,15 @@ load '../../helpers/common'
     # Create high priority issue
     id1=$(create_issue task "ReadyMiss High priority task")
     "$WK_BIN" label "$id1" "priority:1"
+    "$WK_BIN" label "$id1" "test:miss-priority"
     # Create default priority issue (no tag = 2)
     id2=$(create_issue task "ReadyMiss Default priority task")
+    "$WK_BIN" label "$id2" "test:miss-priority"
     # Create low priority issue
     id3=$(create_issue task "ReadyMiss Low priority task")
     "$WK_BIN" label "$id3" "priority:3"
-    run "$WK_BIN" ready
+    "$WK_BIN" label "$id3" "test:miss-priority"
+    run "$WK_BIN" ready --label "test:miss-priority"
     assert_success
     # Find line numbers for each ReadyMiss issue
     high_line=$(echo "$output" | grep -n "ReadyMiss High priority task" | cut -d: -f1)
@@ -147,12 +156,33 @@ load '../../helpers/common'
 @test "ready named priority values work" {
     id1=$(create_issue task "ReadyNamed Highest priority")
     "$WK_BIN" label "$id1" "priority:highest"
+    "$WK_BIN" label "$id1" "test:named-priority"
     id2=$(create_issue task "ReadyNamed Lowest priority")
     "$WK_BIN" label "$id2" "priority:lowest"
-    run "$WK_BIN" ready
+    "$WK_BIN" label "$id2" "test:named-priority"
+    run "$WK_BIN" ready --label "test:named-priority"
     assert_success
     # Highest should appear before lowest
     highest_line=$(echo "$output" | grep -n "ReadyNamed Highest priority" | cut -d: -f1)
     lowest_line=$(echo "$output" | grep -n "ReadyNamed Lowest priority" | cut -d: -f1)
     [ "$highest_line" -lt "$lowest_line" ]
+}
+
+@test "ready returns at most 5 issues" {
+    # Create 8 ready issues
+    for i in {1..8}; do
+        create_issue task "ReadyLimit Issue $i"
+    done
+
+    run "$WK_BIN" ready
+    assert_success
+    # Count issues shown (lines starting with "- [")
+    local count=$(echo "$output" | grep -c "^\- \[")
+    [ "$count" -le 5 ]
+
+    # JSON also respects limit
+    run "$WK_BIN" ready --format json
+    assert_success
+    count=$(echo "$output" | jq '.issues | length')
+    [ "$count" -le 5 ]
 }

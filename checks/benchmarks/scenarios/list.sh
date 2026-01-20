@@ -179,3 +179,44 @@ run_output_benchmarks() {
     benchmark_output_format
     success "Output format benchmarks complete"
 }
+
+# ============================================================================
+# Phase 7: Stress Tests with Default Limit
+# ============================================================================
+# Test performance with default limit (100) vs unlimited (--limit 0)
+
+# Benchmark default limit (100) on large databases
+benchmark_stress_default_limit() {
+    info "Stress test: default limit (100)"
+    for size in large xlarge; do
+        setup_db "$size"
+        run_benchmark "stress_default_${size}" "$WK_BIN" list
+    done
+}
+
+# Benchmark unlimited (--limit 0) on large databases
+benchmark_stress_unlimited() {
+    info "Stress test: unlimited (--limit 0)"
+    for size in large xlarge; do
+        setup_db "$size"
+        run_benchmark "stress_unlimited_${size}" "$WK_BIN" list --limit 0 --all
+    done
+}
+
+# Compare default vs unlimited performance
+benchmark_stress_compare() {
+    setup_db xlarge
+
+    run_comparison "stress_limit_comparison" \
+        "$WK_BIN list" \
+        "$WK_BIN list --limit 0 --all"
+}
+
+# Run all stress benchmarks
+run_stress_benchmarks() {
+    info "=== Stress Tests ==="
+    benchmark_stress_default_limit
+    benchmark_stress_unlimited
+    benchmark_stress_compare
+    success "Stress benchmarks complete"
+}

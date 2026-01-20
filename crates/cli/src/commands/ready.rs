@@ -16,6 +16,10 @@ use crate::models::{Issue, IssueType, Status};
 use super::list::{matches_filter_groups, matches_label_groups, parse_filter_groups};
 use super::open_db;
 
+/// Maximum number of issues to show in ready output.
+/// Keeps output manageable - you can only work on a few things at once.
+const MAX_READY_ISSUES: usize = 5;
+
 /// JSON representation of an issue for ready output.
 #[derive(Serialize)]
 struct ReadyIssueJson {
@@ -187,6 +191,9 @@ pub(crate) fn run_impl(
             (false, false) => a.created_at.cmp(&b.created_at),
         }
     });
+
+    // Truncate to hard limit - ready queue shows only top priorities
+    ready_issues.truncate(MAX_READY_ISSUES);
 
     match format {
         OutputFormat::Text => {

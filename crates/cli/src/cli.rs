@@ -86,10 +86,11 @@ pub enum Command {
         wk new bug \"Fix crash\"              Create bug with explicit type\n  \
         wk new chore \"Update deps\"          Create chore for maintenance\n  \
         wk new feature \"User auth\" -l auth   Create feature with label\n  \
+        wk new idea \"Better caching\"         Create idea for future consideration\n  \
         wk new task \"Multi\" -l a,b,c         Create task with multiple labels\n  \
         wk new \"Task\" -a alice               Create task assigned to alice")]
     New {
-        /// Issue type (feature, task, bug, chore) or title if type is omitted
+        /// Issue type (feature, task, bug, chore, idea) or title if type is omitted
         type_or_title: String,
 
         /// Title (if type was provided as first arg)

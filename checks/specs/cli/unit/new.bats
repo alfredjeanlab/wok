@@ -1,7 +1,7 @@
 #!/usr/bin/env bats
 load '../../helpers/common'
 
-@test "new creates issues with correct type (default task, feature, bug, chore)" {
+@test "new creates issues with correct type (default task, feature, bug, chore, idea)" {
     # Default creates task
     run "$WK_BIN" new "NewType My task"
     assert_success
@@ -26,6 +26,11 @@ load '../../helpers/common'
     run "$WK_BIN" new chore "NewType My chore"
     assert_success
     assert_output --partial "[chore]"
+
+    # Idea
+    run "$WK_BIN" new idea "NewType My idea"
+    assert_success
+    assert_output --partial "[idea]"
 
     # Starts in todo status
     run "$WK_BIN" new "NewType Status task"

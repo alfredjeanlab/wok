@@ -57,6 +57,7 @@ load '../../helpers/common'
     create_issue bug "TypeFilter MyBug"
     create_issue chore "TypeFilter MyChore"
     create_issue task "TypeFilter MyTask"
+    create_issue idea "TypeFilter MyIdea"
 
     run "$WK_BIN" list --type feature
     assert_success
@@ -70,6 +71,11 @@ load '../../helpers/common'
     run "$WK_BIN" list --type chore
     assert_success
     assert_output --partial "TypeFilter MyChore"
+
+    run "$WK_BIN" list --type idea
+    assert_success
+    assert_output --partial "TypeFilter MyIdea"
+    refute_output --partial "TypeFilter MyTask"
 
     # Short flag -t works
     run "$WK_BIN" list -t task
@@ -354,4 +360,43 @@ load '../../helpers/common'
 
     run "$WK_BIN" list --filter "age GT 0ms"
     assert_success
+}
+
+@test "list defaults to 100 results" {
+    # Create more than 100 issues
+    for i in {1..105}; do
+        create_issue task "DefaultLimit Issue $i"
+    done
+
+    # Default list should return at most 100
+    run "$WK_BIN" list
+    assert_success
+    local count=$(echo "$output" | grep -c "^\- \[")
+    [ "$count" -le 100 ]
+}
+
+@test "list --limit 0 shows all results (unlimited)" {
+    # Create 15 issues with a unique label (enough to prove unlimited works)
+    for i in {1..15}; do
+        create_issue task "UnlimitedTest Issue $i" --label "test:unlimited"
+    done
+
+    # --limit 0 should show all issues
+    run "$WK_BIN" list --label "test:unlimited" --limit 0
+    assert_success
+    local count=$(echo "$output" | grep -c "^\- \[")
+    [ "$count" -eq 15 ]
+}
+
+@test "list explicit limit overrides default" {
+    # Create 50 issues with a unique label
+    for i in {1..50}; do
+        create_issue task "ExplicitLimit Issue $i" --label "test:explicit"
+    done
+
+    # --limit 20 should return exactly 20
+    run "$WK_BIN" list --label "test:explicit" --limit 20
+    assert_success
+    local count=$(echo "$output" | grep -c "^\- \[")
+    [ "$count" -eq 20 ]
 }

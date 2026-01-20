@@ -26,6 +26,22 @@ load '../../helpers/common'
     assert_output --partial "[feature]"
 }
 
+@test "edit type to idea" {
+    id=$(create_issue task "Test issue")
+    run "$WK_BIN" edit "$id" type idea
+    assert_success
+    run "$WK_BIN" show "$id"
+    assert_output --partial "[idea]"
+}
+
+@test "edit type from idea to task" {
+    id=$(create_issue idea "My idea")
+    run "$WK_BIN" edit "$id" type task
+    assert_success
+    run "$WK_BIN" show "$id"
+    assert_output --partial "[task]"
+}
+
 @test "edit both title and type sequentially" {
     id=$(create_issue task "Original")
     run "$WK_BIN" edit "$id" title "Updated"

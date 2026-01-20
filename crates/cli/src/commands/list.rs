@@ -15,6 +15,10 @@ use std::collections::HashSet;
 
 use super::open_db;
 
+/// Default limit for list output when not explicitly specified.
+/// Prevents large result sets from overwhelming terminal output.
+const DEFAULT_LIMIT: usize = 100;
+
 /// JSON representation of an issue for list output.
 #[derive(Serialize)]
 struct ListIssueJson {
@@ -224,9 +228,10 @@ pub(crate) fn run_impl(
         }
     });
 
-    // Apply limit after sorting
-    if let Some(n) = limit {
-        issues.truncate(n);
+    // Apply limit after sorting (default 100, or explicit value, 0 = unlimited)
+    let effective_limit = limit.unwrap_or(DEFAULT_LIMIT);
+    if effective_limit > 0 {
+        issues.truncate(effective_limit);
     }
 
     match format {
