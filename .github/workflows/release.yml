@@ -9,21 +9,22 @@ permissions:
 
 jobs:
   build:
+    name: Build ${{ matrix.name }}
     strategy:
       matrix:
         include:
           - os: ubuntu-latest
             target: x86_64-unknown-linux-gnu
-            name: wk-linux-x86_64
+            name: wok-linux-x86_64
           - os: macos-latest
             target: x86_64-apple-darwin
-            name: wk-macos-x86_64
+            name: wok-macos-x86_64
           - os: macos-latest
             target: aarch64-apple-darwin
-            name: wk-macos-aarch64
+            name: wok-macos-aarch64
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - uses: dtolnay/rust-toolchain@stable
         with:
           targets: ${{ matrix.target }}
@@ -32,23 +33,75 @@ jobs:
       - name: Package
         run: |
           cd target/${{ matrix.target }}/release
-          tar czf ../../../${{ matrix.name }}.tar.gz wk
+          tar czf ../../../${{ matrix.name }}.tar.gz wk wk-remote
       - uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.name }}
           path: ${{ matrix.name }}.tar.gz
 
   release:
+    name: Create Release
     needs: build
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
+
+      - name: Extract version
+        id: version
+        run: |
+          VERSION="${GITHUB_REF#refs/tags/v}"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "tag=${GITHUB_REF#refs/tags/}" >> "$GITHUB_OUTPUT"
+
+      - name: Create source tarball
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          mkdir -p dist
+          git archive --format=tar.gz --prefix=wok-${VERSION}/ -o "dist/wok-${VERSION}.tar.gz" HEAD
+          echo "Created dist/wok-${VERSION}.tar.gz"
+
       - uses: actions/download-artifact@v4
-      - name: Create release
-        uses: softprops/action-gh-release@v1
         with:
-          files: |
-            wk-linux-x86_64/wk-linux-x86_64.tar.gz
-            wk-macos-x86_64/wk-macos-x86_64.tar.gz
-            wk-macos-aarch64/wk-macos-aarch64.tar.gz
+          path: dist
+
+      - name: Flatten artifacts
+        run: |
+          cd dist
+          mv wok-linux-x86_64/wok-linux-x86_64.tar.gz .
+          mv wok-macos-x86_64/wok-macos-x86_64.tar.gz .
+          mv wok-macos-aarch64/wok-macos-aarch64.tar.gz .
+          rmdir wok-linux-x86_64 wok-macos-x86_64 wok-macos-aarch64
+
+      - name: Generate checksums
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          cd dist
+          sha256sum wok-${VERSION}.tar.gz > wok-${VERSION}.tar.gz.sha256
+          sha256sum wok-linux-x86_64.tar.gz > wok-linux-x86_64.tar.gz.sha256
+          sha256sum wok-macos-x86_64.tar.gz > wok-macos-x86_64.tar.gz.sha256
+          sha256sum wok-macos-aarch64.tar.gz > wok-macos-aarch64.tar.gz.sha256
+          echo "Checksums:"
+          cat *.sha256
+
+      - name: Prepare install script
+        run: |
+          cp install.sh dist/install.sh
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.version.outputs.tag }}
+          name: wok ${{ steps.version.outputs.tag }}
+          draft: false
+          prerelease: ${{ contains(steps.version.outputs.tag, '-') }}
           generate_release_notes: true
+          files: |
+            dist/wok-${{ steps.version.outputs.version }}.tar.gz
+            dist/wok-${{ steps.version.outputs.version }}.tar.gz.sha256
+            dist/wok-linux-x86_64.tar.gz
+            dist/wok-linux-x86_64.tar.gz.sha256
+            dist/wok-macos-x86_64.tar.gz
+            dist/wok-macos-x86_64.tar.gz.sha256
+            dist/wok-macos-aarch64.tar.gz
+            dist/wok-macos-aarch64.tar.gz.sha256
+            dist/install.sh

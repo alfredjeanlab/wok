@@ -2,6 +2,20 @@
 
 A collaborative, offline-first, AI-friendly issue tracker.
 
+## Installation
+
+### Homebrew (macOS)
+
+```bash
+brew install alfredjeanlab/tap/wok
+```
+
+### Linux / Manual
+
+```bash
+curl -fsSL https://github.com/alfredjeanlab/wok/releases/latest/download/install.sh | bash
+```
+
 ## Setup
 
 Initialize a tracker in your project:
