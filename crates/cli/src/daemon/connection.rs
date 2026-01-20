@@ -212,6 +212,25 @@ impl ConnectionManager {
     pub fn cancel(&self) {
         self.cancel_token.cancel();
     }
+
+    /// Schedule a connection attempt after a delay.
+    ///
+    /// This spawns a background task that waits for the delay, then starts
+    /// the connection attempt. This allows the caller to remain responsive
+    /// while waiting for the retry.
+    pub fn spawn_delayed_connect(&self, delay: Duration) {
+        let config = self.config.clone();
+        let shared_state = Arc::clone(&self.shared_state);
+        let event_tx = self.event_tx.clone();
+        let cancel_token = self.cancel_token.clone();
+
+        tokio::spawn(async move {
+            tokio::time::sleep(delay).await;
+            if !cancel_token.is_cancelled() {
+                connect_with_retry(config, shared_state, event_tx, cancel_token).await;
+            }
+        });
+    }
 }
 
 /// Background connection task with exponential backoff.
