@@ -6,24 +6,11 @@ load '../helpers/remote_common'
 # ============================================================================
 
 @test "server starts and binds to specified port" {
-    local port
-    port=$(find_free_port)
-    local data_dir="$TEST_DIR/server_data"
-    mkdir -p "$data_dir"
-
-    # Start server
-    "$WK_REMOTE_BIN" --bind "127.0.0.1:$port" --data "$data_dir" &
-    local pid=$!
-
-    # Wait for server to be ready
-    wait_server_ready "$port"
+    # Use start_server helper for proper process tracking and cleanup
+    start_server
 
     # Verify port is open
-    nc -z 127.0.0.1 "$port"
-
-    # Cleanup
-    kill "$pid" 2>/dev/null || true
-    wait "$pid" 2>/dev/null || true
+    nc -z 127.0.0.1 "$SERVER_PORT"
 }
 
 @test "server accepts WebSocket connections" {
@@ -35,40 +22,23 @@ load '../helpers/remote_common'
 }
 
 @test "server creates data directory if needed" {
-    local port
-    port=$(find_free_port)
     local data_dir="$TEST_DIR/nested/deep/data"
 
     # Directory should not exist
     [ ! -d "$data_dir" ]
 
-    # Start server with nested data directory
-    "$WK_REMOTE_BIN" --bind "127.0.0.1:$port" --data "$data_dir" &
-    local pid=$!
-
-    # Wait for server to start
-    wait_server_ready "$port"
+    # Use start_server with custom data dir for proper process tracking
+    start_server "$data_dir"
 
     # Directory should now exist
     [ -d "$data_dir" ]
-
-    # Cleanup
-    kill "$pid" 2>/dev/null || true
-    wait "$pid" 2>/dev/null || true
 }
 
 @test "server stops cleanly on SIGTERM" {
-    local port
-    port=$(find_free_port)
-    local data_dir="$TEST_DIR/server_data"
-    mkdir -p "$data_dir"
-
-    # Start server
-    "$WK_REMOTE_BIN" --bind "127.0.0.1:$port" --data "$data_dir" &
-    local pid=$!
-
-    # Wait for server to be ready
-    wait_server_ready "$port"
+    # Use start_server for proper process tracking
+    start_server
+    local port="$SERVER_PORT"
+    local pid="$SERVER_PID"
 
     # Send SIGTERM
     kill -TERM "$pid"
@@ -80,6 +50,9 @@ load '../helpers/remote_common'
     # Verify port is no longer in use
     run nc -z 127.0.0.1 "$port"
     assert_failure
+
+    # Clear SERVER_PID so teardown doesn't try to kill again
+    unset SERVER_PID
 }
 
 @test "server rejects invalid bind address" {
