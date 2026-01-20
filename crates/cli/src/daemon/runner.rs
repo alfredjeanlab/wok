@@ -269,10 +269,10 @@ async fn run_daemon_async(daemon_dir: &Path, config: &Config) -> Result<()> {
                                 }
                             }
                             ConnectionEvent::Failed { .. } => {
-                                // Connection manager has given up, wait a bit then try again
-                                tokio::time::sleep(Duration::from_secs(5)).await;
+                                // Connection manager has given up, schedule retry after delay.
+                                // Use spawn_delayed_connect to avoid blocking IPC handling.
                                 if let Some(ref manager) = connection_manager {
-                                    manager.spawn_connect_task();
+                                    manager.spawn_delayed_connect(Duration::from_secs(5));
                                 }
                             }
                         }
