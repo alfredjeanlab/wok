@@ -30,6 +30,10 @@ EOF
 @test "import updates existing issues and detects collisions" {
     # Updates existing issues
     id=$(create_issue task "Original title")
+    # Verify issue was created before importing (defensive against timing issues)
+    run "$WK_BIN" show "$id"
+    assert_success
+    assert_output --partial "Original title"
     cat > import.jsonl << EOF
 {"id":"$id","issue_type":"task","title":"Updated title","status":"todo","created_at":"2024-01-01T00:00:00Z","updated_at":"2024-01-01T00:00:00Z","labels":[],"notes":[],"deps":[],"events":[]}
 EOF
