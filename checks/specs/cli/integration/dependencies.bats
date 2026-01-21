@@ -53,21 +53,21 @@ load '../../helpers/common'
 }
 
 @test "transitive blocking works" {
-    a=$(create_issue task "Task A")
-    b=$(create_issue task "Task B")
-    c=$(create_issue task "Task C")
+    a=$(create_issue task "Task A" --label "test:trans-block")
+    b=$(create_issue task "Task B" --label "test:trans-block")
+    c=$(create_issue task "Task C" --label "test:trans-block")
     "$WK_BIN" dep "$a" blocks "$b"
     "$WK_BIN" dep "$b" blocks "$c"
 
     # list shows all open issues
-    run "$WK_BIN" list
+    run "$WK_BIN" list --label "test:trans-block"
     assert_success
     assert_output --partial "$a"
     assert_output --partial "$b"
     assert_output --partial "$c"
 
     # ready shows only unblocked (A), not B or C
-    run "$WK_BIN" ready
+    run "$WK_BIN" ready --label "test:trans-block"
     assert_success
     assert_output --partial "$a"
     refute_output --partial "$b"
@@ -75,9 +75,9 @@ load '../../helpers/common'
 }
 
 @test "transitive blocking unblocks in chain" {
-    a=$(create_issue task "Task A")
-    b=$(create_issue task "Task B")
-    c=$(create_issue task "Task C")
+    a=$(create_issue task "Task A" --label "test:trans-unblock")
+    b=$(create_issue task "Task B" --label "test:trans-unblock")
+    c=$(create_issue task "Task C" --label "test:trans-unblock")
     "$WK_BIN" dep "$a" blocks "$b"
     "$WK_BIN" dep "$b" blocks "$c"
 
@@ -85,7 +85,7 @@ load '../../helpers/common'
     "$WK_BIN" start "$a"
     "$WK_BIN" done "$a"
 
-    run "$WK_BIN" ready
+    run "$WK_BIN" ready --label "test:trans-unblock"
     assert_output --partial "$b"
     refute_output --partial "$c"
 
@@ -93,7 +93,7 @@ load '../../helpers/common'
     "$WK_BIN" start "$b"
     "$WK_BIN" done "$b"
 
-    run "$WK_BIN" ready
+    run "$WK_BIN" ready --label "test:trans-unblock"
     assert_output --partial "$c"
 }
 
