@@ -230,9 +230,11 @@ load '../../helpers/common'
 }
 
 @test "ready with -t short flag for type" {
-    create_issue bug "A bug"
-    create_issue task "A task"
-    run "$WK_BIN" ready -t bug
+    id1=$(create_issue bug "A bug")
+    "$WK_BIN" label "$id1" "test:ready-shortflag"
+    id2=$(create_issue task "A task")
+    "$WK_BIN" label "$id2" "test:ready-shortflag"
+    run "$WK_BIN" ready -t bug --label "test:ready-shortflag"
     assert_success
     assert_output --partial "A bug"
     refute_output --partial "A task"
