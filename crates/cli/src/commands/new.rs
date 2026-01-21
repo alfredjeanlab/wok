@@ -8,7 +8,7 @@ use wk_core::OpPayload;
 
 use crate::config::{find_work_dir, get_db_path, Config};
 use crate::db::Database;
-use crate::error::Result;
+use crate::error::{Error, Result};
 use crate::id::generate_unique_id;
 use crate::models::{Action, Event, Issue, IssueType, Status};
 use crate::validate::{
@@ -61,6 +61,65 @@ fn expand_labels(labels: &[String]) -> Vec<String> {
                 .map(String::from)
         })
         .collect()
+}
+
+/// Maximum number of retries for ID collision during issue creation.
+const MAX_ID_COLLISION_RETRIES: u32 = 10;
+
+/// Create an issue with retry on ID collision.
+///
+/// When multiple processes generate IDs simultaneously, they may both check
+/// that an ID doesn't exist and then both try to insert, causing a UNIQUE
+/// constraint violation. This function retries with a new timestamp when
+/// this race condition occurs.
+fn create_issue_with_retry(
+    db: &Database,
+    config: &Config,
+    issue_type: IssueType,
+    title: &str,
+    assignee: Option<String>,
+) -> Result<(String, Issue)> {
+    for _ in 0..MAX_ID_COLLISION_RETRIES {
+        let created_at = Utc::now();
+        let id = generate_unique_id(&config.prefix, title, &created_at, |id| {
+            db.issue_exists(id).unwrap_or(false)
+        });
+
+        let issue = Issue {
+            id: id.clone(),
+            issue_type,
+            title: title.to_string(),
+            description: None,
+            status: Status::Todo,
+            assignee: assignee.clone(),
+            created_at,
+            updated_at: created_at,
+            closed_at: None,
+        };
+
+        match db.create_issue(&issue) {
+            Ok(()) => return Ok((id, issue)),
+            Err(Error::Database(ref e)) if is_unique_constraint_error(e) => {
+                // ID collision due to race condition, retry with new timestamp
+                continue;
+            }
+            Err(e) => return Err(e),
+        }
+    }
+
+    Err(Error::InvalidInput(
+        "failed to generate unique issue ID after multiple retries".to_string(),
+    ))
+}
+
+/// Check if a rusqlite error is a UNIQUE constraint violation.
+fn is_unique_constraint_error(err: &rusqlite::Error) -> bool {
+    match err {
+        rusqlite::Error::SqliteFailure(sqlite_err, _) => {
+            sqlite_err.code == rusqlite::ErrorCode::ConstraintViolation
+        }
+        _ => false,
+    }
 }
 
 /// Internal implementation that accepts db/config for testing.
@@ -127,24 +186,11 @@ pub(crate) fn run_impl(
         ));
     }
 
-    let created_at = Utc::now();
-    let id = generate_unique_id(&config.prefix, &normalized.title, &created_at, |id| {
-        db.issue_exists(id).unwrap_or(false)
-    });
-
-    let issue = Issue {
-        id: id.clone(),
-        issue_type,
-        title: normalized.title.clone(),
-        description: None,
-        status: Status::Todo,
-        assignee,
-        created_at,
-        updated_at: created_at,
-        closed_at: None,
-    };
-
-    db.create_issue(&issue)?;
+    // Create issue with retry on ID collision.
+    // Race condition: two processes may generate the same ID simultaneously
+    // if they check existence at the same time. We retry with a new timestamp
+    // if a UNIQUE constraint violation occurs.
+    let (id, issue) = create_issue_with_retry(db, config, issue_type, &normalized.title, assignee)?;
 
     // Log creation event
     let event = Event::new(id.clone(), Action::Created);
