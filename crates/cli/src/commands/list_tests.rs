@@ -736,3 +736,70 @@ fn test_run_impl_all_flag_shows_all_statuses() {
     );
     assert!(result.is_ok());
 }
+
+// Tests for ids output format
+
+#[test]
+fn test_run_impl_ids_format_outputs_space_separated() {
+    let db = setup_db();
+    create_issue(&db, "test-1", Status::Todo, IssueType::Task);
+    create_issue(&db, "test-2", Status::Todo, IssueType::Bug);
+
+    let result = run_impl(
+        &db,
+        vec![],
+        vec![],
+        vec![],
+        vec![],
+        false,
+        vec![],
+        None,
+        false,
+        false,
+        OutputFormat::Ids,
+    );
+    assert!(result.is_ok());
+}
+
+#[test]
+fn test_run_impl_ids_format_with_filters() {
+    let db = setup_db();
+    create_issue(&db, "test-1", Status::Todo, IssueType::Task);
+    create_issue(&db, "test-2", Status::Todo, IssueType::Bug);
+
+    let result = run_impl(
+        &db,
+        vec![],
+        vec!["task".to_string()],
+        vec![],
+        vec![],
+        false,
+        vec![],
+        None,
+        false,
+        false,
+        OutputFormat::Ids,
+    );
+    assert!(result.is_ok());
+}
+
+#[test]
+fn test_run_impl_ids_format_empty_list() {
+    let db = setup_db();
+
+    // Empty database should not print anything
+    let result = run_impl(
+        &db,
+        vec![],
+        vec![],
+        vec![],
+        vec![],
+        false,
+        vec![],
+        None,
+        false,
+        false,
+        OutputFormat::Ids,
+    );
+    assert!(result.is_ok());
+}

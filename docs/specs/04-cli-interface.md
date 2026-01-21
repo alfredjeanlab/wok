@@ -97,7 +97,7 @@ wk list [--status/-s <status>[,<status>...]]   # todo|in_progress|done|closed
         [--type/-t <type>[,<type>...]]         # feature|task|bug|chore
         [--label/-l <label>[,<label>...]]...   # repeatable
         [--blocked]         # show only blocked issues
-        [--format/-f text|json]             # output format (default: text)
+        [--format/-f text|json|ids]          # output format (default: text)
 # Sort order: priority ASC (0=highest first), then created_at DESC (newest first)
 
 # Show ready issues (unblocked todo items only)

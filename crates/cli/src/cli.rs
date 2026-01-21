@@ -208,7 +208,8 @@ pub enum Command {
         wk list -q \"age < 3d\"          List issues created in last 3 days\n  \
         wk list -q \"updated > 1w\"      List issues not updated in 7+ days\n  \
         wk list --limit 10             Show only first 10 results\n  \
-        wk list -f json                Output in JSON format")]
+        wk list -f json                Output in JSON format\n  \
+        wk list -f ids                 Output only IDs (for piping to other commands)")]
     List {
         /// Filter by status (comma-separated for OR, repeat for AND)
         #[arg(long, short)]
