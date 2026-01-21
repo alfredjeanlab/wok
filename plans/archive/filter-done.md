@@ -1,5 +1,7 @@
 # Filter Done Implementation Plan
 
+**Root Feature:** `wok-9252`
+
 ## Overview
 
 Fix the filter behavior in `wk list` and `wk search` so that filter fields correctly distinguish between successfully completed issues and cancelled issues:
