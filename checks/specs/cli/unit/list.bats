@@ -401,7 +401,7 @@ load '../../helpers/common'
     [ "$count" -eq 20 ]
 }
 
-@test "list --format ids outputs one ID per line" {
+@test "list --format ids outputs space-separated IDs" {
     id1=$(create_issue task "IDFormat Issue 1")
     id2=$(create_issue task "IDFormat Issue 2")
     run "$WK_BIN" list --format ids
@@ -412,6 +412,9 @@ load '../../helpers/common'
     [[ ! "$output" =~ "task" ]]
     [[ ! "$output" =~ "todo" ]]
     [[ ! "$output" =~ "IDFormat" ]]
+    # Verify output is a single line with space-separated IDs
+    local line_count=$(echo "$output" | wc -l | tr -d ' ')
+    [ "$line_count" -eq 1 ]
 }
 
 @test "list --format ids works with filters" {
@@ -429,7 +432,8 @@ load '../../helpers/common'
     done
     run "$WK_BIN" list --label "test:limit-ids" --format ids --limit 10
     assert_success
-    local count=$(echo "$output" | wc -l | tr -d ' ')
+    # Count space-separated words (IDs)
+    local count=$(echo "$output" | wc -w | tr -d ' ')
     [ "$count" -eq 10 ]
 }
 
@@ -445,8 +449,27 @@ load '../../helpers/common'
     # Verify output is clean for command substitution
     run "$WK_BIN" list --format ids
     assert_success
-    # Output should be just IDs (alphanumeric with hyphens), one per line
-    while IFS= read -r line; do
-        [[ "$line" =~ ^[a-z0-9-]+$ ]]
-    done <<< "$output"
+    # Output should be space-separated IDs (alphanumeric with hyphens)
+    for word in $output; do
+        [[ "$word" =~ ^[a-z0-9-]+$ ]]
+    done
+}
+
+@test "list --format ids composes with batch commands" {
+    # Create issues with a unique label for isolation
+    id1=$(create_issue task "BatchClose Issue 1" --label "test:batch-close")
+    id2=$(create_issue task "BatchClose Issue 2" --label "test:batch-close")
+
+    # Verify we can use command substitution to close multiple issues
+    # shellcheck disable=SC2046
+    run "$WK_BIN" close $("$WK_BIN" list --label "test:batch-close" --format ids) --reason "batch closed"
+    assert_success
+    assert_output --partial "Closed $id1"
+    assert_output --partial "Closed $id2"
+
+    # Verify both issues are now closed
+    run "$WK_BIN" show "$id1"
+    assert_output --partial "Status: closed"
+    run "$WK_BIN" show "$id2"
+    assert_output --partial "Status: closed"
 }
