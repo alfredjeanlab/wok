@@ -163,15 +163,20 @@ pub(crate) fn run_impl(
         .map(|f| parse_filter(f))
         .collect::<Result<_>>()?;
 
-    // Check if any filter targets the closed field
-    let has_closed_filter = filters.iter().any(|f| f.field == FilterField::Closed);
+    // Check if any filter targets a terminal state field (completed, skipped, closed)
+    let has_terminal_filter = filters.iter().any(|f| {
+        matches!(
+            f.field,
+            FilterField::Completed | FilterField::Skipped | FilterField::Closed
+        )
+    });
 
     // Get all issues (we'll filter in-memory for complex multi-value logic)
     let mut issues = db.list_issues(None, None, None)?;
 
     // Default: show open issues (todo + in_progress) when no status filter and not --all
-    // Exception: when closed filter is used, include closed issues (they're the target)
-    if !all && status_groups.is_none() && !has_closed_filter {
+    // Exception: when terminal filter is used, include closed issues (they're the target)
+    if !all && status_groups.is_none() && !has_terminal_filter {
         issues.retain(|issue| issue.status == Status::Todo || issue.status == Status::InProgress);
     } else if status_groups.is_some() {
         // Filter by explicit status groups

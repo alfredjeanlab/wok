@@ -5,7 +5,7 @@
 
 use chrono::{DateTime, Duration, NaiveTime, Utc};
 
-use crate::models::Issue;
+use crate::models::{Issue, Status};
 
 use super::expr::{CompareOp, FilterExpr, FilterField, FilterValue};
 
@@ -20,15 +20,31 @@ impl FilterExpr {
     /// For date-based filters (e.g., `created > 2024-01-01`), the comparison
     /// is directly against the timestamp.
     ///
-    /// For closed filters, open issues (with no `closed_at`) never match.
+    /// For closed filters:
+    /// - `completed`/`done`: only matches issues with Status::Done
+    /// - `skipped`/`cancelled`: only matches issues with Status::Closed
+    /// - `closed`: matches any terminal state (Status::Done or Status::Closed)
     pub fn matches(&self, issue: &Issue, now: DateTime<Utc>) -> bool {
+        // Check status requirement for terminal-state fields
+        let status_matches = match self.field {
+            FilterField::Completed => issue.status == Status::Done,
+            FilterField::Skipped => issue.status == Status::Closed,
+            FilterField::Closed => issue.status == Status::Done || issue.status == Status::Closed,
+            FilterField::Age | FilterField::Updated => true,
+        };
+
+        if !status_matches {
+            return false;
+        }
+
+        // Get the relevant timestamp for this field
         let issue_time = match self.field {
             FilterField::Age => Some(issue.created_at),
             FilterField::Updated => Some(issue.updated_at),
-            FilterField::Closed => issue.closed_at,
+            FilterField::Completed | FilterField::Skipped | FilterField::Closed => issue.closed_at,
         };
 
-        // For Closed field: non-closed issues never match
+        // For terminal-state fields: non-closed issues never match
         let issue_time = match issue_time {
             Some(t) => t,
             None => return false,

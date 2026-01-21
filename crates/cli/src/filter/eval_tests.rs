@@ -445,3 +445,156 @@ fn closed_on_date_with_eq() {
     // Should match because dates are compared ignoring time
     assert!(expr.matches(&issue, now));
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Status-aware filtering (Completed vs Skipped vs Closed)
+// ─────────────────────────────────────────────────────────────────────────────
+
+fn make_done_issue(closed: DateTime<Utc>) -> Issue {
+    Issue {
+        id: "test-1234".to_string(),
+        issue_type: IssueType::Task,
+        title: "Done issue".to_string(),
+        description: None,
+        status: crate::models::Status::Done,
+        assignee: None,
+        created_at: closed - Duration::days(7),
+        updated_at: closed,
+        closed_at: Some(closed),
+    }
+}
+
+fn make_cancelled_issue(closed: DateTime<Utc>) -> Issue {
+    Issue {
+        id: "test-5678".to_string(),
+        issue_type: IssueType::Task,
+        title: "Cancelled issue".to_string(),
+        description: None,
+        status: crate::models::Status::Closed,
+        assignee: None,
+        created_at: closed - Duration::days(7),
+        updated_at: closed,
+        closed_at: Some(closed),
+    }
+}
+
+#[test]
+fn completed_filter_matches_done_status() {
+    let now = Utc::now();
+    let closed = now - Duration::hours(1);
+    let issue = make_done_issue(closed);
+
+    let expr = FilterExpr {
+        field: FilterField::Completed,
+        op: CompareOp::Lt,
+        value: FilterValue::Duration(Duration::days(1)),
+    };
+
+    assert!(expr.matches(&issue, now));
+}
+
+#[test]
+fn completed_filter_excludes_closed_status() {
+    let now = Utc::now();
+    let closed = now - Duration::hours(1);
+    let issue = make_cancelled_issue(closed);
+
+    let expr = FilterExpr {
+        field: FilterField::Completed,
+        op: CompareOp::Lt,
+        value: FilterValue::Duration(Duration::days(1)),
+    };
+
+    // Completed filter should NOT match Status::Closed issues
+    assert!(!expr.matches(&issue, now));
+}
+
+#[test]
+fn completed_filter_excludes_open_issues() {
+    let now = Utc::now();
+    let issue = make_issue_created_at(now - Duration::days(1));
+    // issue.status is Todo and closed_at is None
+
+    let expr = FilterExpr {
+        field: FilterField::Completed,
+        op: CompareOp::Lt,
+        value: FilterValue::Duration(Duration::days(30)),
+    };
+
+    assert!(!expr.matches(&issue, now));
+}
+
+#[test]
+fn skipped_filter_matches_closed_status() {
+    let now = Utc::now();
+    let closed = now - Duration::hours(1);
+    let issue = make_cancelled_issue(closed);
+
+    let expr = FilterExpr {
+        field: FilterField::Skipped,
+        op: CompareOp::Lt,
+        value: FilterValue::Duration(Duration::days(1)),
+    };
+
+    assert!(expr.matches(&issue, now));
+}
+
+#[test]
+fn skipped_filter_excludes_done_status() {
+    let now = Utc::now();
+    let closed = now - Duration::hours(1);
+    let issue = make_done_issue(closed);
+
+    let expr = FilterExpr {
+        field: FilterField::Skipped,
+        op: CompareOp::Lt,
+        value: FilterValue::Duration(Duration::days(1)),
+    };
+
+    // Skipped filter should NOT match Status::Done issues
+    assert!(!expr.matches(&issue, now));
+}
+
+#[test]
+fn skipped_filter_excludes_open_issues() {
+    let now = Utc::now();
+    let issue = make_issue_created_at(now - Duration::days(1));
+
+    let expr = FilterExpr {
+        field: FilterField::Skipped,
+        op: CompareOp::Lt,
+        value: FilterValue::Duration(Duration::days(30)),
+    };
+
+    assert!(!expr.matches(&issue, now));
+}
+
+#[test]
+fn closed_filter_matches_done_status() {
+    let now = Utc::now();
+    let closed = now - Duration::hours(1);
+    let issue = make_done_issue(closed);
+
+    let expr = FilterExpr {
+        field: FilterField::Closed,
+        op: CompareOp::Lt,
+        value: FilterValue::Duration(Duration::days(1)),
+    };
+
+    assert!(expr.matches(&issue, now));
+}
+
+#[test]
+fn closed_filter_matches_closed_status() {
+    let now = Utc::now();
+    let closed = now - Duration::hours(1);
+    let issue = make_cancelled_issue(closed);
+
+    let expr = FilterExpr {
+        field: FilterField::Closed,
+        op: CompareOp::Lt,
+        value: FilterValue::Duration(Duration::days(1)),
+    };
+
+    assert!(expr.matches(&issue, now));
+}

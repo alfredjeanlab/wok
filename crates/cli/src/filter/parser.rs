@@ -73,7 +73,9 @@ fn parse_field(s: &str) -> Result<FilterField> {
     match s.to_lowercase().as_str() {
         "age" | "created" => Ok(FilterField::Age),
         "updated" | "activity" => Ok(FilterField::Updated),
-        "closed" | "completed" | "done" => Ok(FilterField::Closed),
+        "completed" | "done" => Ok(FilterField::Completed),
+        "skipped" | "cancelled" => Ok(FilterField::Skipped),
+        "closed" => Ok(FilterField::Closed),
         _ => Err(Error::InvalidInput(format!(
             "unknown field '{s}'. Valid fields: {}",
             FilterField::valid_names()

@@ -32,15 +32,21 @@ pub enum FilterField {
     /// Time since last update (`updated` or `activity` synonyms).
     /// Represents `now - updated_at`.
     Updated,
-    /// Time since closed (`closed`, `completed`, or `done` synonyms).
-    /// Represents `now - closed_at`. Only matches issues with a closed_at timestamp.
+    /// Successfully completed issues only (Status::Done).
+    /// Time since closed via `wk done` (`completed` or `done` synonyms).
+    Completed,
+    /// Cancelled/skipped issues only (Status::Closed).
+    /// Time since closed via `wk close --reason` (`skipped` or `cancelled` synonyms).
+    Skipped,
+    /// Any terminal state (Status::Done or Status::Closed).
+    /// Time since closed (`closed` synonym). Matches any issue with a closed_at timestamp.
     Closed,
 }
 
 impl FilterField {
     /// Returns valid field names for error messages.
     pub fn valid_names() -> &'static str {
-        "age, created, updated, activity, closed, completed, done"
+        "age, created, activity, updated, completed, done, skipped, cancelled, closed"
     }
 }
 

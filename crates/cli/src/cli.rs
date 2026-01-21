@@ -212,11 +212,10 @@ pub enum Command {
         wk list -f ids                 Output only IDs (for piping to other commands)\n\n\
       Filter Expressions (-q/--filter):\n  \
         Syntax: FIELD OPERATOR VALUE\n  \
-        Fields: age (or created), updated (or activity), closed (or completed, done)\n  \
-        Operators: < <= > >= = != (or word forms: lt lte gt gte eq ne)\n  \
+        Fields: age, activity, completed, skipped, closed\n  \
+        Operators: < <= > >= = != (or: lt lte gt gte eq ne)\n  \
         Values: durations (30d, 1w, 24h, 5m, 10s) or dates (2024-01-01)\n  \
-        Duration units: ms, s, m, h, d, w, M (30d), y (365d)\n  \
-        Word operators are shell-friendly (no quoting needed)")]
+        Duration units: ms, s, m, h, d, w, M (30d), y (365d)")]
     List {
         /// Filter by status (comma-separated for OR, repeat for AND)
         #[arg(long, short)]
@@ -305,11 +304,10 @@ pub enum Command {
             wk search \"auth\" -n 5          Limit to 5 results\n\n\
           Filter Expressions (-q/--filter):\n  \
             Syntax: FIELD OPERATOR VALUE\n  \
-            Fields: age (or created), updated (or activity), closed (or completed, done)\n  \
-            Operators: < <= > >= = != (or word forms: lt lte gt gte eq ne)\n  \
+            Fields: age, activity, completed, skipped, closed\n  \
+            Operators: < <= > >= = != (or: lt lte gt gte eq ne)\n  \
             Values: durations (30d, 1w, 24h, 5m, 10s) or dates (2024-01-01)\n  \
-            Duration units: ms, s, m, h, d, w, M (30d), y (365d)\n  \
-            Word operators are shell-friendly (no quoting needed)"
+            Duration units: ms, s, m, h, d, w, M (30d), y (365d)"
     )]
     Search {
         /// Search query

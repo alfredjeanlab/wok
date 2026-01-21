@@ -36,20 +36,32 @@ fn parse_field_activity_synonym() {
 }
 
 #[test]
-fn parse_field_closed() {
-    let expr = parse_filter("closed < 3d").unwrap();
-    assert_eq!(expr.field, FilterField::Closed);
-}
-
-#[test]
-fn parse_field_completed_synonym() {
-    let expr = parse_filter("completed > 1w").unwrap();
-    assert_eq!(expr.field, FilterField::Closed);
+fn parse_field_completed() {
+    let expr = parse_filter("completed < 3d").unwrap();
+    assert_eq!(expr.field, FilterField::Completed);
 }
 
 #[test]
 fn parse_field_done_synonym() {
     let expr = parse_filter("done >= 2024-01-01").unwrap();
+    assert_eq!(expr.field, FilterField::Completed);
+}
+
+#[test]
+fn parse_field_skipped() {
+    let expr = parse_filter("skipped > 1w").unwrap();
+    assert_eq!(expr.field, FilterField::Skipped);
+}
+
+#[test]
+fn parse_field_cancelled_synonym() {
+    let expr = parse_filter("cancelled < 3d").unwrap();
+    assert_eq!(expr.field, FilterField::Skipped);
+}
+
+#[test]
+fn parse_field_closed() {
+    let expr = parse_filter("closed < 3d").unwrap();
     assert_eq!(expr.field, FilterField::Closed);
 }
 

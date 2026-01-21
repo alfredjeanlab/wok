@@ -13,9 +13,11 @@ fn filter_field_valid_names_includes_all_synonyms() {
     assert!(names.contains("created"));
     assert!(names.contains("updated"));
     assert!(names.contains("activity"));
-    assert!(names.contains("closed"));
     assert!(names.contains("completed"));
     assert!(names.contains("done"));
+    assert!(names.contains("skipped"));
+    assert!(names.contains("cancelled"));
+    assert!(names.contains("closed"));
 }
 
 #[test]
@@ -60,7 +62,7 @@ fn filter_expr_inequality_different_field() {
 }
 
 #[test]
-fn filter_expr_closed_field_distinct() {
+fn filter_expr_terminal_fields_distinct() {
     let age = FilterExpr {
         field: FilterField::Age,
         op: CompareOp::Lt,
@@ -71,13 +73,31 @@ fn filter_expr_closed_field_distinct() {
         op: CompareOp::Lt,
         value: FilterValue::Duration(Duration::days(3)),
     };
+    let completed = FilterExpr {
+        field: FilterField::Completed,
+        op: CompareOp::Lt,
+        value: FilterValue::Duration(Duration::days(3)),
+    };
+    let skipped = FilterExpr {
+        field: FilterField::Skipped,
+        op: CompareOp::Lt,
+        value: FilterValue::Duration(Duration::days(3)),
+    };
     let closed = FilterExpr {
         field: FilterField::Closed,
         op: CompareOp::Lt,
         value: FilterValue::Duration(Duration::days(3)),
     };
+    // All fields should be distinct
+    assert_ne!(age, completed);
+    assert_ne!(age, skipped);
     assert_ne!(age, closed);
+    assert_ne!(updated, completed);
+    assert_ne!(updated, skipped);
     assert_ne!(updated, closed);
+    assert_ne!(completed, skipped);
+    assert_ne!(completed, closed);
+    assert_ne!(skipped, closed);
 }
 
 #[test]

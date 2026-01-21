@@ -312,17 +312,69 @@ load '../../helpers/common'
     assert_output --partial "ClosedStatus Done"
     assert_output --partial "ClosedStatus Closed"
     refute_output --partial "ClosedStatus Open"
+}
 
-    # Closed synonyms work
-    id=$(create_issue task "ClosedSyn Issue")
-    "$WK_BIN" start "$id"
-    "$WK_BIN" done "$id"
+@test "list --filter completed only shows done status" {
+    # Create issues with different terminal states
+    done_id=$(create_issue task "CompletedFilter Done")
+    "$WK_BIN" start "$done_id"
+    "$WK_BIN" done "$done_id"
+    closed_id=$(create_issue task "CompletedFilter Cancelled")
+    "$WK_BIN" close "$closed_id" --reason "wontfix"
+    open_id=$(create_issue task "CompletedFilter Open")
 
-    for field in "closed" "completed" "done"; do
-        run "$WK_BIN" list --filter "$field < 1d"
-        assert_success
-        assert_output --partial "ClosedSyn Issue"
-    done
+    # completed filter should only match Status::Done
+    run "$WK_BIN" list --filter "completed < 1d"
+    assert_success
+    assert_output --partial "CompletedFilter Done"
+    refute_output --partial "CompletedFilter Cancelled"
+    refute_output --partial "CompletedFilter Open"
+
+    # done is a synonym for completed
+    run "$WK_BIN" list --filter "done < 1d"
+    assert_success
+    assert_output --partial "CompletedFilter Done"
+    refute_output --partial "CompletedFilter Cancelled"
+}
+
+@test "list --filter skipped only shows closed status" {
+    # Create issues with different terminal states
+    done_id=$(create_issue task "SkippedFilter Done")
+    "$WK_BIN" start "$done_id"
+    "$WK_BIN" done "$done_id"
+    closed_id=$(create_issue task "SkippedFilter Cancelled")
+    "$WK_BIN" close "$closed_id" --reason "wontfix"
+    open_id=$(create_issue task "SkippedFilter Open")
+
+    # skipped filter should only match Status::Closed
+    run "$WK_BIN" list --filter "skipped < 1d"
+    assert_success
+    assert_output --partial "SkippedFilter Cancelled"
+    refute_output --partial "SkippedFilter Done"
+    refute_output --partial "SkippedFilter Open"
+
+    # cancelled is a synonym for skipped
+    run "$WK_BIN" list --filter "cancelled < 1d"
+    assert_success
+    assert_output --partial "SkippedFilter Cancelled"
+    refute_output --partial "SkippedFilter Done"
+}
+
+@test "list --filter closed shows both done and closed status" {
+    # Create issues with different terminal states
+    done_id=$(create_issue task "ClosedFilter Done")
+    "$WK_BIN" start "$done_id"
+    "$WK_BIN" done "$done_id"
+    closed_id=$(create_issue task "ClosedFilter Cancelled")
+    "$WK_BIN" close "$closed_id" --reason "wontfix"
+    open_id=$(create_issue task "ClosedFilter Open")
+
+    # closed filter should match both Status::Done and Status::Closed
+    run "$WK_BIN" list --filter "closed < 1d"
+    assert_success
+    assert_output --partial "ClosedFilter Done"
+    assert_output --partial "ClosedFilter Cancelled"
+    refute_output --partial "ClosedFilter Open"
 }
 
 @test "list --filter with word operators (shell-friendly)" {
