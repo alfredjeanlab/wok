@@ -209,7 +209,14 @@ pub enum Command {
         wk list -q \"updated > 1w\"      List issues not updated in 7+ days\n  \
         wk list --limit 10             Show only first 10 results\n  \
         wk list -f json                Output in JSON format\n  \
-        wk list -f ids                 Output only IDs (for piping to other commands)")]
+        wk list -f ids                 Output only IDs (for piping to other commands)\n\n\
+      Filter Expressions (-q/--filter):\n  \
+        Syntax: FIELD OPERATOR VALUE\n  \
+        Fields: age (or created), updated (or activity), closed (or completed, done)\n  \
+        Operators: < <= > >= = != (or word forms: lt lte gt gte eq ne)\n  \
+        Values: durations (30d, 1w, 24h, 5m, 10s) or dates (2024-01-01)\n  \
+        Duration units: ms, s, m, h, d, w, M (30d), y (365d)\n  \
+        Word operators are shell-friendly (no quoting needed)")]
     List {
         /// Filter by status (comma-separated for OR, repeat for AND)
         #[arg(long, short)]
@@ -295,7 +302,14 @@ pub enum Command {
             wk search \"bug\" -t bug         Search bugs only\n  \
             wk search \"task\" -a alice      Search issues assigned to alice\n  \
             wk search \"auth\" -q \"age < 30d\" Search with time filter\n  \
-            wk search \"auth\" -n 5          Limit to 5 results"
+            wk search \"auth\" -n 5          Limit to 5 results\n\n\
+          Filter Expressions (-q/--filter):\n  \
+            Syntax: FIELD OPERATOR VALUE\n  \
+            Fields: age (or created), updated (or activity), closed (or completed, done)\n  \
+            Operators: < <= > >= = != (or word forms: lt lte gt gte eq ne)\n  \
+            Values: durations (30d, 1w, 24h, 5m, 10s) or dates (2024-01-01)\n  \
+            Duration units: ms, s, m, h, d, w, M (30d), y (365d)\n  \
+            Word operators are shell-friendly (no quoting needed)"
     )]
     Search {
         /// Search query
