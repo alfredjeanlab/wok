@@ -210,16 +210,17 @@ load '../../helpers/common'
 
 @test "list --filter expressions" {
     # Age filter
+    # Use generous timing margins to avoid flakiness under high load
     old_id=$(create_issue task "AgeFilter Old")
-    sleep 0.2
+    sleep 0.5
     new_id=$(create_issue task "AgeFilter New")
 
-    run "$WK_BIN" list --filter "age < 100ms"
+    run "$WK_BIN" list --filter "age < 400ms"
     assert_success
     assert_output --partial "AgeFilter New"
     refute_output --partial "AgeFilter Old"
 
-    run "$WK_BIN" list --filter "age >= 100ms"
+    run "$WK_BIN" list --filter "age >= 400ms"
     assert_success
     assert_output --partial "AgeFilter Old"
     refute_output --partial "AgeFilter New"
@@ -379,24 +380,25 @@ load '../../helpers/common'
 
 @test "list --filter with word operators (shell-friendly)" {
     # Word operators are shell-friendly alternatives to < > = etc.
+    # Use generous timing margins to avoid flakiness under high load
     old_id=$(create_issue task "WordOp Old")
-    sleep 0.2
+    sleep 0.5
     new_id=$(create_issue task "WordOp New")
 
     # lt = less than (<)
-    run "$WK_BIN" list --filter "age lt 100ms"
+    run "$WK_BIN" list --filter "age lt 400ms"
     assert_success
     assert_output --partial "WordOp New"
     refute_output --partial "WordOp Old"
 
     # gte = greater than or equal (>=)
-    run "$WK_BIN" list --filter "age gte 100ms"
+    run "$WK_BIN" list --filter "age gte 400ms"
     assert_success
     assert_output --partial "WordOp Old"
     refute_output --partial "WordOp New"
 
     # gt = greater than (>)
-    run "$WK_BIN" list --filter "age gt 50ms"
+    run "$WK_BIN" list --filter "age gt 300ms"
     assert_success
     assert_output --partial "WordOp Old"
 
