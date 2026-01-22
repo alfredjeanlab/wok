@@ -1,5 +1,6 @@
 # Filter Status Implementation Plan
 
+**Root Feature:** `wok-1365`
 **Branch:** `feature/filter-status`
 
 ## Overview
