@@ -1,5 +1,7 @@
 # Ready Command Performance Optimization
 
+**Root Feature:** `wok-fb59`
+
 **Root Issue:** `wk ready` takes >500ms (often 3+ seconds) on a database with only 664 issues.
 
 ## Overview
