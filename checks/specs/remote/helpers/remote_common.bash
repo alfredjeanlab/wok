@@ -448,7 +448,7 @@ wait_for_issue() {
         if "$WK_BIN" list --all 2>/dev/null | grep -q "$title"; then
             return 0
         fi
-        sleep 0.01
+        sleep 0.02  # Slightly longer sleep for CI environments
         ((attempt++))
     done
 
@@ -470,7 +470,7 @@ wait_for_status() {
         if [ "$status" = "$expected" ]; then
             return 0
         fi
-        sleep 0.01
+        sleep 0.02  # Slightly longer sleep for CI environments
         ((attempt++))
     done
 
