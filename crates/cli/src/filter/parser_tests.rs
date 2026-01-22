@@ -404,3 +404,122 @@ fn duration_parse_negative_error() {
     let err = parse_duration("-5d").unwrap_err();
     assert!(err.to_string().contains("negative"));
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Now value parsing
+// ─────────────────────────────────────────────────────────────────────────────
+
+#[test]
+fn parses_now_value() {
+    let expr = parse_filter("closed < now").unwrap();
+    assert_eq!(expr.field, FilterField::Closed);
+    assert_eq!(expr.op, CompareOp::Lt);
+    assert_eq!(expr.value, FilterValue::Now);
+}
+
+#[test]
+fn parses_now_case_insensitive() {
+    let expr = parse_filter("closed < NOW").unwrap();
+    assert_eq!(expr.value, FilterValue::Now);
+
+    let expr = parse_filter("closed < Now").unwrap();
+    assert_eq!(expr.value, FilterValue::Now);
+}
+
+#[test]
+fn parses_now_with_different_fields() {
+    let expr = parse_filter("age < now").unwrap();
+    assert_eq!(expr.value, FilterValue::Now);
+
+    let expr = parse_filter("created > now").unwrap();
+    assert_eq!(expr.value, FilterValue::Now);
+
+    let expr = parse_filter("updated >= now").unwrap();
+    assert_eq!(expr.value, FilterValue::Now);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Bare status field parsing
+// ─────────────────────────────────────────────────────────────────────────────
+
+#[test]
+fn parses_bare_closed() {
+    let expr = parse_filter("closed").unwrap();
+    assert_eq!(expr.field, FilterField::Closed);
+    assert_eq!(expr.op, CompareOp::Ge);
+    assert!(matches!(expr.value, FilterValue::Duration(d) if d.is_zero()));
+}
+
+#[test]
+fn parses_bare_completed() {
+    let expr = parse_filter("completed").unwrap();
+    assert_eq!(expr.field, FilterField::Completed);
+    assert_eq!(expr.op, CompareOp::Ge);
+    assert!(matches!(expr.value, FilterValue::Duration(d) if d.is_zero()));
+}
+
+#[test]
+fn parses_bare_skipped() {
+    let expr = parse_filter("skipped").unwrap();
+    assert_eq!(expr.field, FilterField::Skipped);
+    assert_eq!(expr.op, CompareOp::Ge);
+    assert!(matches!(expr.value, FilterValue::Duration(d) if d.is_zero()));
+}
+
+#[test]
+fn parses_bare_done_alias() {
+    let expr = parse_filter("done").unwrap();
+    assert_eq!(expr.field, FilterField::Completed);
+}
+
+#[test]
+fn parses_bare_cancelled_alias() {
+    let expr = parse_filter("cancelled").unwrap();
+    assert_eq!(expr.field, FilterField::Skipped);
+}
+
+#[test]
+fn parses_bare_with_whitespace() {
+    let expr = parse_filter("  closed  ").unwrap();
+    assert_eq!(expr.field, FilterField::Closed);
+}
+
+#[test]
+fn rejects_bare_age() {
+    let result = parse_filter("age");
+    assert!(result.is_err());
+    assert!(result
+        .unwrap_err()
+        .to_string()
+        .contains("requires operator"));
+}
+
+#[test]
+fn rejects_bare_updated() {
+    let result = parse_filter("updated");
+    assert!(result.is_err());
+    assert!(result
+        .unwrap_err()
+        .to_string()
+        .contains("requires operator"));
+}
+
+#[test]
+fn rejects_bare_activity() {
+    let result = parse_filter("activity");
+    assert!(result.is_err());
+    assert!(result
+        .unwrap_err()
+        .to_string()
+        .contains("requires operator"));
+}
+
+#[test]
+fn rejects_bare_created() {
+    let result = parse_filter("created");
+    assert!(result.is_err());
+    assert!(result
+        .unwrap_err()
+        .to_string()
+        .contains("requires operator"));
+}

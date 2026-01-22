@@ -81,6 +81,8 @@ pub enum FilterValue {
     Duration(Duration),
     /// An absolute date like `2024-01-01`.
     Date(NaiveDate),
+    /// The current time (now).
+    Now,
 }
 
 #[cfg(test)]

@@ -212,10 +212,11 @@ pub enum Command {
         wk list -f json                Output in JSON format\n  \
         wk list -f ids                 Output only IDs (for piping to other commands)\n\n\
       Filter Expressions (-q/--filter):\n  \
-        Syntax: FIELD OPERATOR VALUE\n  \
+        Syntax: FIELD [OPERATOR VALUE]\n  \
         Fields: age, activity, completed, skipped, closed\n  \
+        Status shortcuts: 'closed', 'skipped', 'completed' (no operator needed)\n  \
         Operators: < <= > >= = != (or: lt lte gt gte eq ne)\n  \
-        Values: durations (30d, 1w, 24h, 5m, 10s) or dates (2024-01-01)\n  \
+        Values: durations (30d, 1w, 24h, 5m, 10s), dates (2024-01-01), or 'now'\n  \
         Duration units: ms, s, m, h, d, w, M (30d), y (365d)")]
     List {
         /// Filter by status (comma-separated for OR, repeat for AND)
@@ -304,10 +305,11 @@ pub enum Command {
             wk search \"auth\" -q \"age < 30d\" Search with time filter\n  \
             wk search \"auth\" -n 5          Limit to 5 results\n\n\
           Filter Expressions (-q/--filter):\n  \
-            Syntax: FIELD OPERATOR VALUE\n  \
+            Syntax: FIELD [OPERATOR VALUE]\n  \
             Fields: age, activity, completed, skipped, closed\n  \
+            Status shortcuts: 'closed', 'skipped', 'completed' (no operator needed)\n  \
             Operators: < <= > >= = != (or: lt lte gt gte eq ne)\n  \
-            Values: durations (30d, 1w, 24h, 5m, 10s) or dates (2024-01-01)\n  \
+            Values: durations (30d, 1w, 24h, 5m, 10s), dates (2024-01-01), or 'now'\n  \
             Duration units: ms, s, m, h, d, w, M (30d), y (365d)"
     )]
     Search {

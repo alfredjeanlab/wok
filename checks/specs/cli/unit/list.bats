@@ -527,3 +527,82 @@ load '../../helpers/common'
     run "$WK_BIN" show "$id2"
     assert_output --partial "Status: closed"
 }
+
+@test "list --filter accepts 'now' as value" {
+    # Create and close an issue
+    id=$(create_issue task "NowFilter Issue")
+    "$WK_BIN" close "$id" --reason "test"
+
+    # closed < now should match (closed before current time)
+    run "$WK_BIN" list --filter "closed < now"
+    assert_success
+    assert_output --partial "NowFilter Issue"
+
+    # closed > now should not match (nothing closed in the future)
+    run "$WK_BIN" list --filter "closed > now"
+    assert_success
+    refute_output --partial "NowFilter Issue"
+}
+
+@test "list --filter accepts bare status fields" {
+    # Create issues with different states
+    open_id=$(create_issue task "BareFilter Open")
+    done_id=$(create_issue task "BareFilter Done")
+    "$WK_BIN" start "$done_id"
+    "$WK_BIN" done "$done_id"
+    skipped_id=$(create_issue task "BareFilter Skipped")
+    "$WK_BIN" close "$skipped_id" --reason "wontfix"
+
+    # Bare "closed" matches any terminal state
+    run "$WK_BIN" list --filter "closed"
+    assert_success
+    assert_output --partial "BareFilter Done"
+    assert_output --partial "BareFilter Skipped"
+    refute_output --partial "BareFilter Open"
+
+    # Bare "completed" matches only Status::Done
+    run "$WK_BIN" list --filter "completed"
+    assert_success
+    assert_output --partial "BareFilter Done"
+    refute_output --partial "BareFilter Skipped"
+    refute_output --partial "BareFilter Open"
+
+    # Bare "skipped" matches only Status::Closed
+    run "$WK_BIN" list --filter "skipped"
+    assert_success
+    assert_output --partial "BareFilter Skipped"
+    refute_output --partial "BareFilter Done"
+    refute_output --partial "BareFilter Open"
+}
+
+@test "list --filter bare fields work with aliases" {
+    id=$(create_issue task "AliasFilter Done")
+    "$WK_BIN" start "$id"
+    "$WK_BIN" done "$id"
+
+    # "done" is alias for "completed"
+    run "$WK_BIN" list --filter "done"
+    assert_success
+    assert_output --partial "AliasFilter Done"
+
+    # "cancelled" is alias for "skipped"
+    skipped_id=$(create_issue task "AliasFilter Skipped")
+    "$WK_BIN" close "$skipped_id" --reason "test"
+
+    run "$WK_BIN" list --filter "cancelled"
+    assert_success
+    assert_output --partial "AliasFilter Skipped"
+    refute_output --partial "AliasFilter Done"
+}
+
+@test "list --filter rejects bare non-status fields" {
+    # Bare "age" without operator should fail
+    run "$WK_BIN" list --filter "age"
+    assert_failure
+    assert_output --partial "requires operator"
+
+    # Bare "updated" without operator should fail
+    run "$WK_BIN" list --filter "updated"
+    assert_failure
+    assert_output --partial "requires operator"
+}

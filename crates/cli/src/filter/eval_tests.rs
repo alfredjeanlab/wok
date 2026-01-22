@@ -598,3 +598,107 @@ fn closed_filter_matches_closed_status() {
 
     assert!(expr.matches(&issue, now));
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Now value evaluation
+// ─────────────────────────────────────────────────────────────────────────────
+
+#[test]
+fn now_value_matches_past_timestamps() {
+    let now = Utc::now();
+    let closed = now - Duration::hours(1);
+    let issue = make_closed_issue(closed);
+
+    // closed < now should match (closed 1 hour ago)
+    let expr = FilterExpr {
+        field: FilterField::Closed,
+        op: CompareOp::Lt,
+        value: FilterValue::Now,
+    };
+    assert!(expr.matches(&issue, now));
+
+    // closed > now should not match
+    let expr = FilterExpr {
+        field: FilterField::Closed,
+        op: CompareOp::Gt,
+        value: FilterValue::Now,
+    };
+    assert!(!expr.matches(&issue, now));
+}
+
+#[test]
+fn now_value_with_age_field() {
+    let now = Utc::now();
+    let created = now - Duration::hours(1);
+    let issue = make_issue_created_at(created);
+
+    // created < now should match (created 1 hour ago)
+    let expr = FilterExpr {
+        field: FilterField::Age,
+        op: CompareOp::Lt,
+        value: FilterValue::Now,
+    };
+    assert!(expr.matches(&issue, now));
+}
+
+#[test]
+fn now_value_with_updated_field() {
+    let now = Utc::now();
+    let created = now - Duration::days(7);
+    let updated = now - Duration::hours(1);
+    let issue = make_issue_at(created, updated);
+
+    // updated < now should match
+    let expr = FilterExpr {
+        field: FilterField::Updated,
+        op: CompareOp::Lt,
+        value: FilterValue::Now,
+    };
+    assert!(expr.matches(&issue, now));
+}
+
+#[test]
+fn now_value_excludes_open_issues_for_closed_field() {
+    let now = Utc::now();
+    let issue = make_issue_created_at(now - Duration::days(1));
+    // issue.closed_at is None (open issue)
+
+    let expr = FilterExpr {
+        field: FilterField::Closed,
+        op: CompareOp::Lt,
+        value: FilterValue::Now,
+    };
+
+    // Open issues never match closed filter even with Now value
+    assert!(!expr.matches(&issue, now));
+}
+
+#[test]
+fn now_value_with_le_operator() {
+    let now = Utc::now();
+    let closed = now - Duration::hours(1);
+    let issue = make_closed_issue(closed);
+
+    // closed <= now should match
+    let expr = FilterExpr {
+        field: FilterField::Closed,
+        op: CompareOp::Le,
+        value: FilterValue::Now,
+    };
+    assert!(expr.matches(&issue, now));
+}
+
+#[test]
+fn now_value_with_ge_operator() {
+    let now = Utc::now();
+    let closed = now - Duration::hours(1);
+    let issue = make_closed_issue(closed);
+
+    // closed >= now should not match (closed in the past)
+    let expr = FilterExpr {
+        field: FilterField::Closed,
+        op: CompareOp::Ge,
+        value: FilterValue::Now,
+    };
+    assert!(!expr.matches(&issue, now));
+}

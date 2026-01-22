@@ -63,6 +63,10 @@ impl FilterExpr {
                     .and_utc();
                 self.op.compare_datetime(issue_time, threshold)
             }
+            FilterValue::Now => {
+                // "now" compares the issue timestamp directly to the current time
+                self.op.compare_datetime(issue_time, now)
+            }
         }
     }
 }

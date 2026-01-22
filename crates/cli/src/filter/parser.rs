@@ -36,8 +36,29 @@ pub fn parse_filter(input: &str) -> Result<FilterExpr> {
     let (field_str, rest) = split_field(input)?;
     let field = parse_field(field_str)?;
 
-    // Extract operator
+    // Check if this is a bare status field (no operator/value)
     let rest = rest.trim_start();
+    if rest.is_empty() {
+        // Only allow bare syntax for status-aware fields
+        if matches!(
+            field,
+            FilterField::Completed | FilterField::Skipped | FilterField::Closed
+        ) {
+            // Bare status field: "closed" means "has closed status"
+            // Equivalent to "closed >= 0s" (any time since closed)
+            return Ok(FilterExpr {
+                field,
+                op: CompareOp::Ge,
+                value: FilterValue::Duration(Duration::zero()),
+            });
+        } else {
+            return Err(Error::InvalidInput(format!(
+                "filter expression requires operator and value: \"{input}\""
+            )));
+        }
+    }
+
+    // Extract operator
     let (op, rest) = parse_operator(rest)?;
 
     // Extract value
@@ -154,8 +175,13 @@ fn try_parse_word_operator(s: &str) -> Option<(CompareOp, &str)> {
     }
 }
 
-/// Parse a value (duration or date).
+/// Parse a value (duration, date, or "now").
 fn parse_value(s: &str) -> Result<FilterValue> {
+    // Check for "now" keyword first
+    if s.eq_ignore_ascii_case("now") {
+        return Ok(FilterValue::Now);
+    }
+
     // Try parsing as a date first (YYYY-MM-DD format)
     if let Some(date) = try_parse_date(s) {
         return Ok(FilterValue::Date(date));
