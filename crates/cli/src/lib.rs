@@ -39,6 +39,7 @@ pub mod filter;
 mod git_hooks;
 mod mode;
 mod normalize;
+mod schema;
 mod validate;
 mod wal;
 mod worktree;
@@ -50,7 +51,9 @@ pub mod id;
 pub mod models;
 pub mod sync;
 
-pub use cli::{Cli, Command, ConfigCommand, HooksCommand, OutputFormat, RemoteCommand};
+pub use cli::{
+    Cli, Command, ConfigCommand, HooksCommand, OutputFormat, RemoteCommand, SchemaCommand,
+};
 pub use config::{find_work_dir, get_db_path, init_work_dir, init_workspace_link, Config};
 pub use db::Database;
 pub use error::{Error, Result};
@@ -210,6 +213,7 @@ pub fn run(command: Command) -> Result<()> {
             HooksCommand::Status => commands::hooks::status(),
         },
         Command::Config(cmd) => commands::config::run(cmd),
+        Command::Schema(cmd) => commands::schema::run(cmd),
     }
 }
 

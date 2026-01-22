@@ -48,6 +48,7 @@ Setup & Configuration:
   remote      Manage remote sync
   export      Export issues to JSONL
   import      Import issues from JSONL
+  schema      Output JSON Schema for commands
   completion  Generate shell completions
   prime       Generate onboarding template";
 
@@ -576,6 +577,18 @@ pub enum Command {
 
     /// Output issue tracker onboarding template
     Prime,
+
+    /// Output JSON Schema for commands with JSON output
+    ///
+    /// Use these schemas to validate JSON output or generate type definitions.
+    #[command(
+        subcommand,
+        after_help = "Examples:\n  \
+            wk schema list    Output schema for 'wk list -f json'\n  \
+            wk schema show    Output schema for 'wk show <id> -f json'\n\n\
+          Available schemas: list, show, ready, search"
+    )]
+    Schema(SchemaCommand),
 }
 
 /// Configuration management commands.
@@ -636,6 +649,19 @@ pub enum RemoteCommand {
         #[arg(long)]
         work_dir: std::path::PathBuf,
     },
+}
+
+/// Schema output commands.
+#[derive(Subcommand)]
+pub enum SchemaCommand {
+    /// Output JSON Schema for 'wk list' JSON output
+    List,
+    /// Output JSON Schema for 'wk show' JSON output
+    Show,
+    /// Output JSON Schema for 'wk ready' JSON output
+    Ready,
+    /// Output JSON Schema for 'wk search' JSON output
+    Search,
 }
 
 /// Hooks management commands.
