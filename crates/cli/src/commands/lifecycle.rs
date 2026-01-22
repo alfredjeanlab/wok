@@ -15,6 +15,64 @@ use crate::validate::validate_and_trim_reason;
 
 use super::queue_op;
 
+/// Result of a bulk lifecycle operation
+#[derive(Default)]
+pub(crate) struct BulkResult {
+    /// Number of issues successfully transitioned
+    pub success_count: usize,
+    /// IDs that were not found in the database
+    pub unknown_ids: Vec<String>,
+    /// IDs that failed due to invalid transitions (with error message)
+    pub transition_failures: Vec<(String, String)>,
+}
+
+impl BulkResult {
+    /// Returns true if all operations succeeded
+    pub fn is_success(&self) -> bool {
+        self.unknown_ids.is_empty() && self.transition_failures.is_empty()
+    }
+
+    /// Returns the total number of failures
+    pub fn failure_count(&self) -> usize {
+        self.unknown_ids.len() + self.transition_failures.len()
+    }
+}
+
+/// Print summary for bulk operations
+fn print_bulk_summary(result: &BulkResult, action_verb: &str) {
+    // Only print summary if there were multiple items OR failures
+    if result.success_count + result.failure_count() <= 1 && result.is_success() {
+        return;
+    }
+
+    // Summary line
+    let total = result.success_count + result.failure_count();
+    // Capitalize first letter of action verb
+    let capitalized = format!(
+        "{}{}",
+        action_verb
+            .chars()
+            .next()
+            .map(|c| c.to_uppercase().to_string())
+            .unwrap_or_default(),
+        &action_verb[1..]
+    );
+    println!(
+        "{} {} of {} issues",
+        capitalized, result.success_count, total
+    );
+
+    // List unknown IDs
+    if !result.unknown_ids.is_empty() {
+        println!("Unknown IDs: {}", result.unknown_ids.join(", "));
+    }
+
+    // List transition failures
+    for (id, reason) in &result.transition_failures {
+        eprintln!("  {}: {}", id, reason);
+    }
+}
+
 pub fn start(ids: &[String]) -> Result<()> {
     let work_dir = find_work_dir()?;
     let config = Config::load(&work_dir)?;
@@ -30,10 +88,57 @@ pub(crate) fn start_impl(
     work_dir: &Path,
     ids: &[String],
 ) -> Result<()> {
+    let mut result = BulkResult::default();
+    let mut last_error: Option<Error> = None;
+
     for id in ids {
-        start_single(db, config, work_dir, id)?;
+        match start_single(db, config, work_dir, id) {
+            Ok(()) => result.success_count += 1,
+            Err(Error::IssueNotFound(ref unknown_id)) => {
+                last_error = Some(Error::IssueNotFound(unknown_id.clone()));
+                result.unknown_ids.push(unknown_id.clone());
+            }
+            Err(Error::InvalidTransition {
+                ref from,
+                ref to,
+                ref valid_targets,
+            }) => {
+                last_error = Some(Error::InvalidTransition {
+                    from: from.clone(),
+                    to: to.clone(),
+                    valid_targets: valid_targets.clone(),
+                });
+                let msg = format!("cannot go from {} to {}", from, to);
+                result.transition_failures.push((id.clone(), msg));
+            }
+            Err(e) => {
+                // Unexpected errors should still fail fast
+                return Err(e);
+            }
+        }
     }
-    Ok(())
+
+    // For single ID, return original error for backward compatibility
+    if ids.len() == 1 {
+        if result.is_success() {
+            return Ok(());
+        }
+        return Err(last_error
+            .unwrap_or_else(|| Error::InvalidInput("internal error: expected error".to_string())));
+    }
+
+    print_bulk_summary(&result, "started");
+
+    if result.is_success() {
+        Ok(())
+    } else {
+        Err(Error::PartialBulkFailure {
+            succeeded: result.success_count,
+            failed: result.failure_count(),
+            unknown_ids: result.unknown_ids,
+            transition_failures: result.transition_failures,
+        })
+    }
 }
 
 fn start_single(db: &Database, config: &Config, work_dir: &Path, id: &str) -> Result<()> {
@@ -91,10 +196,61 @@ pub(crate) fn done_impl(
     ids: &[String],
     reason: Option<&str>,
 ) -> Result<()> {
+    let mut result = BulkResult::default();
+    let mut last_error: Option<Error> = None;
+
     for id in ids {
-        done_single(db, config, work_dir, id, reason)?;
+        match done_single(db, config, work_dir, id, reason) {
+            Ok(()) => result.success_count += 1,
+            Err(Error::IssueNotFound(ref unknown_id)) => {
+                last_error = Some(Error::IssueNotFound(unknown_id.clone()));
+                result.unknown_ids.push(unknown_id.clone());
+            }
+            Err(Error::InvalidTransition {
+                ref from,
+                ref to,
+                ref valid_targets,
+            }) => {
+                last_error = Some(Error::InvalidTransition {
+                    from: from.clone(),
+                    to: to.clone(),
+                    valid_targets: valid_targets.clone(),
+                });
+                let msg = format!("cannot go from {} to {}", from, to);
+                result.transition_failures.push((id.clone(), msg));
+            }
+            Err(Error::InvalidInput(ref msg)) if msg.contains("required for agent") => {
+                last_error = Some(Error::InvalidInput(msg.clone()));
+                result.transition_failures.push((id.clone(), msg.clone()));
+            }
+            Err(e) => {
+                // Unexpected errors should still fail fast
+                return Err(e);
+            }
+        }
     }
-    Ok(())
+
+    // For single ID, return original error for backward compatibility
+    if ids.len() == 1 {
+        if result.is_success() {
+            return Ok(());
+        }
+        return Err(last_error
+            .unwrap_or_else(|| Error::InvalidInput("internal error: expected error".to_string())));
+    }
+
+    print_bulk_summary(&result, "completed");
+
+    if result.is_success() {
+        Ok(())
+    } else {
+        Err(Error::PartialBulkFailure {
+            succeeded: result.success_count,
+            failed: result.failure_count(),
+            unknown_ids: result.unknown_ids,
+            transition_failures: result.transition_failures,
+        })
+    }
 }
 
 fn done_single(
@@ -222,10 +378,57 @@ pub(crate) fn close_impl(
     ids: &[String],
     reason: &str,
 ) -> Result<()> {
+    let mut result = BulkResult::default();
+    let mut last_error: Option<Error> = None;
+
     for id in ids {
-        close_single(db, config, work_dir, id, reason)?;
+        match close_single(db, config, work_dir, id, reason) {
+            Ok(()) => result.success_count += 1,
+            Err(Error::IssueNotFound(ref unknown_id)) => {
+                last_error = Some(Error::IssueNotFound(unknown_id.clone()));
+                result.unknown_ids.push(unknown_id.clone());
+            }
+            Err(Error::InvalidTransition {
+                ref from,
+                ref to,
+                ref valid_targets,
+            }) => {
+                last_error = Some(Error::InvalidTransition {
+                    from: from.clone(),
+                    to: to.clone(),
+                    valid_targets: valid_targets.clone(),
+                });
+                let msg = format!("cannot go from {} to {}", from, to);
+                result.transition_failures.push((id.clone(), msg));
+            }
+            Err(e) => {
+                // Unexpected errors should still fail fast
+                return Err(e);
+            }
+        }
     }
-    Ok(())
+
+    // For single ID, return original error for backward compatibility
+    if ids.len() == 1 {
+        if result.is_success() {
+            return Ok(());
+        }
+        return Err(last_error
+            .unwrap_or_else(|| Error::InvalidInput("internal error: expected error".to_string())));
+    }
+
+    print_bulk_summary(&result, "closed");
+
+    if result.is_success() {
+        Ok(())
+    } else {
+        Err(Error::PartialBulkFailure {
+            succeeded: result.success_count,
+            failed: result.failure_count(),
+            unknown_ids: result.unknown_ids,
+            transition_failures: result.transition_failures,
+        })
+    }
 }
 
 fn close_single(
@@ -297,10 +500,61 @@ pub(crate) fn reopen_impl(
     ids: &[String],
     reason: Option<&str>,
 ) -> Result<()> {
+    let mut result = BulkResult::default();
+    let mut last_error: Option<Error> = None;
+
     for id in ids {
-        reopen_single(db, config, work_dir, id, reason)?;
+        match reopen_single(db, config, work_dir, id, reason) {
+            Ok(()) => result.success_count += 1,
+            Err(Error::IssueNotFound(ref unknown_id)) => {
+                last_error = Some(Error::IssueNotFound(unknown_id.clone()));
+                result.unknown_ids.push(unknown_id.clone());
+            }
+            Err(Error::InvalidTransition {
+                ref from,
+                ref to,
+                ref valid_targets,
+            }) => {
+                last_error = Some(Error::InvalidTransition {
+                    from: from.clone(),
+                    to: to.clone(),
+                    valid_targets: valid_targets.clone(),
+                });
+                let msg = format!("cannot go from {} to {}", from, to);
+                result.transition_failures.push((id.clone(), msg));
+            }
+            Err(Error::InvalidInput(ref msg)) if msg.contains("required for agent") => {
+                last_error = Some(Error::InvalidInput(msg.clone()));
+                result.transition_failures.push((id.clone(), msg.clone()));
+            }
+            Err(e) => {
+                // Unexpected errors should still fail fast
+                return Err(e);
+            }
+        }
     }
-    Ok(())
+
+    // For single ID, return original error for backward compatibility
+    if ids.len() == 1 {
+        if result.is_success() {
+            return Ok(());
+        }
+        return Err(last_error
+            .unwrap_or_else(|| Error::InvalidInput("internal error: expected error".to_string())));
+    }
+
+    print_bulk_summary(&result, "reopened");
+
+    if result.is_success() {
+        Ok(())
+    } else {
+        Err(Error::PartialBulkFailure {
+            succeeded: result.success_count,
+            failed: result.failure_count(),
+            unknown_ids: result.unknown_ids,
+            transition_failures: result.transition_failures,
+        })
+    }
 }
 
 fn reopen_single(

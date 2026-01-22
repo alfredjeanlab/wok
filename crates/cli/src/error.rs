@@ -93,6 +93,14 @@ pub enum Error {
 
     #[error("daemon timeout: {0}")]
     DaemonTimeout(String),
+
+    #[error("some operations failed: {succeeded} succeeded, {failed} failed")]
+    PartialBulkFailure {
+        succeeded: usize,
+        failed: usize,
+        unknown_ids: Vec<String>,
+        transition_failures: Vec<(String, String)>,
+    },
 }
 
 /// A specialized Result type for wkrs operations.

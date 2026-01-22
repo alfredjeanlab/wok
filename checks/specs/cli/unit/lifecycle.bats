@@ -192,10 +192,79 @@ load '../../helpers/common'
     assert_output --partial "Status: todo"
 }
 
-@test "batch start fails if any issue has invalid status" {
+@test "batch start with invalid status performs partial update" {
     id1=$(create_issue task "LifeBatchFail Task 1")
     id2=$(create_issue task "LifeBatchFail Task 2")
     "$WK_BIN" start "$id1"
     run "$WK_BIN" start "$id1" "$id2"
     assert_failure
+    assert_output --partial "Started 1 of 2"
+    # id2 should still be transitioned
+    run "$WK_BIN" show "$id2"
+    assert_output --partial "Status: in_progress"
+}
+
+@test "batch start with unknown IDs performs partial update" {
+    id1=$(create_issue task "PartialBatch Task 1")
+    run "$WK_BIN" start "$id1" "unknown-123" "unknown-456"
+    assert_failure
+    assert_output --partial "Started 1 of 3"
+    assert_output --partial "Unknown IDs: unknown-123, unknown-456"
+
+    # Verify the valid issue was still transitioned
+    run "$WK_BIN" show "$id1"
+    assert_output --partial "Status: in_progress"
+}
+
+@test "batch start with mixed unknown and invalid shows both" {
+    id1=$(create_issue task "PartialMixed Task 1")
+    id2=$(create_issue task "PartialMixed Task 2")
+    "$WK_BIN" start "$id1"  # Now in_progress, can't start again
+
+    run "$WK_BIN" start "$id1" "$id2" "unknown-789"
+    assert_failure
+    assert_output --partial "Started 1 of 3"
+    assert_output --partial "Unknown IDs: unknown-789"
+    assert_output --partial "$id1: cannot go from in_progress to in_progress"
+}
+
+@test "batch done with unknown IDs performs partial update" {
+    id1=$(create_issue task "PartialDone Task 1")
+    "$WK_BIN" start "$id1"
+    run "$WK_BIN" done "$id1" "unknown-123"
+    assert_failure
+    assert_output --partial "Completed 1 of 2"
+    assert_output --partial "Unknown IDs: unknown-123"
+}
+
+@test "batch close with unknown IDs performs partial update" {
+    id1=$(create_issue task "PartialClose Task 1")
+    run "$WK_BIN" close "$id1" "unknown-123" --reason "duplicate"
+    assert_failure
+    assert_output --partial "Closed 1 of 2"
+    assert_output --partial "Unknown IDs: unknown-123"
+}
+
+@test "batch reopen with unknown IDs performs partial update" {
+    id1=$(create_issue task "PartialReopen Task 1")
+    "$WK_BIN" start "$id1"
+    run "$WK_BIN" reopen "$id1" "unknown-123"
+    assert_failure
+    assert_output --partial "Reopened 1 of 2"
+    assert_output --partial "Unknown IDs: unknown-123"
+}
+
+@test "batch operation all unknown IDs shows all as unknown" {
+    run "$WK_BIN" start "unknown-1" "unknown-2" "unknown-3"
+    assert_failure
+    assert_output --partial "Started 0 of 3"
+    assert_output --partial "Unknown IDs: unknown-1, unknown-2, unknown-3"
+}
+
+@test "batch operation with single ID preserves current behavior" {
+    # Single unknown ID should show simple error, no summary
+    run "$WK_BIN" start "unknown-single"
+    assert_failure
+    assert_output --partial "issue not found: unknown-single"
+    refute_output --partial "Started 0 of 1"
 }

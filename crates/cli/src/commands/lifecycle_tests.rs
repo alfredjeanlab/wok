@@ -664,3 +664,274 @@ fn test_resolve_reason_without_reason_in_ci() {
         .to_string()
         .contains("required for agent"));
 }
+
+// === BulkResult Tests ===
+
+use super::BulkResult;
+
+#[test]
+fn test_bulk_result_default_is_success() {
+    let result = BulkResult::default();
+    assert!(result.is_success());
+    assert_eq!(result.failure_count(), 0);
+}
+
+#[test]
+fn test_bulk_result_with_unknown_ids() {
+    let mut result = BulkResult::default();
+    result.unknown_ids.push("test-1".to_string());
+    assert!(!result.is_success());
+    assert_eq!(result.failure_count(), 1);
+}
+
+#[test]
+fn test_bulk_result_with_transition_failures() {
+    let mut result = BulkResult::default();
+    result
+        .transition_failures
+        .push(("test-1".to_string(), "reason".to_string()));
+    assert!(!result.is_success());
+    assert_eq!(result.failure_count(), 1);
+}
+
+#[test]
+fn test_bulk_result_mixed_failures() {
+    let mut result = BulkResult::default();
+    result.success_count = 2;
+    result.unknown_ids.push("test-1".to_string());
+    result
+        .transition_failures
+        .push(("test-2".to_string(), "reason".to_string()));
+    assert!(!result.is_success());
+    assert_eq!(result.failure_count(), 2);
+}
+
+// === Partial Bulk Update Tests ===
+
+#[test]
+fn test_start_partial_update_with_unknown() {
+    let ctx = TestContext::new();
+    ctx.create_issue("test-1", IssueType::Task, "Task 1");
+
+    let result = start_impl(
+        &ctx.db,
+        &ctx.config,
+        &ctx.work_dir,
+        &["test-1".to_string(), "unknown-123".to_string()],
+    );
+
+    // Should fail overall but test-1 should be transitioned
+    assert!(result.is_err());
+    assert_eq!(
+        ctx.db.get_issue("test-1").unwrap().status,
+        Status::InProgress
+    );
+
+    // Check error type
+    match result.unwrap_err() {
+        Error::PartialBulkFailure {
+            succeeded,
+            failed,
+            unknown_ids,
+            transition_failures,
+        } => {
+            assert_eq!(succeeded, 1);
+            assert_eq!(failed, 1);
+            assert_eq!(unknown_ids, vec!["unknown-123"]);
+            assert!(transition_failures.is_empty());
+        }
+        _ => panic!("Expected PartialBulkFailure"),
+    }
+}
+
+#[test]
+fn test_start_partial_update_with_invalid_transition() {
+    let ctx = TestContext::new();
+    ctx.create_issue("test-1", IssueType::Task, "Task 1")
+        .start_issue("test-1"); // Already started
+    ctx.create_issue("test-2", IssueType::Task, "Task 2");
+
+    let result = start_impl(
+        &ctx.db,
+        &ctx.config,
+        &ctx.work_dir,
+        &["test-1".to_string(), "test-2".to_string()],
+    );
+
+    // test-1 fails (already started), test-2 succeeds
+    assert!(result.is_err());
+    assert_eq!(
+        ctx.db.get_issue("test-2").unwrap().status,
+        Status::InProgress
+    );
+
+    match result.unwrap_err() {
+        Error::PartialBulkFailure {
+            succeeded,
+            failed,
+            unknown_ids,
+            transition_failures,
+        } => {
+            assert_eq!(succeeded, 1);
+            assert_eq!(failed, 1);
+            assert!(unknown_ids.is_empty());
+            assert_eq!(transition_failures.len(), 1);
+            assert_eq!(transition_failures[0].0, "test-1");
+        }
+        _ => panic!("Expected PartialBulkFailure"),
+    }
+}
+
+#[test]
+fn test_start_partial_update_mixed_failures() {
+    let ctx = TestContext::new();
+    ctx.create_issue("test-1", IssueType::Task, "Task 1")
+        .start_issue("test-1"); // Already started
+    ctx.create_issue("test-2", IssueType::Task, "Task 2");
+
+    let result = start_impl(
+        &ctx.db,
+        &ctx.config,
+        &ctx.work_dir,
+        &[
+            "test-1".to_string(),
+            "test-2".to_string(),
+            "unknown-999".to_string(),
+        ],
+    );
+
+    // test-1 fails (invalid), test-2 succeeds, unknown-999 not found
+    assert!(result.is_err());
+    assert_eq!(
+        ctx.db.get_issue("test-2").unwrap().status,
+        Status::InProgress
+    );
+
+    match result.unwrap_err() {
+        Error::PartialBulkFailure {
+            succeeded,
+            failed,
+            unknown_ids,
+            transition_failures,
+        } => {
+            assert_eq!(succeeded, 1);
+            assert_eq!(failed, 2);
+            assert_eq!(unknown_ids, vec!["unknown-999"]);
+            assert_eq!(transition_failures.len(), 1);
+        }
+        _ => panic!("Expected PartialBulkFailure"),
+    }
+}
+
+#[test]
+fn test_done_partial_update_with_unknown() {
+    let ctx = TestContext::new();
+    ctx.create_and_start("test-1", IssueType::Task, "Task 1");
+
+    let result = done_impl(
+        &ctx.db,
+        &ctx.config,
+        &ctx.work_dir,
+        &["test-1".to_string(), "unknown-123".to_string()],
+        None,
+    );
+
+    assert!(result.is_err());
+    assert_eq!(ctx.db.get_issue("test-1").unwrap().status, Status::Done);
+
+    match result.unwrap_err() {
+        Error::PartialBulkFailure {
+            succeeded, failed, ..
+        } => {
+            assert_eq!(succeeded, 1);
+            assert_eq!(failed, 1);
+        }
+        _ => panic!("Expected PartialBulkFailure"),
+    }
+}
+
+#[test]
+fn test_close_partial_update_with_unknown() {
+    let ctx = TestContext::new();
+    ctx.create_issue("test-1", IssueType::Task, "Task 1");
+
+    let result = close_impl(
+        &ctx.db,
+        &ctx.config,
+        &ctx.work_dir,
+        &["test-1".to_string(), "unknown-123".to_string()],
+        "duplicate",
+    );
+
+    assert!(result.is_err());
+    assert_eq!(ctx.db.get_issue("test-1").unwrap().status, Status::Closed);
+
+    match result.unwrap_err() {
+        Error::PartialBulkFailure {
+            succeeded, failed, ..
+        } => {
+            assert_eq!(succeeded, 1);
+            assert_eq!(failed, 1);
+        }
+        _ => panic!("Expected PartialBulkFailure"),
+    }
+}
+
+#[test]
+fn test_reopen_partial_update_with_unknown() {
+    let ctx = TestContext::new();
+    ctx.create_completed("test-1", IssueType::Task, "Task 1");
+
+    let result = reopen_impl(
+        &ctx.db,
+        &ctx.config,
+        &ctx.work_dir,
+        &["test-1".to_string(), "unknown-123".to_string()],
+        Some("regression"),
+    );
+
+    assert!(result.is_err());
+    assert_eq!(ctx.db.get_issue("test-1").unwrap().status, Status::Todo);
+
+    match result.unwrap_err() {
+        Error::PartialBulkFailure {
+            succeeded, failed, ..
+        } => {
+            assert_eq!(succeeded, 1);
+            assert_eq!(failed, 1);
+        }
+        _ => panic!("Expected PartialBulkFailure"),
+    }
+}
+
+#[test]
+fn test_start_all_unknown_ids() {
+    let ctx = TestContext::new();
+
+    let result = start_impl(
+        &ctx.db,
+        &ctx.config,
+        &ctx.work_dir,
+        &[
+            "unknown-1".to_string(),
+            "unknown-2".to_string(),
+            "unknown-3".to_string(),
+        ],
+    );
+
+    assert!(result.is_err());
+
+    match result.unwrap_err() {
+        Error::PartialBulkFailure {
+            succeeded,
+            failed,
+            unknown_ids,
+            ..
+        } => {
+            assert_eq!(succeeded, 0);
+            assert_eq!(failed, 3);
+            assert_eq!(unknown_ids.len(), 3);
+        }
+        _ => panic!("Expected PartialBulkFailure"),
+    }
+}
