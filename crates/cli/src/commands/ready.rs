@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Alfred Jean LLC
 
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use std::path::Path;
 
 use chrono::{Duration, Utc};
@@ -126,16 +126,23 @@ pub(crate) fn run_impl(
     // Ready = unblocked todo items only
     let mut issues = db.list_issues(Some(Status::Todo), None, None)?;
 
-    // Apply type filter
+    // Apply type filter first (no DB access needed)
     if type_groups.is_some() {
         issues.retain(|issue| matches_filter_groups(&type_groups, || issue.issue_type));
     }
 
-    // Apply label filter
+    // Pre-fetch all labels for remaining issues in one query
+    let issue_ids: Vec<&str> = issues.iter().map(|i| i.id.as_str()).collect();
+    let labels_map: HashMap<String, Vec<String>> = db.get_labels_batch(&issue_ids)?;
+
+    // Apply label filter using pre-fetched map
     if label_groups.is_some() {
         issues.retain(|issue| {
-            let issue_labels = db.get_labels(&issue.id).unwrap_or_default();
-            matches_label_groups(&label_groups, &issue_labels)
+            let issue_labels = labels_map
+                .get(&issue.id)
+                .map(|v| v.as_slice())
+                .unwrap_or(&[]);
+            matches_label_groups(&label_groups, issue_labels)
         });
     }
 
@@ -178,10 +185,12 @@ pub(crate) fn run_impl(
             (false, true) => std::cmp::Ordering::Greater,
             // Both recent: sort by priority ASC, then created_at ASC as tiebreaker
             (true, true) => {
-                let tags_a = db.get_labels(&a.id).unwrap_or_default();
-                let tags_b = db.get_labels(&b.id).unwrap_or_default();
-                let priority_a = Database::priority_from_tags(&tags_a);
-                let priority_b = Database::priority_from_tags(&tags_b);
+                // Use pre-fetched labels - no DB access
+                let empty_vec = Vec::new();
+                let tags_a = labels_map.get(&a.id).unwrap_or(&empty_vec);
+                let tags_b = labels_map.get(&b.id).unwrap_or(&empty_vec);
+                let priority_a = Database::priority_from_tags(tags_a);
+                let priority_b = Database::priority_from_tags(tags_b);
                 match priority_a.cmp(&priority_b) {
                     std::cmp::Ordering::Equal => a.created_at.cmp(&b.created_at), // ASC tiebreaker
                     other => other,
@@ -208,7 +217,8 @@ pub(crate) fn run_impl(
         OutputFormat::Json => {
             let mut json_issues = Vec::new();
             for issue in &ready_issues {
-                let labels = db.get_labels(&issue.id)?;
+                // Use pre-fetched labels - no additional DB access
+                let labels = labels_map.get(&issue.id).cloned().unwrap_or_default();
                 json_issues.push(ReadyIssueJson {
                     id: issue.id.clone(),
                     issue_type: issue.issue_type,
