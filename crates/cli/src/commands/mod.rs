@@ -18,6 +18,7 @@ pub mod note;
 pub mod prime;
 pub mod ready;
 pub mod remote;
+pub mod schema;
 pub mod search;
 pub mod show;
 #[cfg(test)]
