@@ -265,7 +265,7 @@ fn done_single(
     // Require reason when transitioning from todo (skipping in_progress)
     if issue.status == Status::Todo && reason.is_none() {
         // Try to resolve a reason (auto-generate for humans, error for agents)
-        let effective_reason = resolve_reason(None, "Completed")?;
+        let effective_reason = resolve_reason(None, "complete")?;
         return done_single_with_reason(db, config, work_dir, id, &issue, &effective_reason);
     }
 
@@ -361,7 +361,7 @@ fn done_single_with_reason(
 }
 
 pub fn close(ids: &[String], reason: Option<&str>) -> Result<()> {
-    let effective_reason = resolve_reason(reason, "Closed")?;
+    let effective_reason = resolve_reason(reason, "closed")?;
 
     let work_dir = find_work_dir()?;
     let config = Config::load(&work_dir)?;
@@ -570,7 +570,7 @@ fn reopen_single(
     let requires_reason = issue.status == Status::Done || issue.status == Status::Closed;
     if requires_reason && reason.is_none() {
         // Try to resolve a reason (auto-generate for humans, error for agents)
-        let effective_reason = resolve_reason(None, "Reopened")?;
+        let effective_reason = resolve_reason(None, "reopened")?;
         return reopen_single_with_reason(db, config, work_dir, id, &issue, &effective_reason);
     }
 
@@ -671,7 +671,7 @@ pub(crate) fn resolve_reason(reason: Option<&str>, action: &str) -> Result<Strin
     // Auto-generate for human interactive sessions
     if is_human_interactive() {
         let name = get_user_name();
-        return Ok(format!("{} by {}", action, name));
+        return Ok(format!("Marked as {} by {}", action, name));
     }
 
     // Require explicit reason for non-interactive/automation contexts
