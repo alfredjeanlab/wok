@@ -1,5 +1,7 @@
 # Partial Bulk Updates for Lifecycle Commands
 
+**Root Feature:** `wok-b86e`
+
 ## Overview
 
 Implement partial bulk update behavior for lifecycle commands (`start`, `done`, `close`, `reopen`). When multiple IDs are passed but some are unknown or have invalid transitions, the command should:
