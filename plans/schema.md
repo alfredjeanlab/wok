@@ -1,5 +1,7 @@
 # Implementation Plan: `wk schema` Command
 
+**Root Feature:** `wok-eb3c`
+
 ## Overview
 
 Add a new `wk schema` command that outputs JSON Schema specifications for subcommands that support JSON formatted output. This enables programmatic discovery of output structures for tooling, code generation, and AI integration.
