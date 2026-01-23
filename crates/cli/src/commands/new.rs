@@ -6,8 +6,10 @@ use std::path::Path;
 use chrono::Utc;
 use wk_core::OpPayload;
 
-use crate::config::{find_work_dir, get_db_path, Config};
+use crate::config::Config;
 use crate::db::Database;
+
+use super::open_db;
 use crate::error::{Error, Result};
 use crate::id::generate_unique_id;
 use crate::models::{Action, Event, Issue, IssueType, Status};
@@ -29,10 +31,7 @@ pub fn run(
     priority: Option<u8>,
     description: Option<String>,
 ) -> Result<()> {
-    let work_dir = find_work_dir()?;
-    let config = Config::load(&work_dir)?;
-    let db_path = get_db_path(&work_dir, &config);
-    let db = Database::open(&db_path)?;
+    let (db, config, work_dir) = open_db()?;
     run_impl(
         &db,
         &config,

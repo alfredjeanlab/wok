@@ -8,7 +8,7 @@ use crate::error::{Error, Result};
 use super::open_db;
 
 pub fn run(id: Option<String>, limit: usize) -> Result<()> {
-    let (db, _) = open_db()?;
+    let (db, _, _) = open_db()?;
     run_impl(&db, id, limit)
 }
 

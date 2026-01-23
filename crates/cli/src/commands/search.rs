@@ -53,7 +53,7 @@ pub fn run(
     limit: Option<usize>,
     format: OutputFormat,
 ) -> Result<()> {
-    let (db, _) = open_db()?;
+    let (db, _, _) = open_db()?;
     run_impl(
         &db, query, status, issue_type, label, assignee, unassigned, filter, limit, format,
     )

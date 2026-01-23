@@ -25,7 +25,7 @@ pub fn run(cmd: ConfigCommand) -> Result<()> {
             old_prefix,
             new_prefix,
         } => {
-            let (db, config) = open_db()?;
+            let (db, config, _) = open_db()?;
             let work_dir = find_work_dir()?;
             run_rename_prefix(&db, &config, &work_dir, &old_prefix, &new_prefix)
         }

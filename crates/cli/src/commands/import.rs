@@ -381,7 +381,7 @@ pub fn run(
         }
     };
 
-    let (db, config) = open_db()?;
+    let (db, config, _) = open_db()?;
     run_impl(
         &db, &config, path, format, dry_run, status, issue_type, label, prefix,
     )

@@ -28,7 +28,7 @@ pub fn run(filepath: &str) -> Result<()> {
     // Validate export path
     validate_export_path(filepath)?;
 
-    let (db, _) = open_db()?;
+    let (db, _, _) = open_db()?;
     run_impl(&db, filepath)
 }
 
