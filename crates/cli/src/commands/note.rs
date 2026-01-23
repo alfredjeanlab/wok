@@ -47,12 +47,7 @@ pub(crate) fn run_impl(
     }
 
     // Convert status for sync
-    let core_status = match issue.status {
-        Status::Todo => wk_core::Status::Todo,
-        Status::InProgress => wk_core::Status::InProgress,
-        Status::Done => wk_core::Status::Done,
-        Status::Closed => wk_core::Status::Closed,
-    };
+    let core_status: wk_core::Status = issue.status.into();
 
     if replace {
         db.replace_note(id, issue.status, &trimmed_content)?;

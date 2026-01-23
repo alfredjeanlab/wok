@@ -83,6 +83,17 @@ impl FromStr for Status {
     }
 }
 
+impl From<Status> for wk_core::Status {
+    fn from(status: Status) -> Self {
+        match status {
+            Status::Todo => wk_core::Status::Todo,
+            Status::InProgress => wk_core::Status::InProgress,
+            Status::Done => wk_core::Status::Done,
+            Status::Closed => wk_core::Status::Closed,
+        }
+    }
+}
+
 /// The primary entity representing a tracked work item.
 ///
 /// Issues are identified by a unique ID generated from a project prefix
