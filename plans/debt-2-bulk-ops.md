@@ -1,6 +1,6 @@
 # Plan: Extract Generic Bulk Operation Helper
 
-**Root Feature:** `debt-2-bulk-ops`
+**Root Feature:** `wok-8e48`
 
 ## Overview
 
