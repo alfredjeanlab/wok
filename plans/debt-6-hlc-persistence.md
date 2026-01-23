@@ -1,5 +1,7 @@
 # Plan: HlcPersistence Type for Unified HLC Storage
 
+**Root Feature:** `wok-e74e`
+
 ## Overview
 
 Create a generic `HlcPersistence` type to eliminate duplicate `last_hlc`/`server_hlc` function pairs in `crates/cli/src/commands/mod.rs`. Currently, there are 8 nearly-identical functions (4 operations × 2 HLC types) that can be unified into a single struct with 4 methods, reducing code by ~50% and improving maintainability.
