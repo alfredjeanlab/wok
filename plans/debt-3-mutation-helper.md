@@ -1,5 +1,7 @@
 # Plan: apply_mutation Helper
 
+**Root Feature:** `wok-f14b`
+
 ## Overview
 
 Create an `apply_mutation()` helper function to unify the repeated event+log+queue pattern across CLI command files. Currently there are ~38 instances of `db.log_event()` and ~28 instances of `queue_op()` spread across 7 command files. This helper will reduce boilerplate, ensure consistency, and make the mutation pattern easier to maintain.
