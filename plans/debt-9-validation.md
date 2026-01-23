@@ -1,5 +1,7 @@
 # Plan: Replace Stringly-typed InvalidInput with Structured ValidationError
 
+**Root Feature:** `wok-43f5`
+
 ## Overview
 
 Replace generic `Error::InvalidInput(String)` calls in `validate.rs` with structured enum variants that provide type-safe, machine-readable validation errors. This improves error handling, enables pattern matching on specific error types, and maintains consistent error messages.
