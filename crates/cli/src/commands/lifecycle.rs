@@ -320,7 +320,7 @@ fn done_single(
     }
 
     // Log unblocked events for issues that are now unblocked
-    log_unblocked_events(db, id)?;
+    log_unblocked_events(db, work_dir, config, id)?;
 
     apply_mutation(
         db,
@@ -365,7 +365,7 @@ fn done_single_with_reason(
     db.add_note(id, Status::Done, reason)?;
 
     // Log unblocked events for issues that are now unblocked
-    log_unblocked_events(db, id)?;
+    log_unblocked_events(db, work_dir, config, id)?;
 
     apply_mutation(
         db,
@@ -429,7 +429,7 @@ fn close_single(
     db.add_note(id, Status::Closed, reason)?;
 
     // Log unblocked events for issues that are now unblocked
-    log_unblocked_events(db, id)?;
+    log_unblocked_events(db, work_dir, config, id)?;
 
     apply_mutation(
         db,
@@ -596,7 +596,12 @@ pub(crate) fn resolve_reason(reason: Option<&str>, action: &str) -> Result<Strin
 }
 
 /// Log unblocked events for issues that become unblocked when a blocker is completed
-fn log_unblocked_events(db: &crate::db::Database, completed_id: &str) -> Result<()> {
+fn log_unblocked_events(
+    db: &crate::db::Database,
+    work_dir: &Path,
+    config: &Config,
+    completed_id: &str,
+) -> Result<()> {
     // Get all issues that were blocked by this issue
     let blocked_issues = db.get_blocking(completed_id)?;
 
@@ -606,9 +611,13 @@ fn log_unblocked_events(db: &crate::db::Database, completed_id: &str) -> Result<
 
         // If no more open blockers, log an unblocked event (no sync needed)
         if remaining_blockers.is_empty() {
-            db.log_event(
-                &Event::new(blocked_id, Action::Unblocked)
+            apply_mutation(
+                db,
+                work_dir,
+                config,
+                Event::new(blocked_id, Action::Unblocked)
                     .with_values(None, Some(completed_id.to_string())),
+                None,
             )?;
         }
     }

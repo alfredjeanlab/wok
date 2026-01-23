@@ -3,21 +3,31 @@
 
 //! External link management command.
 
+use std::path::Path;
+
+use crate::config::Config;
 use crate::db::links::new_link;
 use crate::db::Database;
 use crate::error::{Error, Result};
 use crate::models::{parse_link_url, Action, Event, LinkRel};
 
-use super::open_db;
+use super::{apply_mutation, open_db};
 
 /// Add an external link to an issue.
 pub fn add(id: &str, url: &str, reason: Option<String>) -> Result<()> {
-    let (db, _, _) = open_db()?;
-    add_impl(&db, id, url, reason)
+    let (db, config, work_dir) = open_db()?;
+    add_impl(&db, &work_dir, &config, id, url, reason)
 }
 
 /// Internal implementation that accepts db for testing.
-pub(crate) fn add_impl(db: &Database, id: &str, url: &str, reason: Option<String>) -> Result<()> {
+pub(crate) fn add_impl(
+    db: &Database,
+    work_dir: &Path,
+    config: &Config,
+    id: &str,
+    url: &str,
+    reason: Option<String>,
+) -> Result<()> {
     // Verify issue exists
     db.get_issue(id)?;
 
@@ -50,9 +60,14 @@ pub(crate) fn add_impl(db: &Database, id: &str, url: &str, reason: Option<String
 
     db.add_link(&link)?;
 
-    // Log event
-    let event = Event::new(id.to_string(), Action::Linked).with_values(None, Some(url.to_string()));
-    db.log_event(&event)?;
+    // Log event (links don't sync currently)
+    apply_mutation(
+        db,
+        work_dir,
+        config,
+        Event::new(id.to_string(), Action::Linked).with_values(None, Some(url.to_string())),
+        None,
+    )?;
 
     println!("Added link to {}", id);
     Ok(())
@@ -62,7 +77,13 @@ pub(crate) fn add_impl(db: &Database, id: &str, url: &str, reason: Option<String
 ///
 /// This is a helper function used by the `new` command to add links
 /// during issue creation.
-pub(crate) fn add_link_impl(db: &Database, issue_id: &str, url: &str) -> Result<()> {
+pub(crate) fn add_link_impl(
+    db: &Database,
+    work_dir: &Path,
+    config: &Config,
+    issue_id: &str,
+    url: &str,
+) -> Result<()> {
     let (link_type, external_id) = parse_link_url(url);
 
     let mut link = new_link(issue_id);
@@ -72,10 +93,14 @@ pub(crate) fn add_link_impl(db: &Database, issue_id: &str, url: &str) -> Result<
 
     db.add_link(&link)?;
 
-    // Log event
-    let event =
-        Event::new(issue_id.to_string(), Action::Linked).with_values(None, Some(url.to_string()));
-    db.log_event(&event)?;
+    // Log event (links don't sync currently)
+    apply_mutation(
+        db,
+        work_dir,
+        config,
+        Event::new(issue_id.to_string(), Action::Linked).with_values(None, Some(url.to_string())),
+        None,
+    )?;
 
     Ok(())
 }

@@ -7,28 +7,7 @@
 use super::*;
 use crate::commands::lifecycle::{close_impl, done_impl, reopen_impl, resolve_reason, start_impl};
 use crate::commands::testing::TestContext;
-use crate::db::Database;
-use crate::models::{Issue, IssueType, Relation};
-use chrono::Utc;
-
-fn setup_db() -> Database {
-    Database::open_in_memory().unwrap()
-}
-
-fn create_issue(db: &Database, id: &str, status: Status) {
-    let issue = Issue {
-        id: id.to_string(),
-        issue_type: IssueType::Task,
-        title: format!("Test issue {}", id),
-        description: None,
-        status,
-        assignee: None,
-        created_at: Utc::now(),
-        updated_at: Utc::now(),
-        closed_at: None,
-    };
-    db.create_issue(&issue).unwrap();
-}
+use crate::models::{IssueType, Relation};
 
 // Test status transition validation logic (via Status methods)
 #[test]
@@ -77,71 +56,76 @@ fn test_reopen_valid_from_done_and_closed() {
 // Test log_unblocked_events logic
 #[test]
 fn test_log_unblocked_when_blocker_completed() {
-    let db = setup_db();
+    let ctx = TestContext::new();
 
     // Create two issues: A blocks B
-    create_issue(&db, "issue-a", Status::InProgress);
-    create_issue(&db, "issue-b", Status::Todo);
-    db.add_dependency("issue-a", "issue-b", Relation::Blocks)
+    ctx.create_issue_with_status("issue-a", IssueType::Task, "Issue A", Status::InProgress);
+    ctx.create_issue_with_status("issue-b", IssueType::Task, "Issue B", Status::Todo);
+    ctx.db
+        .add_dependency("issue-a", "issue-b", Relation::Blocks)
         .unwrap();
 
     // Complete issue A
-    db.update_issue_status("issue-a", Status::Done).unwrap();
+    ctx.db.update_issue_status("issue-a", Status::Done).unwrap();
 
     // Call log_unblocked_events
-    log_unblocked_events(&db, "issue-a").unwrap();
+    log_unblocked_events(&ctx.db, &ctx.work_dir, &ctx.config, "issue-a").unwrap();
 
     // Check that an unblocked event was logged for issue B
-    let events = db.get_events("issue-b").unwrap();
+    let events = ctx.db.get_events("issue-b").unwrap();
     assert!(events.iter().any(|e| e.action == Action::Unblocked));
 }
 
 #[test]
 fn test_no_unblocked_when_multiple_blockers() {
-    let db = setup_db();
+    let ctx = TestContext::new();
 
     // Create three issues: A and C both block B
-    create_issue(&db, "issue-a", Status::InProgress);
-    create_issue(&db, "issue-b", Status::Todo);
-    create_issue(&db, "issue-c", Status::InProgress);
-    db.add_dependency("issue-a", "issue-b", Relation::Blocks)
+    ctx.create_issue_with_status("issue-a", IssueType::Task, "Issue A", Status::InProgress);
+    ctx.create_issue_with_status("issue-b", IssueType::Task, "Issue B", Status::Todo);
+    ctx.create_issue_with_status("issue-c", IssueType::Task, "Issue C", Status::InProgress);
+    ctx.db
+        .add_dependency("issue-a", "issue-b", Relation::Blocks)
         .unwrap();
-    db.add_dependency("issue-c", "issue-b", Relation::Blocks)
+    ctx.db
+        .add_dependency("issue-c", "issue-b", Relation::Blocks)
         .unwrap();
 
     // Complete issue A (but C still blocks B)
-    db.update_issue_status("issue-a", Status::Done).unwrap();
+    ctx.db.update_issue_status("issue-a", Status::Done).unwrap();
 
     // Call log_unblocked_events
-    log_unblocked_events(&db, "issue-a").unwrap();
+    log_unblocked_events(&ctx.db, &ctx.work_dir, &ctx.config, "issue-a").unwrap();
 
     // Check that NO unblocked event was logged for issue B (still blocked by C)
-    let events = db.get_events("issue-b").unwrap();
+    let events = ctx.db.get_events("issue-b").unwrap();
     assert!(!events.iter().any(|e| e.action == Action::Unblocked));
 }
 
 #[test]
 fn test_unblocked_after_all_blockers_done() {
-    let db = setup_db();
+    let ctx = TestContext::new();
 
     // Create three issues: A and C both block B
-    create_issue(&db, "issue-a", Status::InProgress);
-    create_issue(&db, "issue-b", Status::Todo);
-    create_issue(&db, "issue-c", Status::InProgress);
-    db.add_dependency("issue-a", "issue-b", Relation::Blocks)
+    ctx.create_issue_with_status("issue-a", IssueType::Task, "Issue A", Status::InProgress);
+    ctx.create_issue_with_status("issue-b", IssueType::Task, "Issue B", Status::Todo);
+    ctx.create_issue_with_status("issue-c", IssueType::Task, "Issue C", Status::InProgress);
+    ctx.db
+        .add_dependency("issue-a", "issue-b", Relation::Blocks)
         .unwrap();
-    db.add_dependency("issue-c", "issue-b", Relation::Blocks)
+    ctx.db
+        .add_dependency("issue-c", "issue-b", Relation::Blocks)
         .unwrap();
 
     // Complete both A and C
-    db.update_issue_status("issue-a", Status::Done).unwrap();
-    log_unblocked_events(&db, "issue-a").unwrap();
+    ctx.db.update_issue_status("issue-a", Status::Done).unwrap();
+    log_unblocked_events(&ctx.db, &ctx.work_dir, &ctx.config, "issue-a").unwrap();
 
-    db.update_issue_status("issue-c", Status::Done).unwrap();
-    log_unblocked_events(&db, "issue-c").unwrap();
+    ctx.db.update_issue_status("issue-c", Status::Done).unwrap();
+    log_unblocked_events(&ctx.db, &ctx.work_dir, &ctx.config, "issue-c").unwrap();
 
     // Now B should have an unblocked event
-    let events = db.get_events("issue-b").unwrap();
+    let events = ctx.db.get_events("issue-b").unwrap();
     assert!(events.iter().any(|e| e.action == Action::Unblocked));
 }
 

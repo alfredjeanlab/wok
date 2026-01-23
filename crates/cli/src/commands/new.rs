@@ -242,7 +242,7 @@ pub(crate) fn run_impl(
 
     // Add links if provided
     for link_url in &links {
-        add_link_impl(db, &id, link_url)?;
+        add_link_impl(db, work_dir, config, &id, link_url)?;
     }
 
     println!(
