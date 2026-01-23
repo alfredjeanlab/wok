@@ -10,12 +10,10 @@ use wk_core::OpPayload;
 use crate::config::Config;
 use crate::db::Database;
 
-use super::open_db;
+use super::{apply_mutation, open_db};
 use crate::error::{Error, Result};
 use crate::models::{Action, Event, Status};
 use crate::validate::validate_and_trim_reason;
-
-use super::queue_op;
 
 /// Result of a bulk lifecycle operation
 #[derive(Default)]
@@ -238,17 +236,19 @@ fn start_single(db: &Database, config: &Config, work_dir: &Path, id: &str) -> Re
 
     db.update_issue_status(id, Status::InProgress)?;
 
-    let event = Event::new(id.to_string(), Action::Started).with_values(
-        Some(issue.status.to_string()),
-        Some("in_progress".to_string()),
-    );
-    db.log_event(&event)?;
-
-    // Queue SetStatus op for sync
-    queue_op(
+    apply_mutation(
+        db,
         work_dir,
         config,
-        OpPayload::set_status(id.to_string(), wk_core::Status::InProgress, None),
+        Event::new(id.to_string(), Action::Started).with_values(
+            Some(issue.status.to_string()),
+            Some("in_progress".to_string()),
+        ),
+        Some(OpPayload::set_status(
+            id.to_string(),
+            wk_core::Status::InProgress,
+            None,
+        )),
     )?;
 
     println!("Started {}", id);
@@ -313,7 +313,6 @@ fn done_single(
     if let Some(r) = reason {
         event = event.with_reason(Some(r.to_string()));
     }
-    db.log_event(&event)?;
 
     // Add reason as note if provided (will appear in "Summary" section)
     if let Some(r) = reason {
@@ -323,15 +322,16 @@ fn done_single(
     // Log unblocked events for issues that are now unblocked
     log_unblocked_events(db, id)?;
 
-    // Queue SetStatus op for sync
-    queue_op(
+    apply_mutation(
+        db,
         work_dir,
         config,
-        OpPayload::set_status(
+        event,
+        Some(OpPayload::set_status(
             id.to_string(),
             wk_core::Status::Done,
             reason.map(String::from),
-        ),
+        )),
     )?;
 
     if let Some(r) = reason {
@@ -361,26 +361,24 @@ fn done_single_with_reason(
 
     db.update_issue_status(id, Status::Done)?;
 
-    let event = Event::new(id.to_string(), Action::Done)
-        .with_values(Some(issue.status.to_string()), Some("done".to_string()))
-        .with_reason(Some(reason.to_string()));
-    db.log_event(&event)?;
-
     // Add reason as note (will appear in "Summary" section)
     db.add_note(id, Status::Done, reason)?;
 
     // Log unblocked events for issues that are now unblocked
     log_unblocked_events(db, id)?;
 
-    // Queue SetStatus op for sync
-    queue_op(
+    apply_mutation(
+        db,
         work_dir,
         config,
-        OpPayload::set_status(
+        Event::new(id.to_string(), Action::Done)
+            .with_values(Some(issue.status.to_string()), Some("done".to_string()))
+            .with_reason(Some(reason.to_string())),
+        Some(OpPayload::set_status(
             id.to_string(),
             wk_core::Status::Done,
             Some(reason.to_string()),
-        ),
+        )),
     )?;
 
     println!("Completed {} ({})", id, reason);
@@ -427,26 +425,24 @@ fn close_single(
 
     db.update_issue_status(id, Status::Closed)?;
 
-    let event = Event::new(id.to_string(), Action::Closed)
-        .with_values(Some(issue.status.to_string()), Some("closed".to_string()))
-        .with_reason(Some(reason.to_string()));
-    db.log_event(&event)?;
-
     // Add reason as note (will appear in "Close Reason" section)
     db.add_note(id, Status::Closed, reason)?;
 
     // Log unblocked events for issues that are now unblocked
     log_unblocked_events(db, id)?;
 
-    // Queue SetStatus op for sync
-    queue_op(
+    apply_mutation(
+        db,
         work_dir,
         config,
-        OpPayload::set_status(
+        Event::new(id.to_string(), Action::Closed)
+            .with_values(Some(issue.status.to_string()), Some("closed".to_string()))
+            .with_reason(Some(reason.to_string())),
+        Some(OpPayload::set_status(
             id.to_string(),
             wk_core::Status::Closed,
             Some(reason.to_string()),
-        ),
+        )),
     )?;
 
     println!("Closed {} ({})", id, reason);
@@ -518,17 +514,16 @@ fn reopen_single(
         println!("Reopened {}", id);
     }
 
-    db.log_event(&event)?;
-
-    // Queue SetStatus op for sync
-    queue_op(
+    apply_mutation(
+        db,
         work_dir,
         config,
-        OpPayload::set_status(
+        event,
+        Some(OpPayload::set_status(
             id.to_string(),
             wk_core::Status::Todo,
             reason.map(String::from),
-        ),
+        )),
     )?;
 
     Ok(())
@@ -552,23 +547,21 @@ fn reopen_single_with_reason(
 
     db.update_issue_status(id, Status::Todo)?;
 
-    let event = Event::new(id.to_string(), Action::Reopened)
-        .with_values(Some(issue.status.to_string()), Some("todo".to_string()))
-        .with_reason(Some(reason.to_string()));
-    db.log_event(&event)?;
-
     // Add reason as note (will appear in "Description" section)
     db.add_note(id, Status::Todo, reason)?;
 
-    // Queue SetStatus op for sync
-    queue_op(
+    apply_mutation(
+        db,
         work_dir,
         config,
-        OpPayload::set_status(
+        Event::new(id.to_string(), Action::Reopened)
+            .with_values(Some(issue.status.to_string()), Some("todo".to_string()))
+            .with_reason(Some(reason.to_string())),
+        Some(OpPayload::set_status(
             id.to_string(),
             wk_core::Status::Todo,
             Some(reason.to_string()),
-        ),
+        )),
     )?;
 
     println!("Reopened {} ({})", id, reason);
@@ -611,11 +604,12 @@ fn log_unblocked_events(db: &crate::db::Database, completed_id: &str) -> Result<
         // Check if this issue still has any open blockers
         let remaining_blockers = db.get_transitive_blockers(&blocked_id)?;
 
-        // If no more open blockers, log an unblocked event
+        // If no more open blockers, log an unblocked event (no sync needed)
         if remaining_blockers.is_empty() {
-            let event = Event::new(blocked_id, Action::Unblocked)
-                .with_values(None, Some(completed_id.to_string()));
-            db.log_event(&event)?;
+            db.log_event(
+                &Event::new(blocked_id, Action::Unblocked)
+                    .with_values(None, Some(completed_id.to_string())),
+            )?;
         }
     }
 

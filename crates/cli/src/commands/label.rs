@@ -8,12 +8,10 @@ use wk_core::OpPayload;
 use crate::config::Config;
 use crate::db::Database;
 
-use super::open_db;
+use super::{apply_mutation, open_db};
 use crate::error::Result;
 use crate::models::{Action, Event};
 use crate::validate::{validate_label, validate_label_count};
-
-use super::queue_op;
 
 pub fn add(ids: &[String], label: &str) -> Result<()> {
     let (db, config, work_dir) = open_db()?;
@@ -53,15 +51,12 @@ fn add_single(
 
     db.add_label(id, label)?;
 
-    let event =
-        Event::new(id.to_string(), Action::Labeled).with_values(None, Some(label.to_string()));
-    db.log_event(&event)?;
-
-    // Queue AddLabel op for sync
-    queue_op(
+    apply_mutation(
+        db,
         work_dir,
         config,
-        OpPayload::add_label(id.to_string(), label.to_string()),
+        Event::new(id.to_string(), Action::Labeled).with_values(None, Some(label.to_string())),
+        Some(OpPayload::add_label(id.to_string(), label.to_string())),
     )?;
 
     println!("Labeled {} with {}", id, label);
@@ -101,15 +96,13 @@ fn remove_single(
     let removed = db.remove_label(id, label)?;
 
     if removed {
-        let event = Event::new(id.to_string(), Action::Unlabeled)
-            .with_values(None, Some(label.to_string()));
-        db.log_event(&event)?;
-
-        // Queue RemoveLabel op for sync
-        queue_op(
+        apply_mutation(
+            db,
             work_dir,
             config,
-            OpPayload::remove_label(id.to_string(), label.to_string()),
+            Event::new(id.to_string(), Action::Unlabeled)
+                .with_values(None, Some(label.to_string())),
+            Some(OpPayload::remove_label(id.to_string(), label.to_string())),
         )?;
 
         println!("Removed label {} from {}", label, id);

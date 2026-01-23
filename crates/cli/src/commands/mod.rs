@@ -33,6 +33,7 @@ use wk_core::{Hlc, HlcClock, Op, OpPayload};
 use crate::config::{find_work_dir, get_daemon_dir, get_db_path, Config, RemoteType};
 use crate::db::Database;
 use crate::error::Result;
+use crate::models::Event;
 use crate::sync::OfflineQueue;
 use crate::wal::Wal;
 
@@ -183,4 +184,30 @@ pub fn queue_op(work_dir: &Path, config: &Config, payload: OpPayload) -> Result<
     let _ = update_last_hlc(&daemon_dir, hlc);
 
     write_pending_op(work_dir, config, &op)
+}
+
+/// Apply a mutation by logging an event and optionally queueing a sync operation.
+///
+/// This helper unifies the common pattern of:
+/// 1. Creating an Event
+/// 2. Logging it to the local database
+/// 3. Queueing an operation for remote sync
+///
+/// Use this for all issue mutations to ensure consistent audit trail and sync behavior.
+pub fn apply_mutation(
+    db: &Database,
+    work_dir: &Path,
+    config: &Config,
+    event: Event,
+    payload: Option<OpPayload>,
+) -> Result<()> {
+    // Log event to local database first
+    db.log_event(&event)?;
+
+    // Queue operation for sync if provided
+    if let Some(p) = payload {
+        queue_op(work_dir, config, p)?;
+    }
+
+    Ok(())
 }

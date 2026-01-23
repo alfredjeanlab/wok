@@ -8,11 +8,9 @@ use wk_core::OpPayload;
 use crate::config::Config;
 use crate::db::Database;
 
-use super::open_db;
+use super::{apply_mutation, open_db, queue_op};
 use crate::error::Result;
 use crate::models::{Action, Event, Relation, UserRelation};
-
-use super::queue_op;
 
 pub fn add(from_id: &str, rel: &str, to_ids: &[String]) -> Result<()> {
     let (db, config, work_dir) = open_db()?;
@@ -41,19 +39,17 @@ pub(crate) fn add_impl(
             UserRelation::Blocks => {
                 db.add_dependency(from_id, to_id, Relation::Blocks)?;
 
-                let event = Event::new(from_id.to_string(), Action::Related)
-                    .with_values(None, Some(format!("blocks {}", to_id)));
-                db.log_event(&event)?;
-
-                // Queue AddDep op for sync
-                queue_op(
+                apply_mutation(
+                    db,
                     work_dir,
                     config,
-                    OpPayload::add_dep(
+                    Event::new(from_id.to_string(), Action::Related)
+                        .with_values(None, Some(format!("blocks {}", to_id))),
+                    Some(OpPayload::add_dep(
                         from_id.to_string(),
                         to_id.to_string(),
                         wk_core::issue::Relation::Blocks,
-                    ),
+                    )),
                 )?;
 
                 println!("{} blocks {}", from_id, to_id);
@@ -62,19 +58,17 @@ pub(crate) fn add_impl(
                 // "A blocked by B" means "B blocks A"
                 db.add_dependency(to_id, from_id, Relation::Blocks)?;
 
-                let event = Event::new(from_id.to_string(), Action::Related)
-                    .with_values(None, Some(format!("blocked by {}", to_id)));
-                db.log_event(&event)?;
-
-                // Queue AddDep op for sync (reversed direction)
-                queue_op(
+                apply_mutation(
+                    db,
                     work_dir,
                     config,
-                    OpPayload::add_dep(
+                    Event::new(from_id.to_string(), Action::Related)
+                        .with_values(None, Some(format!("blocked by {}", to_id))),
+                    Some(OpPayload::add_dep(
                         to_id.to_string(),
                         from_id.to_string(),
                         wk_core::issue::Relation::Blocks,
-                    ),
+                    )),
                 )?;
 
                 println!("{} blocked by {}", from_id, to_id);
@@ -86,20 +80,19 @@ pub(crate) fn add_impl(
                 db.add_dependency(from_id, to_id, Relation::Tracks)?;
                 db.add_dependency(to_id, from_id, Relation::TrackedBy)?;
 
-                let event = Event::new(from_id.to_string(), Action::Related)
-                    .with_values(None, Some(format!("tracks {}", to_id)));
-                db.log_event(&event)?;
-
-                // Queue AddDep ops for sync (bidirectional)
-                queue_op(
+                apply_mutation(
+                    db,
                     work_dir,
                     config,
-                    OpPayload::add_dep(
+                    Event::new(from_id.to_string(), Action::Related)
+                        .with_values(None, Some(format!("tracks {}", to_id))),
+                    Some(OpPayload::add_dep(
                         from_id.to_string(),
                         to_id.to_string(),
                         wk_core::issue::Relation::Tracks,
-                    ),
+                    )),
                 )?;
+                // Second queue_op for reverse direction
                 queue_op(
                     work_dir,
                     config,
@@ -117,20 +110,19 @@ pub(crate) fn add_impl(
                 db.add_dependency(to_id, from_id, Relation::Tracks)?;
                 db.add_dependency(from_id, to_id, Relation::TrackedBy)?;
 
-                let event = Event::new(from_id.to_string(), Action::Related)
-                    .with_values(None, Some(format!("tracked by {}", to_id)));
-                db.log_event(&event)?;
-
-                // Queue AddDep ops for sync (bidirectional, reversed)
-                queue_op(
+                apply_mutation(
+                    db,
                     work_dir,
                     config,
-                    OpPayload::add_dep(
+                    Event::new(from_id.to_string(), Action::Related)
+                        .with_values(None, Some(format!("tracked by {}", to_id))),
+                    Some(OpPayload::add_dep(
                         to_id.to_string(),
                         from_id.to_string(),
                         wk_core::issue::Relation::Tracks,
-                    ),
+                    )),
                 )?;
+                // Second queue_op for reverse direction
                 queue_op(
                     work_dir,
                     config,
@@ -170,19 +162,17 @@ pub(crate) fn remove_impl(
             UserRelation::Blocks => {
                 db.remove_dependency(from_id, to_id, Relation::Blocks)?;
 
-                let event = Event::new(from_id.to_string(), Action::Unrelated)
-                    .with_values(None, Some(format!("blocks {}", to_id)));
-                db.log_event(&event)?;
-
-                // Queue RemoveDep op for sync
-                queue_op(
+                apply_mutation(
+                    db,
                     work_dir,
                     config,
-                    OpPayload::remove_dep(
+                    Event::new(from_id.to_string(), Action::Unrelated)
+                        .with_values(None, Some(format!("blocks {}", to_id))),
+                    Some(OpPayload::remove_dep(
                         from_id.to_string(),
                         to_id.to_string(),
                         wk_core::issue::Relation::Blocks,
-                    ),
+                    )),
                 )?;
 
                 println!("Removed: {} blocks {}", from_id, to_id);
@@ -191,19 +181,17 @@ pub(crate) fn remove_impl(
                 // "A blocked by B" means "B blocks A"
                 db.remove_dependency(to_id, from_id, Relation::Blocks)?;
 
-                let event = Event::new(from_id.to_string(), Action::Unrelated)
-                    .with_values(None, Some(format!("blocked by {}", to_id)));
-                db.log_event(&event)?;
-
-                // Queue RemoveDep op for sync (reversed direction)
-                queue_op(
+                apply_mutation(
+                    db,
                     work_dir,
                     config,
-                    OpPayload::remove_dep(
+                    Event::new(from_id.to_string(), Action::Unrelated)
+                        .with_values(None, Some(format!("blocked by {}", to_id))),
+                    Some(OpPayload::remove_dep(
                         to_id.to_string(),
                         from_id.to_string(),
                         wk_core::issue::Relation::Blocks,
-                    ),
+                    )),
                 )?;
 
                 println!("Removed: {} blocked by {}", from_id, to_id);
@@ -212,20 +200,19 @@ pub(crate) fn remove_impl(
                 db.remove_dependency(from_id, to_id, Relation::Tracks)?;
                 db.remove_dependency(to_id, from_id, Relation::TrackedBy)?;
 
-                let event = Event::new(from_id.to_string(), Action::Unrelated)
-                    .with_values(None, Some(format!("tracks {}", to_id)));
-                db.log_event(&event)?;
-
-                // Queue RemoveDep ops for sync (bidirectional)
-                queue_op(
+                apply_mutation(
+                    db,
                     work_dir,
                     config,
-                    OpPayload::remove_dep(
+                    Event::new(from_id.to_string(), Action::Unrelated)
+                        .with_values(None, Some(format!("tracks {}", to_id))),
+                    Some(OpPayload::remove_dep(
                         from_id.to_string(),
                         to_id.to_string(),
                         wk_core::issue::Relation::Tracks,
-                    ),
+                    )),
                 )?;
+                // Second queue_op for reverse direction
                 queue_op(
                     work_dir,
                     config,
@@ -243,20 +230,19 @@ pub(crate) fn remove_impl(
                 db.remove_dependency(to_id, from_id, Relation::Tracks)?;
                 db.remove_dependency(from_id, to_id, Relation::TrackedBy)?;
 
-                let event = Event::new(from_id.to_string(), Action::Unrelated)
-                    .with_values(None, Some(format!("tracked by {}", to_id)));
-                db.log_event(&event)?;
-
-                // Queue RemoveDep ops for sync (bidirectional, reversed)
-                queue_op(
+                apply_mutation(
+                    db,
                     work_dir,
                     config,
-                    OpPayload::remove_dep(
+                    Event::new(from_id.to_string(), Action::Unrelated)
+                        .with_values(None, Some(format!("tracked by {}", to_id))),
+                    Some(OpPayload::remove_dep(
                         to_id.to_string(),
                         from_id.to_string(),
                         wk_core::issue::Relation::Tracks,
-                    ),
+                    )),
                 )?;
+                // Second queue_op for reverse direction
                 queue_op(
                     work_dir,
                     config,

@@ -9,14 +9,12 @@ use wk_core::OpPayload;
 use crate::config::Config;
 use crate::db::Database;
 
-use super::open_db;
+use super::{apply_mutation, open_db};
 use crate::error::{Error, Result};
 use crate::models::{Action, Event, IssueType};
 use crate::validate::{
     validate_and_normalize_title, validate_and_trim_description, validate_assignee,
 };
-
-use super::queue_op;
 
 pub fn run(id: &str, attr: &str, value: &str) -> Result<()> {
     let (db, config, work_dir) = open_db()?;
@@ -47,15 +45,16 @@ pub(crate) fn run_impl(
             let old_title = issue.title.clone();
             db.update_issue_title(id, &normalized.title)?;
 
-            let event = Event::new(id.to_string(), Action::Edited)
-                .with_values(Some(old_title), Some(normalized.title.clone()));
-            db.log_event(&event)?;
-
-            // Queue SetTitle op for sync
-            queue_op(
+            apply_mutation(
+                db,
                 work_dir,
                 config,
-                OpPayload::set_title(id.to_string(), normalized.title.clone()),
+                Event::new(id.to_string(), Action::Edited)
+                    .with_values(Some(old_title), Some(normalized.title.clone())),
+                Some(OpPayload::set_title(
+                    id.to_string(),
+                    normalized.title.clone(),
+                )),
             )?;
 
             println!("Updated title of {} to: {}", id, normalized.title);
@@ -67,17 +66,15 @@ pub(crate) fn run_impl(
             if new_type != old_type {
                 db.update_issue_type(id, new_type)?;
 
-                let event = Event::new(id.to_string(), Action::Edited).with_values(
-                    Some(old_type.as_str().to_string()),
-                    Some(new_type.as_str().to_string()),
-                );
-                db.log_event(&event)?;
-
-                // Queue SetType op for sync
-                queue_op(
+                apply_mutation(
+                    db,
                     work_dir,
                     config,
-                    OpPayload::set_type(id.to_string(), new_type),
+                    Event::new(id.to_string(), Action::Edited).with_values(
+                        Some(old_type.as_str().to_string()),
+                        Some(new_type.as_str().to_string()),
+                    ),
+                    Some(OpPayload::set_type(id.to_string(), new_type)),
                 )?;
 
                 println!("Updated type of {} to: {}", id, new_type.as_str());
@@ -88,9 +85,14 @@ pub(crate) fn run_impl(
             let old_desc = issue.description.clone();
             db.update_issue_description(id, &trimmed_desc)?;
 
-            let event = Event::new(id.to_string(), Action::Edited)
-                .with_values(old_desc, Some(trimmed_desc.clone()));
-            db.log_event(&event)?;
+            apply_mutation(
+                db,
+                work_dir,
+                config,
+                Event::new(id.to_string(), Action::Edited)
+                    .with_values(old_desc, Some(trimmed_desc.clone())),
+                None, // No sync for description edits
+            )?;
 
             println!("Updated description of {}", id);
         }
@@ -105,9 +107,14 @@ pub(crate) fn run_impl(
                 } else {
                     db.clear_assignee(id)?;
 
-                    let event = Event::new(id.to_string(), Action::Unassigned)
-                        .with_values(old_assignee, None);
-                    db.log_event(&event)?;
+                    apply_mutation(
+                        db,
+                        work_dir,
+                        config,
+                        Event::new(id.to_string(), Action::Unassigned)
+                            .with_values(old_assignee, None),
+                        None, // No sync for assignee changes
+                    )?;
 
                     println!("Unassigned {}", id);
                 }
@@ -115,9 +122,14 @@ pub(crate) fn run_impl(
                 validate_assignee(trimmed)?;
                 db.set_assignee(id, trimmed)?;
 
-                let event = Event::new(id.to_string(), Action::Assigned)
-                    .with_values(old_assignee, Some(trimmed.to_string()));
-                db.log_event(&event)?;
+                apply_mutation(
+                    db,
+                    work_dir,
+                    config,
+                    Event::new(id.to_string(), Action::Assigned)
+                        .with_values(old_assignee, Some(trimmed.to_string())),
+                    None, // No sync for assignee changes
+                )?;
 
                 println!("Assigned {} to {}", id, trimmed);
             }

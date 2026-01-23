@@ -17,8 +17,8 @@ use crate::validate::{
     validate_and_normalize_title, validate_and_trim_note, validate_assignee, validate_label,
 };
 
+use super::apply_mutation;
 use super::link::add_link_impl;
-use super::queue_op;
 
 #[allow(clippy::too_many_arguments)]
 pub fn run(
@@ -191,33 +191,33 @@ pub(crate) fn run_impl(
     // if a UNIQUE constraint violation occurs.
     let (id, issue) = create_issue_with_retry(db, config, issue_type, &normalized.title, assignee)?;
 
-    // Log creation event
-    let event = Event::new(id.clone(), Action::Created);
-    db.log_event(&event)?;
-
-    // Queue CreateIssue op for sync (convert CLI IssueType to core IssueType)
+    // Log creation event and queue for sync
     let core_issue_type = issue_type
         .as_str()
         .parse()
         .unwrap_or(wk_core::IssueType::Task);
-    queue_op(
+    apply_mutation(
+        db,
         work_dir,
         config,
-        OpPayload::create_issue(id.clone(), core_issue_type, normalized.title.clone()),
+        Event::new(id.clone(), Action::Created),
+        Some(OpPayload::create_issue(
+            id.clone(),
+            core_issue_type,
+            normalized.title.clone(),
+        )),
     )?;
 
     // Validate and add labels
     for label in &labels {
         validate_label(label)?;
         db.add_label(&id, label)?;
-        let event = Event::new(id.clone(), Action::Labeled).with_values(None, Some(label.clone()));
-        db.log_event(&event)?;
-
-        // Queue AddLabel op for sync
-        queue_op(
+        apply_mutation(
+            db,
             work_dir,
             config,
-            OpPayload::add_label(id.clone(), label.clone()),
+            Event::new(id.clone(), Action::Labeled).with_values(None, Some(label.clone())),
+            Some(OpPayload::add_label(id.clone(), label.clone())),
         )?;
     }
 
@@ -226,15 +226,16 @@ pub(crate) fn run_impl(
         let trimmed_note = validate_and_trim_note(&note_content)?;
         if !trimmed_note.is_empty() {
             db.add_note(&id, Status::Todo, &trimmed_note)?;
-            let event =
-                Event::new(id.clone(), Action::Noted).with_values(None, Some(trimmed_note.clone()));
-            db.log_event(&event)?;
-
-            // Queue AddNote op for sync
-            queue_op(
+            apply_mutation(
+                db,
                 work_dir,
                 config,
-                OpPayload::add_note(id.clone(), trimmed_note, wk_core::Status::Todo),
+                Event::new(id.clone(), Action::Noted).with_values(None, Some(trimmed_note.clone())),
+                Some(OpPayload::add_note(
+                    id.clone(),
+                    trimmed_note,
+                    wk_core::Status::Todo,
+                )),
             )?;
         }
     }

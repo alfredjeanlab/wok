@@ -8,12 +8,10 @@ use wk_core::OpPayload;
 use crate::config::Config;
 use crate::db::Database;
 
-use super::open_db;
+use super::{apply_mutation, open_db};
 use crate::error::{Error, Result};
 use crate::models::{Action, Event, Status};
 use crate::validate::validate_and_trim_note;
-
-use super::queue_op;
 
 pub fn run(id: &str, content: &str, replace: bool) -> Result<()> {
     let (db, config, work_dir) = open_db()?;
@@ -48,45 +46,45 @@ pub(crate) fn run_impl(
         ));
     }
 
+    // Convert status for sync
+    let core_status = match issue.status {
+        Status::Todo => wk_core::Status::Todo,
+        Status::InProgress => wk_core::Status::InProgress,
+        Status::Done => wk_core::Status::Done,
+        Status::Closed => wk_core::Status::Closed,
+    };
+
     if replace {
         db.replace_note(id, issue.status, &trimmed_content)?;
 
-        let event = Event::new(id.to_string(), Action::Noted)
-            .with_values(None, Some(trimmed_content.clone()));
-        db.log_event(&event)?;
-
-        // Queue AddNote op for sync
-        let core_status = match issue.status {
-            Status::Todo => wk_core::Status::Todo,
-            Status::InProgress => wk_core::Status::InProgress,
-            Status::Done => wk_core::Status::Done,
-            Status::Closed => wk_core::Status::Closed,
-        };
-        queue_op(
+        apply_mutation(
+            db,
             work_dir,
             config,
-            OpPayload::add_note(id.to_string(), trimmed_content, core_status),
+            Event::new(id.to_string(), Action::Noted)
+                .with_values(None, Some(trimmed_content.clone())),
+            Some(OpPayload::add_note(
+                id.to_string(),
+                trimmed_content,
+                core_status,
+            )),
         )?;
 
         println!("Replaced note on {}", id);
     } else {
         db.add_note(id, issue.status, &trimmed_content)?;
 
-        let event = Event::new(id.to_string(), Action::Noted)
-            .with_values(None, Some(trimmed_content.clone()));
-        db.log_event(&event)?;
-
-        // Queue AddNote op for sync
-        let core_status = match issue.status {
-            Status::Todo => wk_core::Status::Todo,
-            Status::InProgress => wk_core::Status::InProgress,
-            Status::Done => wk_core::Status::Done,
-            Status::Closed => wk_core::Status::Closed,
-        };
-        queue_op(
+        apply_mutation(
+            db,
             work_dir,
             config,
-            OpPayload::add_note(id.to_string(), trimmed_content, core_status),
+            Event::new(id.to_string(), Action::Noted)
+                .with_values(None, Some(trimmed_content.clone())),
+            Some(OpPayload::add_note(
+                id.to_string(),
+                trimmed_content,
+                core_status,
+            )),
         )?;
 
         println!("Added note to {} ({})", id, issue.status);
