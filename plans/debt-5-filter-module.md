@@ -1,5 +1,7 @@
 # Plan: debt-5-filter-module
 
+**Root Feature:** `wok-7d1b`
+
 Move filter parsing/matching logic from `commands/list.rs` to a dedicated `commands/filtering.rs` module.
 
 ## Overview
