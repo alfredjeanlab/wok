@@ -3,6 +3,8 @@
 
 //! Benchmarks for filter parsing and evaluation.
 
+#![allow(clippy::expect_used)]
+
 use chrono::{Duration, Utc};
 use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion};
 use wkrs::filter::parse_filter;

@@ -3,6 +3,8 @@
 
 //! Benchmarks for SQL row to Issue struct mapping.
 
+#![allow(clippy::expect_used)]
+
 use chrono::Utc;
 use criterion::{criterion_group, criterion_main, BatchSize, Criterion};
 use wkrs::db::Database;
