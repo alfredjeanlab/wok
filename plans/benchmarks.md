@@ -1,5 +1,7 @@
 # Implementation Plan: Benchmark Scenarios
 
+**Root Feature:** `wok-527b`
+
 ## Overview
 
 Add new benchmark scenarios for write operations (new/edit/close) and search functionality. Extract shared hyperfine wrapper logic to a dedicated `lib/bench.sh` module to DRY up scenario files and support mutation-specific benchmarking patterns.
