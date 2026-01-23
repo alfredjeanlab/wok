@@ -1,5 +1,7 @@
 # Plan: Unify Issue JSON Types
 
+**Root Feature:** `wok-d952`
+
 ## Overview
 
 Consolidate three identical JSON issue types (`ListIssueJson`, `ReadyIssueJson`, `SearchIssueJson`) into a single `IssueJson` type in the schema module. This eliminates code duplication while maintaining the separate output wrapper types that differ between commands.
