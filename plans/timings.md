@@ -1,5 +1,7 @@
 # WK_TIMINGS Environment Variable Instrumentation
 
+**Root Feature:** `wok-fbd0`
+
 ## Overview
 
 Add `WK_TIMINGS=1` environment variable to output phase durations to stderr for performance debugging. This lightweight instrumentation helps identify performance bottlenecks without external dependencies, using simple `Instant::now()` + `eprintln!` patterns gated by the environment variable check.
