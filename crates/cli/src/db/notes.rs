@@ -64,10 +64,9 @@ impl Database {
                 )?;
                 Ok(id)
             }
-            None => Err(crate::error::Error::InvalidInput(format!(
-                "no notes to replace for issue {}",
-                issue_id
-            ))),
+            None => Err(crate::error::Error::NoNotesToReplace {
+                issue_id: issue_id.to_string(),
+            }),
         }
     }
 

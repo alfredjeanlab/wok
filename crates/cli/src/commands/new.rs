@@ -106,9 +106,7 @@ fn create_issue_with_retry(
         }
     }
 
-    Err(Error::InvalidInput(
-        "failed to generate unique issue ID after multiple retries".to_string(),
-    ))
+    Err(Error::IdGenerationFailed)
 }
 
 /// Check if a rusqlite error is a UNIQUE constraint violation.
@@ -180,9 +178,9 @@ pub(crate) fn run_impl(
     // Validate that prefix is not empty - empty prefix would create IDs like "-a1b2"
     // which cause CLI issues because they look like flags
     if config.prefix.is_empty() {
-        return Err(crate::error::Error::InvalidInput(
-            "cannot create issue: project has no prefix configured\n  hint: workspace links without a prefix can only view issues, not create them".to_string(),
-        ));
+        return Err(crate::error::Error::CannotCreateIssue {
+            reason: "project has no prefix configured\n  hint: workspace links without a prefix can only view issues, not create them".to_string(),
+        });
     }
 
     // Create issue with retry on ID collision.

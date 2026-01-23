@@ -101,7 +101,229 @@ fn test_error_invalid_prefix_display() {
     assert!(err.to_string().contains("2+ lowercase"));
 }
 
+// Phase 1: Filter Parser Error tests
 #[test]
+fn test_error_filter_empty_display() {
+    let err = Error::FilterEmpty;
+    assert!(err.to_string().contains("empty filter expression"));
+}
+
+#[test]
+fn test_error_filter_unknown_field_display() {
+    let err = Error::FilterUnknownField {
+        field: "badfield".to_string(),
+    };
+    let msg = err.to_string();
+    assert!(msg.contains("unknown filter field"));
+    assert!(msg.contains("badfield"));
+}
+
+#[test]
+fn test_error_filter_invalid_operator_display() {
+    let err = Error::FilterInvalidOperator {
+        field: "age".to_string(),
+        op: "<<".to_string(),
+    };
+    let msg = err.to_string();
+    assert!(msg.contains("invalid filter operator"));
+    assert!(msg.contains("<<"));
+    assert!(msg.contains("age"));
+}
+
+#[test]
+fn test_error_filter_invalid_value_display() {
+    let err = Error::FilterInvalidValue {
+        field: "age".to_string(),
+        reason: "missing value".to_string(),
+    };
+    let msg = err.to_string();
+    assert!(msg.contains("invalid filter value"));
+    assert!(msg.contains("age"));
+    assert!(msg.contains("missing value"));
+}
+
+#[test]
+fn test_error_invalid_duration_display() {
+    let err = Error::InvalidDuration {
+        reason: "empty duration".to_string(),
+    };
+    let msg = err.to_string();
+    assert!(msg.contains("invalid duration"));
+    assert!(msg.contains("empty duration"));
+}
+
+// Phase 2: Command Validation Error tests
+#[test]
+fn test_error_cancelled_display() {
+    let err = Error::Cancelled;
+    assert!(err.to_string().contains("cancelled"));
+}
+
+#[test]
+fn test_error_required_for_display() {
+    let err = Error::RequiredFor {
+        context: "--reason",
+        operation: "agents",
+    };
+    let msg = err.to_string();
+    assert!(msg.contains("--reason"));
+    assert!(msg.contains("required for"));
+    assert!(msg.contains("agents"));
+}
+
+#[test]
+fn test_error_cannot_derive_display() {
+    let err = Error::CannotDerive {
+        item: "prefix",
+        from: "path".to_string(),
+    };
+    let msg = err.to_string();
+    assert!(msg.contains("cannot derive"));
+    assert!(msg.contains("prefix"));
+    assert!(msg.contains("path"));
+}
+
+#[test]
+fn test_error_parse_line_error_display() {
+    let err = Error::ParseLineError {
+        line: 42,
+        reason: "invalid JSON".to_string(),
+    };
+    let msg = err.to_string();
+    assert!(msg.contains("line 42"));
+    assert!(msg.contains("invalid JSON"));
+}
+
+#[test]
+fn test_error_invalid_scope_display() {
+    let err = Error::InvalidScope {
+        scope: "badscope".to_string(),
+    };
+    let msg = err.to_string();
+    assert!(msg.contains("invalid scope"));
+    assert!(msg.contains("badscope"));
+}
+
+#[test]
+fn test_error_tty_required_display() {
+    let err = Error::TtyRequired;
+    assert!(err.to_string().contains("terminal"));
+    assert!(err.to_string().contains("TTY"));
+}
+
+#[test]
+fn test_error_permission_denied_display() {
+    let err = Error::PermissionDenied {
+        target: "project".to_string(),
+    };
+    let msg = err.to_string();
+    assert!(msg.contains("permission denied"));
+    assert!(msg.contains("project"));
+}
+
+#[test]
+fn test_error_no_input_file_display() {
+    let err = Error::NoInputFile;
+    assert!(err.to_string().contains("no input file"));
+}
+
+#[test]
+fn test_error_invalid_timestamp_display() {
+    let err = Error::InvalidTimestamp {
+        reason: "created_at: parse error".to_string(),
+    };
+    let msg = err.to_string();
+    assert!(msg.contains("invalid timestamp"));
+    assert!(msg.contains("created_at"));
+}
+
+// Phase 3: Link and Edit Error tests
+#[test]
+fn test_error_link_requires_display() {
+    let err = Error::LinkRequires {
+        requirement: "import",
+        dependency: "a known provider type",
+    };
+    let msg = err.to_string();
+    assert!(msg.contains("import"));
+    assert!(msg.contains("requires"));
+    assert!(msg.contains("provider"));
+}
+
+#[test]
+fn test_error_unknown_attribute_display() {
+    let err = Error::UnknownAttribute {
+        attr: "badattr".to_string(),
+    };
+    let msg = err.to_string();
+    assert!(msg.contains("unknown attribute"));
+    assert!(msg.contains("badattr"));
+}
+
+#[test]
+fn test_error_title_contains_description_display() {
+    let err = Error::TitleContainsDescription;
+    let msg = err.to_string();
+    assert!(msg.contains("double-newline"));
+    assert!(msg.contains("wk note"));
+}
+
+// Phase 4: Note and Lookup Error tests
+#[test]
+fn test_error_no_notes_to_replace_display() {
+    let err = Error::NoNotesToReplace {
+        issue_id: "wk-abc".to_string(),
+    };
+    let msg = err.to_string();
+    assert!(msg.contains("no notes to replace"));
+    assert!(msg.contains("wk-abc"));
+}
+
+#[test]
+fn test_error_field_required_display() {
+    let err = Error::FieldRequired { field: "Label" };
+    let msg = err.to_string();
+    assert!(msg.contains("Label"));
+    assert!(msg.contains("required"));
+}
+
+#[test]
+fn test_error_cannot_note_closed_issue_display() {
+    let err = Error::CannotNoteClosedIssue;
+    assert!(err.to_string().contains("cannot add notes"));
+    assert!(err.to_string().contains("closed"));
+}
+
+#[test]
+fn test_error_unknown_format_display() {
+    let err = Error::UnknownFormat {
+        format: "xml".to_string(),
+    };
+    let msg = err.to_string();
+    assert!(msg.contains("unknown format"));
+    assert!(msg.contains("xml"));
+}
+
+#[test]
+fn test_error_cannot_create_issue_display() {
+    let err = Error::CannotCreateIssue {
+        reason: "no prefix".to_string(),
+    };
+    let msg = err.to_string();
+    assert!(msg.contains("cannot create issue"));
+    assert!(msg.contains("no prefix"));
+}
+
+#[test]
+fn test_error_id_generation_failed_display() {
+    let err = Error::IdGenerationFailed;
+    assert!(err.to_string().contains("unique issue ID"));
+    assert!(err.to_string().contains("retries"));
+}
+
+// Legacy InvalidInput test (deprecated)
+#[test]
+#[allow(deprecated)]
 fn test_error_invalid_input_display() {
     let err = Error::InvalidInput("custom error message".to_string());
     assert_eq!(err.to_string(), "custom error message");

@@ -123,7 +123,7 @@ fn show_invalid_format() {
         .current_dir(temp.path())
         .assert()
         .failure()
-        .stderr(predicate::str::contains("Unknown format"));
+        .stderr(predicate::str::contains("unknown format"));
 }
 
 #[test]

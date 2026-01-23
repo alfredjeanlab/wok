@@ -65,10 +65,9 @@ pub(crate) fn run_impl(db: &Database, id: &str, format: &str) -> Result<()> {
             println!("{}", output);
         }
         _ => {
-            return Err(Error::InvalidInput(format!(
-                "Unknown format '{}'. Valid options: text, json",
-                format
-            )));
+            return Err(Error::UnknownFormat {
+                format: format.to_string(),
+            });
         }
     }
 

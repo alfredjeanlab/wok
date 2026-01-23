@@ -66,13 +66,13 @@ use clap_complete::generate;
 /// The label is always the last argument, with all preceding arguments being IDs.
 fn split_ids_and_label(args: &[String]) -> Result<(Vec<String>, String)> {
     if args.len() < 2 {
-        return Err(Error::InvalidInput(
-            "At least one ID and a label required".into(),
-        ));
+        return Err(Error::FieldRequired {
+            field: "At least one ID and a label",
+        });
     }
     let label = args
         .last()
-        .ok_or_else(|| Error::InvalidInput("Label required".into()))?
+        .ok_or_else(|| Error::FieldRequired { field: "Label" })?
         .clone();
     let ids = args[..args.len() - 1].to_vec();
     Ok((ids, label))

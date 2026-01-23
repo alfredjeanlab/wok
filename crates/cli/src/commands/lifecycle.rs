@@ -50,8 +50,11 @@ enum BulkErrorKind {
         valid_targets: String,
         message: String,
     },
-    /// InvalidInput that should be treated as transition failure
-    InvalidInput(String),
+    /// RequiredFor that should be treated as transition failure
+    RequiredFor {
+        context: &'static str,
+        operation: &'static str,
+    },
     /// Unexpected error - fail fast
     Fatal(Error),
 }
@@ -74,8 +77,8 @@ impl BulkErrorKind {
                     message,
                 }
             }
-            Error::InvalidInput(msg) if msg.contains("required for agent") => {
-                BulkErrorKind::InvalidInput(msg)
+            Error::RequiredFor { context, operation } => {
+                BulkErrorKind::RequiredFor { context, operation }
             }
             e => BulkErrorKind::Fatal(e),
         }
@@ -95,7 +98,9 @@ impl BulkErrorKind {
                 to,
                 valid_targets,
             },
-            BulkErrorKind::InvalidInput(msg) => Error::InvalidInput(msg),
+            BulkErrorKind::RequiredFor { context, operation } => {
+                Error::RequiredFor { context, operation }
+            }
             BulkErrorKind::Fatal(e) => e,
         }
     }
@@ -172,9 +177,10 @@ where
                         message,
                     });
                 }
-                BulkErrorKind::InvalidInput(msg) => {
-                    result.transition_failures.push((id.clone(), msg.clone()));
-                    last_error = Some(BulkErrorKind::InvalidInput(msg));
+                BulkErrorKind::RequiredFor { context, operation } => {
+                    let msg = format!("{} is required for {}", context, operation);
+                    result.transition_failures.push((id.clone(), msg));
+                    last_error = Some(BulkErrorKind::RequiredFor { context, operation });
                 }
                 BulkErrorKind::Fatal(fatal_error) => {
                     return Err(fatal_error);
@@ -188,9 +194,9 @@ where
         if result.is_success() {
             return Ok(());
         }
-        return Err(last_error
-            .map(|k| k.into_error())
-            .unwrap_or_else(|| Error::InvalidInput("internal error: expected error".to_string())));
+        return Err(last_error.map(|k| k.into_error()).unwrap_or_else(|| {
+            Error::CorruptedData("internal error: expected error".to_string())
+        }));
     }
 
     print_bulk_summary(&result, action_verb);
@@ -578,7 +584,7 @@ pub(crate) fn resolve_reason(reason: Option<&str>, action: &str) -> Result<Strin
     if let Some(r) = reason {
         let trimmed = validate_and_trim_reason(r)?;
         if trimmed.is_empty() {
-            return Err(Error::InvalidInput("Reason cannot be empty".to_string()));
+            return Err(Error::FieldEmpty { field: "Reason" });
         }
         return Ok(trimmed);
     }
@@ -590,9 +596,10 @@ pub(crate) fn resolve_reason(reason: Option<&str>, action: &str) -> Result<Strin
     }
 
     // Require explicit reason for non-interactive/automation contexts
-    Err(Error::InvalidInput(
-        "--reason is required for agents".to_string(),
-    ))
+    Err(Error::RequiredFor {
+        context: "--reason",
+        operation: "agents",
+    })
 }
 
 /// Log unblocked events for issues that become unblocked when a blocker is completed

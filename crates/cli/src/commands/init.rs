@@ -148,10 +148,13 @@ fn setup_remote(work_dir: &Path, repo_path: &Path, remote_url: &str) -> Result<(
 /// Derive a prefix from the directory path.
 /// Uses the directory name, converted to lowercase, keeping letters and digits.
 fn derive_prefix_from_path(path: &Path) -> Result<String> {
-    let dir_name = path
-        .file_name()
-        .and_then(|n| n.to_str())
-        .ok_or_else(|| Error::InvalidInput("Cannot derive prefix from path".to_string()))?;
+    let dir_name =
+        path.file_name()
+            .and_then(|n| n.to_str())
+            .ok_or_else(|| Error::CannotDerive {
+                item: "prefix",
+                from: "path".to_string(),
+            })?;
 
     // Convert to lowercase and keep only ASCII alphanumeric characters
     let prefix: String = dir_name
@@ -162,10 +165,13 @@ fn derive_prefix_from_path(path: &Path) -> Result<String> {
 
     // Must have at least 2 characters and contain at least one letter
     if prefix.len() < 2 || !prefix.chars().any(|c| c.is_ascii_lowercase()) {
-        return Err(Error::InvalidInput(
-            "Cannot derive prefix from directory name (need 2+ chars with at least one letter)"
-                .to_string(),
-        ));
+        return Err(Error::CannotDerive {
+            item: "prefix",
+            from: format!(
+                "directory name '{}' (need 2+ chars with at least one letter)",
+                dir_name
+            ),
+        });
     }
 
     Ok(prefix)

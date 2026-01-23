@@ -37,9 +37,7 @@ pub(crate) fn run_impl(
             let normalized = validate_and_normalize_title(value)?;
 
             if normalized.extracted_description.is_some() {
-                return Err(Error::InvalidInput(
-                    "Title contains double-newline; use 'wk note' for description".to_string(),
-                ));
+                return Err(Error::TitleContainsDescription);
             }
 
             let old_title = issue.title.clone();
@@ -135,10 +133,9 @@ pub(crate) fn run_impl(
             }
         }
         _ => {
-            return Err(Error::InvalidInput(format!(
-                "Unknown attribute '{}'. Valid attributes: title, description, type, assignee",
-                attr
-            )));
+            return Err(Error::UnknownAttribute {
+                attr: attr.to_string(),
+            });
         }
     }
 

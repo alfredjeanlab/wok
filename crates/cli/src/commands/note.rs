@@ -31,9 +31,7 @@ pub(crate) fn run_impl(
 
     // Cannot add notes to closed issues
     if issue.status == Status::Closed {
-        return Err(Error::InvalidInput(
-            "cannot add notes to closed issues".to_string(),
-        ));
+        return Err(Error::CannotNoteClosedIssue);
     }
 
     // Validate and trim note
@@ -41,9 +39,7 @@ pub(crate) fn run_impl(
 
     // Check if empty after trimming
     if trimmed_content.is_empty() {
-        return Err(Error::InvalidInput(
-            "Note content cannot be empty".to_string(),
-        ));
+        return Err(Error::FieldEmpty { field: "Note" });
     }
 
     // Convert status for sync

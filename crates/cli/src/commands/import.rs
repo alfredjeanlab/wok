@@ -249,10 +249,14 @@ fn convert_beads_type(issue_type: &str) -> IssueType {
 // Convert beads issue to internal format
 fn convert_beads_issue(bd: BeadsIssue) -> Result<ImportedIssue> {
     let created_at = chrono::DateTime::parse_from_rfc3339(&bd.created_at)
-        .map_err(|e| Error::InvalidInput(format!("invalid created_at: {}", e)))?
+        .map_err(|e| Error::InvalidTimestamp {
+            reason: format!("created_at: {}", e),
+        })?
         .with_timezone(&chrono::Utc);
     let updated_at = chrono::DateTime::parse_from_rfc3339(&bd.updated_at)
-        .map_err(|e| Error::InvalidInput(format!("invalid updated_at: {}", e)))?
+        .map_err(|e| Error::InvalidTimestamp {
+            reason: format!("updated_at: {}", e),
+        })?
         .with_timezone(&chrono::Utc);
 
     let issue = Issue {
@@ -373,12 +377,7 @@ pub fn run(
     let path = match &source {
         Some(p) if p != "-" => p.as_str(),
         Some(_) => "-",
-        None => {
-            return Err(Error::InvalidInput(
-                "no input file specified. Use 'wk import <file>' or 'wk import -' for stdin"
-                    .to_string(),
-            ))
-        }
+        None => return Err(Error::NoInputFile),
     };
 
     let (db, config, _) = open_db()?;
@@ -433,13 +432,19 @@ pub(crate) fn run_impl(
 
         let entry = match format {
             "bd" => {
-                let bd: BeadsIssue = serde_json::from_str(line)
-                    .map_err(|e| Error::InvalidInput(format!("line {}: {}", line_num + 1, e)))?;
+                let bd: BeadsIssue =
+                    serde_json::from_str(line).map_err(|e| Error::ParseLineError {
+                        line: line_num + 1,
+                        reason: e.to_string(),
+                    })?;
                 convert_beads_issue(bd)?
             }
             _ => {
-                let wk: WkIssue = serde_json::from_str(line)
-                    .map_err(|e| Error::InvalidInput(format!("line {}: {}", line_num + 1, e)))?;
+                let wk: WkIssue =
+                    serde_json::from_str(line).map_err(|e| Error::ParseLineError {
+                        line: line_num + 1,
+                        reason: e.to_string(),
+                    })?;
                 convert_wk_issue(wk)
             }
         };
