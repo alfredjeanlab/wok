@@ -94,11 +94,10 @@ impl Database {
         Ok(db)
     }
 
-    /// Open an in-memory database (for testing)
+    /// Open an in-memory database (for testing and benchmarks)
     ///
     /// Note: In-memory databases don't support WAL mode, so we only enable
     /// foreign keys and busy_timeout.
-    #[cfg(test)]
     pub fn open_in_memory() -> Result<Self> {
         let conn = Connection::open_in_memory()?;
         conn.execute_batch(
