@@ -1,5 +1,7 @@
 # Plan: Criterion Microbenchmarks
 
+**Root Feature:** `wok-4703`
+
 ## Overview
 
 Add criterion microbenchmarks to `crates/cli/benches/` targeting CPU-bound parsing, evaluation, and data mapping operations. These benchmarks enable regression detection in CI without full hyperfine runs, focusing on isolated function performance rather than end-to-end CLI timing.
