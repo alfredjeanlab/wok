@@ -40,6 +40,7 @@ mod git_hooks;
 mod mode;
 mod normalize;
 mod schema;
+pub mod timings;
 mod validate;
 mod wal;
 mod worktree;

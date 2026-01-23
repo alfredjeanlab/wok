@@ -46,7 +46,7 @@ pub fn open_db() -> Result<(Database, Config, PathBuf)> {
     let work_dir = find_work_dir()?;
     let config = Config::load(&work_dir)?;
     let db_path = get_db_path(&work_dir, &config);
-    let db = Database::open(&db_path)?;
+    let db = crate::time_phase!("db::open", { Database::open(&db_path)? });
     Ok((db, config, work_dir))
 }
 
