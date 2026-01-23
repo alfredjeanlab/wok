@@ -175,3 +175,11 @@ fn test_issue_type_serde() {
     let parsed: IssueType = serde_json::from_str(&json).unwrap();
     assert_eq!(parsed, IssueType::Chore);
 }
+
+#[test]
+fn status_converts_to_core_status() {
+    assert_eq!(wk_core::Status::Todo, Status::Todo.into());
+    assert_eq!(wk_core::Status::InProgress, Status::InProgress.into());
+    assert_eq!(wk_core::Status::Done, Status::Done.into());
+    assert_eq!(wk_core::Status::Closed, Status::Closed.into());
+}
