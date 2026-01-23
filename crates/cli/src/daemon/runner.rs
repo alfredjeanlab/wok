@@ -23,6 +23,7 @@ use tokio::net::UnixListener;
 use tokio::sync::mpsc;
 use wk_core::{Database, Hlc, Merge, Op, OpPayload, Oplog};
 
+use crate::commands::HlcPersistence;
 use crate::config::{get_db_path, Config, RemoteType};
 use crate::error::{Error, Result};
 use crate::sync::{SyncClient, SyncConfig, Transport, WebSocketTransport};
@@ -243,7 +244,7 @@ async fn run_daemon_async(daemon_dir: &Path, config: &Config) -> Result<()> {
                                         new_client.set_connected();
 
                                         // Initialize client's last_hlc from persisted SERVER state
-                                        if let Some(server_hlc) = crate::commands::read_server_hlc(daemon_dir) {
+                                        if let Some(server_hlc) = HlcPersistence::server(daemon_dir).read() {
                                             new_client.set_last_hlc(server_hlc);
                                         }
 
@@ -522,9 +523,9 @@ fn handle_server_message(
         ServerMessage::Op(op) => {
             apply_op_to_cache(op, db_path, oplog_path)?;
             // Persist SERVER HLC for future sync requests
-            let _ = crate::commands::update_server_hlc(daemon_dir, op.id);
+            let _ = HlcPersistence::server(daemon_dir).update(op.id);
             // Also update local HLC to incorporate received HLC
-            let _ = crate::commands::update_last_hlc(daemon_dir, op.id);
+            let _ = HlcPersistence::last(daemon_dir).update(op.id);
         }
         ServerMessage::SyncResponse { ops } => {
             for op in ops {
@@ -532,8 +533,8 @@ fn handle_server_message(
             }
             // Persist max SERVER HLC from sync response
             if let Some(max_hlc) = ops.iter().map(|op| op.id).max() {
-                let _ = crate::commands::update_server_hlc(daemon_dir, max_hlc);
-                let _ = crate::commands::update_last_hlc(daemon_dir, max_hlc);
+                let _ = HlcPersistence::server(daemon_dir).update(max_hlc);
+                let _ = HlcPersistence::last(daemon_dir).update(max_hlc);
             }
         }
         ServerMessage::SnapshotResponse {
@@ -626,8 +627,8 @@ fn apply_snapshot_to_cache(
     }
 
     // Persist the snapshot's high-water HLC for future sync requests
-    let _ = crate::commands::update_server_hlc(daemon_dir, since);
-    let _ = crate::commands::update_last_hlc(daemon_dir, since);
+    let _ = HlcPersistence::server(daemon_dir).update(since);
+    let _ = HlcPersistence::last(daemon_dir).update(since);
 
     Ok(())
 }
@@ -668,7 +669,7 @@ async fn sync_on_reconnect<T: Transport>(
     // Request sync to catch up on missed ops, using persisted SERVER HLC (not client.last_hlc).
     // client.last_hlc() gets contaminated by local ops, which would cause new clients
     // to request sync(since=local_hlc) instead of snapshot, missing earlier ops.
-    let sync_since = crate::commands::read_server_hlc(daemon_dir);
+    let sync_since = HlcPersistence::server(daemon_dir).read();
 
     if let Some(since) = sync_since {
         let _ = client.request_sync(since).await;
@@ -845,7 +846,7 @@ async fn sync_websocket<T: Transport>(
     // client.last_hlc() gets contaminated by local ops (via send_op), which
     // would cause new clients to request sync(since=local_hlc) instead of
     // snapshot, missing earlier ops from other clients.
-    let sync_since = crate::commands::read_server_hlc(daemon_dir);
+    let sync_since = HlcPersistence::server(daemon_dir).read();
     let queue_path = daemon_dir.join("sync_queue.jsonl");
 
     // Read operations from queue without dequeuing
@@ -966,8 +967,8 @@ async fn sync_websocket<T: Transport>(
 
         // Persist the max HLC from received ops for future sync requests
         if let Some(max_hlc) = received_ops.iter().map(|op| op.id).max() {
-            let _ = crate::commands::update_server_hlc(daemon_dir, max_hlc);
-            let _ = crate::commands::update_last_hlc(daemon_dir, max_hlc);
+            let _ = HlcPersistence::server(daemon_dir).update(max_hlc);
+            let _ = HlcPersistence::last(daemon_dir).update(max_hlc);
             client.set_last_hlc(max_hlc);
         }
     }
@@ -1020,8 +1021,8 @@ async fn sync_websocket<T: Transport>(
 
         // Persist the snapshot's high-water HLC for future sync requests
         // This ensures new operations will have timestamps higher than what the server has seen
-        let _ = crate::commands::update_server_hlc(daemon_dir, since);
-        let _ = crate::commands::update_last_hlc(daemon_dir, since);
+        let _ = HlcPersistence::server(daemon_dir).update(since);
+        let _ = HlcPersistence::last(daemon_dir).update(since);
 
         // Update client's last_hlc so subsequent sync requests use the correct baseline
         client.set_last_hlc(since);

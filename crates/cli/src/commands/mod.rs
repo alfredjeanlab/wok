@@ -6,6 +6,7 @@ pub mod dep;
 pub mod edit;
 pub mod export;
 pub mod filtering;
+pub mod hlc_persistence;
 pub mod hooks;
 pub mod import;
 pub mod init;
@@ -27,6 +28,8 @@ pub mod show;
 pub mod testing;
 pub mod tree;
 
+pub use hlc_persistence::HlcPersistence;
+
 use std::path::{Path, PathBuf};
 
 use wk_core::{Hlc, HlcClock, Op, OpPayload};
@@ -47,76 +50,6 @@ pub fn open_db() -> Result<(Database, Config, PathBuf)> {
     Ok((db, config, work_dir))
 }
 
-/// Get the path to the persisted local HLC file (for generating new ops).
-pub fn get_last_hlc_path(daemon_dir: &Path) -> std::path::PathBuf {
-    daemon_dir.join("last_hlc.txt")
-}
-
-/// Get the path to the persisted server HLC file (for sync requests).
-pub fn get_server_hlc_path(daemon_dir: &Path) -> std::path::PathBuf {
-    daemon_dir.join("server_hlc.txt")
-}
-
-/// Read the last persisted local HLC from disk.
-pub fn read_last_hlc(daemon_dir: &Path) -> Option<Hlc> {
-    let path = get_last_hlc_path(daemon_dir);
-    let content = std::fs::read_to_string(&path).ok()?;
-    content.trim().parse().ok()
-}
-
-/// Read the last persisted server HLC from disk (for sync requests).
-pub fn read_server_hlc(daemon_dir: &Path) -> Option<Hlc> {
-    let path = get_server_hlc_path(daemon_dir);
-    let content = std::fs::read_to_string(&path).ok()?;
-    content.trim().parse().ok()
-}
-
-/// Write the local HLC high-water mark to disk.
-pub fn write_last_hlc(daemon_dir: &Path, hlc: Hlc) -> Result<()> {
-    use std::io::Write;
-
-    let path = get_last_hlc_path(daemon_dir);
-    let mut file = std::fs::File::create(&path)?;
-    write!(file, "{}", hlc)?;
-    file.sync_all()?;
-    Ok(())
-}
-
-/// Write the server HLC high-water mark to disk.
-pub fn write_server_hlc(daemon_dir: &Path, hlc: Hlc) -> Result<()> {
-    use std::io::Write;
-
-    let path = get_server_hlc_path(daemon_dir);
-    let mut file = std::fs::File::create(&path)?;
-    write!(file, "{}", hlc)?;
-    file.sync_all()?;
-    Ok(())
-}
-
-/// Update the persisted local HLC if the given HLC is greater than the current one.
-pub fn update_last_hlc(daemon_dir: &Path, hlc: Hlc) -> Result<()> {
-    if let Some(current) = read_last_hlc(daemon_dir) {
-        if hlc > current {
-            write_last_hlc(daemon_dir, hlc)?;
-        }
-    } else {
-        write_last_hlc(daemon_dir, hlc)?;
-    }
-    Ok(())
-}
-
-/// Update the persisted server HLC if the given HLC is greater than the current one.
-pub fn update_server_hlc(daemon_dir: &Path, hlc: Hlc) -> Result<()> {
-    if let Some(current) = read_server_hlc(daemon_dir) {
-        if hlc > current {
-            write_server_hlc(daemon_dir, hlc)?;
-        }
-    } else {
-        write_server_hlc(daemon_dir, hlc)?;
-    }
-    Ok(())
-}
-
 /// Generate an HLC timestamp incorporating the persisted high-water mark.
 ///
 /// This ensures that new operations get timestamps higher than any
@@ -126,7 +59,7 @@ pub fn generate_hlc_with_context(daemon_dir: &Path) -> Hlc {
     let clock = HlcClock::new(node_id);
 
     // Incorporate last seen HLC if available
-    if let Some(last) = read_last_hlc(daemon_dir) {
+    if let Some(last) = HlcPersistence::last(daemon_dir).read() {
         let _ = clock.receive(&last);
     }
 
@@ -182,7 +115,7 @@ pub fn queue_op(work_dir: &Path, config: &Config, payload: OpPayload) -> Result<
     let op = Op::new(hlc, payload);
 
     // Persist the generated HLC so future operations are higher
-    let _ = update_last_hlc(&daemon_dir, hlc);
+    let _ = HlcPersistence::last(&daemon_dir).update(hlc);
 
     write_pending_op(work_dir, config, &op)
 }

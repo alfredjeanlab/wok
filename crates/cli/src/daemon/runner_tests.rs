@@ -204,7 +204,7 @@ fn apply_snapshot_updates_hlc_files() {
     assert!(result.is_ok());
 
     // Verify HLC files were updated
-    let server_hlc = crate::commands::read_server_hlc(dir.path());
+    let server_hlc = crate::commands::HlcPersistence::server(dir.path()).read();
     assert!(server_hlc.is_some());
     assert_eq!(server_hlc.unwrap(), since);
 }
