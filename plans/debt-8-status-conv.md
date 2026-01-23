@@ -1,5 +1,7 @@
 # Plan: Add From<cli::Status> for wk_core::Status
 
+**Root Feature:** `wok-5007`
+
 ## Overview
 
 Add a `From<cli::Status> for wk_core::Status` implementation to eliminate the duplicate match statement in `note.rs` that manually converts between the two identical Status enum types. This provides a standard, reusable conversion path.
