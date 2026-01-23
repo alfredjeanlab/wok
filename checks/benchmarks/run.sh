@@ -7,8 +7,9 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-# Source common utilities
+# Source common utilities and benchmark wrappers
 source "$SCRIPT_DIR/lib/common.sh"
+source "$SCRIPT_DIR/lib/bench.sh"
 
 usage() {
     cat << EOF
@@ -22,6 +23,9 @@ COMMANDS:
     filter          Run filter benchmarks (status, type, label, etc.)
     combined        Run combined filter benchmarks
     output          Run output format benchmarks
+    ready           Run ready command benchmarks
+    write           Run write operation benchmarks (new/edit/close)
+    search          Run search command benchmarks
     generate        Generate test databases (requires writing to setup/)
     report          Generate benchmark report
 
@@ -41,6 +45,12 @@ EXAMPLES:
 
     # Run only filter benchmarks on medium database
     ./checks/benchmarks/run.sh -s medium filter
+
+    # Run write operation benchmarks
+    WK_BIN=./target/release/wk ./checks/benchmarks/run.sh write
+
+    # Run search benchmarks
+    WK_BIN=./target/release/wk ./checks/benchmarks/run.sh search
 
     # Generate test databases
     WK_BIN=./target/release/wk ./checks/benchmarks/run.sh generate
@@ -101,6 +111,9 @@ esac
 
 # Source scenario files
 source "$SCRIPT_DIR/scenarios/list.sh"
+source "$SCRIPT_DIR/scenarios/ready.sh"
+source "$SCRIPT_DIR/scenarios/write.sh"
+source "$SCRIPT_DIR/scenarios/search.sh"
 
 run_all() {
     info "Running all benchmarks..."
@@ -111,6 +124,9 @@ run_all() {
     run_filter_benchmarks
     run_combined_benchmarks
     run_output_benchmarks
+    run_ready_benchmarks
+    run_write_benchmarks
+    run_search_benchmarks
 
     generate_latest_json
 
@@ -146,6 +162,27 @@ run_output() {
     run_output_benchmarks
 }
 
+run_ready() {
+    info "Running ready command benchmarks..."
+    check_dependencies
+    check_wk_binary
+    run_ready_benchmarks
+}
+
+run_write() {
+    info "Running write operation benchmarks..."
+    check_dependencies
+    check_wk_binary
+    run_write_benchmarks
+}
+
+run_search() {
+    info "Running search command benchmarks..."
+    check_dependencies
+    check_wk_binary
+    run_search_benchmarks
+}
+
 run_generate() {
     info "Generating test databases..."
     check_dependencies
@@ -176,6 +213,15 @@ case "$COMMAND" in
         ;;
     output)
         run_output
+        ;;
+    ready)
+        run_ready
+        ;;
+    write)
+        run_write
+        ;;
+    search)
+        run_search
         ;;
     generate)
         run_generate

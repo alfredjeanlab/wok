@@ -227,6 +227,136 @@ SECTION
         format_filter_row "output_json"
     } >> "$report_file"
 
+    cat >> "$report_file" << 'SECTION'
+
+## Ready Command
+
+Performance of ready command (hard limit of 5).
+
+| Database | Mean | StdDev |
+|----------|------|--------|
+SECTION
+
+    {
+        format_filter_row "ready_default_small"
+        format_filter_row "ready_default_medium"
+        format_filter_row "ready_default_large"
+        format_filter_row "ready_default_xlarge"
+    } >> "$report_file"
+
+    cat >> "$report_file" << 'SECTION'
+
+## Write Operations
+
+Mutation benchmarks with DB restoration between runs.
+
+### Issue Creation
+
+| Operation | Mean | StdDev |
+|-----------|------|--------|
+SECTION
+
+    {
+        format_filter_row "new_sequential_large"
+        format_filter_row "new_batch_10"
+        format_filter_row "new_batch_50"
+        format_filter_row "new_batch_100"
+    } >> "$report_file"
+
+    cat >> "$report_file" << 'SECTION'
+
+### Edit Operations
+
+| Operation | Mean | StdDev |
+|-----------|------|--------|
+SECTION
+
+    {
+        format_filter_row "edit_title"
+        format_filter_row "edit_type"
+        format_filter_row "edit_assignee"
+    } >> "$report_file"
+
+    cat >> "$report_file" << 'SECTION'
+
+### Lifecycle Operations
+
+| Operation | Mean | StdDev |
+|-----------|------|--------|
+SECTION
+
+    {
+        format_filter_row "start_single"
+        format_filter_row "done_single"
+        format_filter_row "close_single"
+        format_filter_row "close_batch_10"
+        format_filter_row "close_batch_50"
+    } >> "$report_file"
+
+    cat >> "$report_file" << 'SECTION'
+
+## Search Command
+
+### Search Scaling
+
+| Database | Mean | StdDev |
+|----------|------|--------|
+SECTION
+
+    {
+        format_filter_row "search_basic_small"
+        format_filter_row "search_basic_medium"
+        format_filter_row "search_basic_large"
+        format_filter_row "search_basic_xlarge"
+    } >> "$report_file"
+
+    cat >> "$report_file" << 'SECTION'
+
+### Search Match Rates
+
+| Query Type | Mean | StdDev |
+|------------|------|--------|
+SECTION
+
+    {
+        format_filter_row "search_high_match"
+        format_filter_row "search_medium_match"
+        format_filter_row "search_low_match"
+        format_filter_row "search_no_match"
+    } >> "$report_file"
+
+    cat >> "$report_file" << 'SECTION'
+
+### Search with Filters
+
+| Filter Type | Mean | StdDev |
+|-------------|------|--------|
+SECTION
+
+    {
+        format_filter_row "search_status_todo"
+        format_filter_row "search_type_task"
+        format_filter_row "search_label_project"
+        format_filter_row "search_assignee_alice"
+        format_filter_row "search_combined_all"
+    } >> "$report_file"
+
+    cat >> "$report_file" << 'SECTION'
+
+### Search Limits
+
+| Limit | Mean | StdDev |
+|-------|------|--------|
+SECTION
+
+    {
+        format_filter_row "search_limit_default"
+        format_filter_row "search_limit_10"
+        format_filter_row "search_limit_50"
+        format_filter_row "search_limit_100"
+        format_filter_row "search_limit_unlimited"
+    } >> "$report_file"
+
     cat >> "$report_file" << 'FOOTER'
 
 ---
@@ -237,6 +367,7 @@ SECTION
 - Mean and standard deviation reported
 - Times under 100ms generally feel instant to users
 - Consider optimization if any filter exceeds 200ms on large database
+- Write benchmarks use DB restoration in --prepare phase (not counted in time)
 FOOTER
 
     success "Report generated: $report_file"

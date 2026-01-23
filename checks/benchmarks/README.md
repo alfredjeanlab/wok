@@ -1,6 +1,6 @@
 # wk Benchmarks
 
-Benchmark suite for the `wk list` command, measuring filtering and query performance at various database scales.
+Benchmark suite for wk commands, measuring performance for list, search, and write operations at various database scales.
 
 ## Prerequisites
 
@@ -51,6 +51,9 @@ WK_BIN=./target/release/wk ./checks/benchmarks/run.sh all
 | `filter` | Run filter benchmarks (status, type, label, etc.) |
 | `combined` | Run combined filter benchmarks |
 | `output` | Run output format benchmarks |
+| `ready` | Run ready command benchmarks |
+| `write` | Run write operation benchmarks (new, edit, close) |
+| `search` | Run search command benchmarks |
 | `generate` | Generate test databases |
 | `report` | Generate markdown report from results |
 
@@ -126,9 +129,63 @@ Real-world multi-filter scenarios:
 - `combined_my_work` - User's in-progress items
 - `combined_complex` - Multiple labels + status + type
 
+### Ready Command Benchmarks
+
+- `ready_default_{size}` - Default ready (hard limit of 5)
+- `ready_json_{size}` - Ready with JSON output
+- `ready_assignee_*` - Ready with assignee filters
+- `ready_label_*` - Ready with label filters
+- `ready_type_*` - Ready with type filters
+
+### Write Operation Benchmarks
+
+**Note:** Write benchmarks use DB restoration between runs via hyperfine's `--prepare` flag.
+
+New issue creation:
+- `new_sequential_{size}` - Create single issue
+- `new_batch_{n}` - Create n issues in sequence (10, 50, 100)
+
+Edit operations:
+- `edit_title` - Edit issue title
+- `edit_type` - Edit issue type
+- `edit_assignee` - Edit issue assignee
+
+Lifecycle operations:
+- `start_single` - Start an issue (todo → in_progress)
+- `done_single` - Complete an issue (in_progress → done)
+- `close_single` - Close an issue
+- `close_batch_{n}` - Close n issues (10, 50)
+
+### Search Command Benchmarks
+
+Basic search:
+- `search_basic_{size}` - Search scaling across DB sizes
+- `search_high_match` - High match rate query (~60%)
+- `search_medium_match` - Medium match rate query (~20%)
+- `search_low_match` - Low match rate query (~15%)
+- `search_no_match` - No match query
+
+Search with filters:
+- `search_status_*` - Search with status filter
+- `search_type_*` - Search with type filter
+- `search_label_*` - Search with label filter
+- `search_assignee_*` - Search with assignee filter
+- `search_combined_*` - Search with multiple filters
+
+Search limits:
+- `search_limit_default` - Default limit (25)
+- `search_limit_{n}` - Custom limits (10, 50, 100)
+- `search_limit_unlimited` - No limit
+
+Search output:
+- `search_output_text` - Text output
+- `search_output_json` - JSON output
+
 ## Performance Targets
 
 Target performance on large database (5,000 issues):
+
+### Read Operations
 
 | Operation | Target Mean | Target p95 |
 |-----------|-------------|------------|
@@ -138,6 +195,23 @@ Target performance on large database (5,000 issues):
 | `list --label X` | < 100ms | < 150ms |
 | `list --blocked` | < 150ms | < 250ms |
 | `list (combined)` | < 150ms | < 250ms |
+| `ready` | < 80ms | < 120ms |
+| `search` (basic) | < 150ms | < 250ms |
+| `search` (with filters) | < 100ms | < 150ms |
+
+### Write Operations
+
+| Operation | Target Mean | Target p95 |
+|-----------|-------------|------------|
+| `new` (single) | < 50ms | < 80ms |
+| `edit` | < 50ms | < 80ms |
+| `start` | < 50ms | < 80ms |
+| `done` | < 50ms | < 80ms |
+| `close` (single) | < 50ms | < 80ms |
+| `close` (batch 10) | < 100ms | < 150ms |
+
+**Note:** Write operation benchmarks include DB restoration overhead in the `--prepare` phase,
+which is not counted in the measured time.
 
 ## Results
 
@@ -173,8 +247,10 @@ Flag any >20% regression for investigation.
 checks/benchmarks/
 ├── README.md                 # This file
 ├── run.sh                    # Main benchmark runner
+├── compare.sh                # Compare benchmark results
 ├── lib/
-│   ├── common.sh             # Shared utilities
+│   ├── common.sh             # Shared utilities (colors, db setup, deps)
+│   ├── bench.sh              # Hyperfine wrappers for benchmarking
 │   └── report.sh             # Report generator
 ├── setup/
 │   ├── generate_db.sh        # Database generator
@@ -183,7 +259,10 @@ checks/benchmarks/
 │   ├── large.sql             # 5,000 issue test database
 │   └── xlarge.sql            # 10,000 issue test database
 ├── scenarios/
-│   └── list.sh               # List benchmark scenarios
+│   ├── list.sh               # List benchmark scenarios
+│   ├── ready.sh              # Ready benchmark scenarios
+│   ├── write.sh              # Write operation benchmark scenarios
+│   └── search.sh             # Search benchmark scenarios
 └── results/
     ├── .gitkeep
     ├── *.json                # Individual benchmark results
