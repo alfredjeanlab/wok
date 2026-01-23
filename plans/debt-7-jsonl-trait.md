@@ -1,6 +1,6 @@
 # Plan: Extract Shared JsonLineStore Trait
 
-**Root Feature:** `wok-e74e`
+**Root Feature:** `wok-9c7b`
 
 ## Overview
 
