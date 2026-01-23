@@ -78,9 +78,8 @@ fn parse_field_case_insensitive() {
 fn parse_field_unknown_error() {
     let err = parse_filter("unknown < 3d").unwrap_err();
     let msg = err.to_string();
-    assert!(msg.contains("unknown field"));
+    assert!(msg.contains("unknown filter field"));
     assert!(msg.contains("unknown"));
-    assert!(msg.contains("age"));
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -127,7 +126,7 @@ fn parse_operator_ne() {
 fn parse_operator_unknown_error() {
     let err = parse_filter("age << 3d").unwrap_err();
     let msg = err.to_string();
-    assert!(msg.contains("unknown operator"));
+    assert!(msg.contains("invalid filter operator"));
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -221,7 +220,8 @@ fn parse_duration_large_number() {
 fn parse_duration_invalid_unit_error() {
     let err = parse_filter("age < 3x").unwrap_err();
     let msg = err.to_string();
-    assert!(msg.contains("unknown duration unit"));
+    assert!(msg.contains("invalid duration"));
+    assert!(msg.contains("unknown unit"));
     assert!(msg.contains("'x'"));
 }
 
@@ -229,7 +229,8 @@ fn parse_duration_invalid_unit_error() {
 fn parse_duration_missing_unit_error() {
     let err = parse_filter("age < 3").unwrap_err();
     let msg = err.to_string();
-    assert!(msg.contains("duration missing unit"));
+    assert!(msg.contains("invalid duration"));
+    assert!(msg.contains("missing unit"));
 }
 
 #[test]
@@ -371,7 +372,7 @@ fn parse_missing_value_error() {
 fn parse_missing_operator_error() {
     let err = parse_filter("age 3d").unwrap_err();
     let msg = err.to_string();
-    assert!(msg.contains("unknown operator"));
+    assert!(msg.contains("invalid filter operator"));
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

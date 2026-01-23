@@ -40,14 +40,16 @@ pub(crate) fn add_impl(
     // Validate import relation requirements
     if rel == Some(LinkRel::Import) {
         if link_type.is_none() {
-            return Err(Error::InvalidInput(
-                "import requires a known provider type (github, jira, gitlab)".to_string(),
-            ));
+            return Err(Error::LinkRequires {
+                requirement: "import",
+                dependency: "a known provider type (github, jira, gitlab)",
+            });
         }
         if external_id.is_none() {
-            return Err(Error::InvalidInput(
-                "import requires a detectable issue ID".to_string(),
-            ));
+            return Err(Error::LinkRequires {
+                requirement: "import",
+                dependency: "a detectable issue ID",
+            });
         }
     }
 

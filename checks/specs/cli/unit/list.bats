@@ -232,15 +232,15 @@ load '../../helpers/common'
     # Validates expressions
     run "$WK_BIN" list --filter "invalid < 3d"
     assert_failure
-    assert_output --partial "unknown field"
+    assert_output --partial "unknown filter field"
 
     run "$WK_BIN" list --filter "age << 3d"
     assert_failure
-    assert_output --partial "unknown operator"
+    assert_output --partial "invalid filter operator"
 
     run "$WK_BIN" list --filter "age < 3x"
     assert_failure
-    assert_output --partial "unknown duration unit"
+    assert_output --partial "invalid duration"
 
     # Multiple filters and combined with flags
     create_issue task "MultiFilter Task" --label "team:alpha"

@@ -64,6 +64,86 @@ pub enum Error {
     #[error("config remote and workspace are incompatible\n  hint: remote sync requires a single .wok/ location, but workspace stores the database elsewhere")]
     WorkspaceRemoteIncompatible,
 
+    // Phase 1: Filter Parser Errors
+    #[error("empty filter expression")]
+    FilterEmpty,
+
+    #[error("unknown filter field: '{field}'")]
+    FilterUnknownField { field: String },
+
+    #[error("invalid filter operator '{op}' for field '{field}'")]
+    FilterInvalidOperator { field: String, op: String },
+
+    #[error("invalid filter value for {field}: {reason}")]
+    FilterInvalidValue { field: String, reason: String },
+
+    #[error("invalid duration: {reason}")]
+    InvalidDuration { reason: String },
+
+    // Phase 2: Command Validation Errors
+    #[error("operation cancelled")]
+    Cancelled,
+
+    #[error("{context} is required for {operation}")]
+    RequiredFor {
+        context: &'static str,
+        operation: &'static str,
+    },
+
+    #[error("cannot derive {item} from {from}")]
+    CannotDerive { item: &'static str, from: String },
+
+    #[error("line {line}: {reason}")]
+    ParseLineError { line: usize, reason: String },
+
+    #[error("invalid scope '{scope}'")]
+    InvalidScope { scope: String },
+
+    #[error("interactive mode requires a terminal (TTY)")]
+    TtyRequired,
+
+    #[error("permission denied writing to {target}")]
+    PermissionDenied { target: String },
+
+    #[error("no input file specified")]
+    NoInputFile,
+
+    #[error("invalid timestamp: {reason}")]
+    InvalidTimestamp { reason: String },
+
+    // Phase 3: Link and Edit Errors
+    #[error("{requirement} requires {dependency}")]
+    LinkRequires {
+        requirement: &'static str,
+        dependency: &'static str,
+    },
+
+    #[error("unknown attribute '{attr}'")]
+    UnknownAttribute { attr: String },
+
+    #[error("title contains double-newline; use 'wk note' for description")]
+    TitleContainsDescription,
+
+    // Phase 4: Note and Lookup Errors
+    #[error("no notes to replace for issue {issue_id}")]
+    NoNotesToReplace { issue_id: String },
+
+    #[error("{field} is required")]
+    FieldRequired { field: &'static str },
+
+    #[error("cannot add notes to closed issues")]
+    CannotNoteClosedIssue,
+
+    #[error("unknown format '{format}'")]
+    UnknownFormat { format: String },
+
+    #[error("cannot create issue: {reason}")]
+    CannotCreateIssue { reason: String },
+
+    #[error("failed to generate unique issue ID after multiple retries")]
+    IdGenerationFailed,
+
+    #[deprecated(note = "use specific error variants instead")]
     #[error("{0}")]
     InvalidInput(String),
 
@@ -128,6 +208,7 @@ impl From<SyncError> for Error {
     }
 }
 
+#[allow(deprecated)]
 impl From<wk_core::Error> for Error {
     fn from(e: wk_core::Error) -> Self {
         match e {

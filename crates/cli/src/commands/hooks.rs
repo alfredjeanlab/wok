@@ -27,11 +27,8 @@ mod tests;
 pub fn install(scope: Option<String>, force_interactive: bool, force_yes: bool) -> Result<()> {
     // Determine the scope
     let scope = match scope {
-        Some(s) => HookScope::parse(&s).ok_or_else(|| {
-            Error::InvalidInput(format!(
-                "Invalid scope '{}'. Use: local, project, or user",
-                s
-            ))
+        Some(s) => HookScope::parse(&s).ok_or_else(|| Error::InvalidScope {
+            scope: s.to_string(),
         })?,
         None => {
             // No scope provided - determine mode
@@ -41,9 +38,7 @@ pub fn install(scope: Option<String>, force_interactive: bool, force_yes: bool) 
             } else if force_interactive {
                 // Must have TTY for interactive
                 if !std::io::stdout().is_terminal() {
-                    return Err(Error::InvalidInput(
-                        "Interactive mode requires a terminal (TTY)".to_string(),
-                    ));
+                    return Err(Error::TtyRequired);
                 }
                 run_interactive_picker()?
             } else if should_use_interactive() {
@@ -58,10 +53,9 @@ pub fn install(scope: Option<String>, force_interactive: bool, force_yes: bool) 
     // Install hooks
     let path = install_hooks(scope).map_err(|e| {
         if e.kind() == io::ErrorKind::PermissionDenied {
-            Error::InvalidInput(format!(
-                "Permission denied writing to {}. Check directory permissions.",
-                scope.display_name()
-            ))
+            Error::PermissionDenied {
+                target: scope.display_name().to_string(),
+            }
         } else {
             Error::Io(e)
         }
@@ -78,11 +72,8 @@ pub fn install(scope: Option<String>, force_interactive: bool, force_yes: bool) 
 /// Run the hooks uninstall command.
 pub fn uninstall(scope: Option<String>) -> Result<()> {
     let scope = match scope {
-        Some(s) => HookScope::parse(&s).ok_or_else(|| {
-            Error::InvalidInput(format!(
-                "Invalid scope '{}'. Use: local, project, or user",
-                s
-            ))
+        Some(s) => HookScope::parse(&s).ok_or_else(|| Error::InvalidScope {
+            scope: s.to_string(),
         })?,
         None => HookScope::Local,
     };
@@ -231,6 +222,6 @@ fn run_interactive_picker() -> Result<HookScope> {
             "user" => HookScope::User,
             _ => HookScope::Local,
         }),
-        None => Err(Error::InvalidInput("Cancelled".to_string())),
+        None => Err(Error::Cancelled),
     }
 }

@@ -29,7 +29,7 @@ pub fn parse_filter(input: &str) -> Result<FilterExpr> {
     let input = input.trim();
 
     if input.is_empty() {
-        return Err(Error::InvalidInput("empty filter expression".to_string()));
+        return Err(Error::FilterEmpty);
     }
 
     // Extract field name (until whitespace or operator character)
@@ -52,9 +52,10 @@ pub fn parse_filter(input: &str) -> Result<FilterExpr> {
                 value: FilterValue::Duration(Duration::zero()),
             });
         } else {
-            return Err(Error::InvalidInput(format!(
-                "filter expression requires operator and value: \"{input}\""
-            )));
+            return Err(Error::FilterInvalidValue {
+                field: field_str.to_string(),
+                reason: "requires operator and value".to_string(),
+            });
         }
     }
 
@@ -64,9 +65,10 @@ pub fn parse_filter(input: &str) -> Result<FilterExpr> {
     // Extract value
     let value_str = rest.trim();
     if value_str.is_empty() {
-        return Err(Error::InvalidInput(format!(
-            "missing value in filter expression: \"{input}\""
-        )));
+        return Err(Error::FilterInvalidValue {
+            field: field_str.to_string(),
+            reason: "missing value".to_string(),
+        });
     }
     let value = parse_value(value_str)?;
 
@@ -81,9 +83,10 @@ fn split_field(input: &str) -> Result<(&str, &str)> {
         .unwrap_or(input.len());
 
     if end == 0 {
-        return Err(Error::InvalidInput(format!(
-            "missing field name in filter expression: \"{input}\""
-        )));
+        return Err(Error::FilterInvalidValue {
+            field: "(none)".to_string(),
+            reason: "missing field name".to_string(),
+        });
     }
 
     Ok((&input[..end], &input[end..]))
@@ -97,10 +100,9 @@ fn parse_field(s: &str) -> Result<FilterField> {
         "completed" | "done" => Ok(FilterField::Completed),
         "skipped" | "cancelled" => Ok(FilterField::Skipped),
         "closed" => Ok(FilterField::Closed),
-        _ => Err(Error::InvalidInput(format!(
-            "unknown field '{s}'. Valid fields: {}",
-            FilterField::valid_names()
-        ))),
+        _ => Err(Error::FilterUnknownField {
+            field: s.to_string(),
+        }),
     }
 }
 
@@ -114,11 +116,10 @@ fn parse_operator(s: &str) -> Result<(CompareOp, &str)> {
             "!=" => return Ok((CompareOp::Ne, &s[2..])),
             // Catch invalid double operators
             "<<" | ">>" | "==" => {
-                return Err(Error::InvalidInput(format!(
-                    "unknown operator '{}'. Valid operators: {}",
-                    &s[..2],
-                    CompareOp::valid_symbols()
-                )));
+                return Err(Error::FilterInvalidOperator {
+                    field: "(filter)".to_string(),
+                    op: s[..2].to_string(),
+                });
             }
             _ => {}
         }
@@ -145,10 +146,10 @@ fn parse_operator(s: &str) -> Result<(CompareOp, &str)> {
         .unwrap_or(s.len().min(5));
     let bad_op = if op_end > 0 { &s[..op_end] } else { "(none)" };
 
-    Err(Error::InvalidInput(format!(
-        "unknown operator '{bad_op}'. Valid operators: {}",
-        CompareOp::valid_symbols()
-    )))
+    Err(Error::FilterInvalidOperator {
+        field: "(filter)".to_string(),
+        op: bad_op.to_string(),
+    })
 }
 
 /// Try to parse a word-based operator (lt, lte, gt, gte, eq, ne).
@@ -208,22 +209,24 @@ fn try_parse_date(s: &str) -> Option<NaiveDate> {
 /// Parse a duration string like "3d", "1w", "24h".
 pub fn parse_duration(s: &str) -> Result<Duration> {
     if s.is_empty() {
-        return Err(Error::InvalidInput("empty duration".to_string()));
+        return Err(Error::InvalidDuration {
+            reason: "empty duration".to_string(),
+        });
     }
 
     // Split into number and unit
     let (num_str, unit) = split_number_unit(s)?;
 
     // Parse the number
-    let num: i64 = num_str
-        .parse()
-        .map_err(|_| Error::InvalidInput(format!("invalid number in duration: '{num_str}'")))?;
+    let num: i64 = num_str.parse().map_err(|_| Error::InvalidDuration {
+        reason: format!("invalid number: '{num_str}'"),
+    })?;
 
     // Check for negative durations
     if num < 0 {
-        return Err(Error::InvalidInput(
-            "negative durations are not allowed".to_string(),
-        ));
+        return Err(Error::InvalidDuration {
+            reason: "negative durations are not allowed".to_string(),
+        });
     }
 
     // Convert to Duration based on unit
@@ -236,9 +239,9 @@ pub fn parse_duration(s: &str) -> Result<Duration> {
         "w" => Ok(Duration::weeks(num)),
         "M" => Ok(Duration::days(num.saturating_mul(30))), // Approximate month
         "y" => Ok(Duration::days(num.saturating_mul(365))), // Approximate year
-        _ => Err(Error::InvalidInput(format!(
-            "unknown duration unit '{unit}'. Valid units: ms, s, m, h, d, w, M, y"
-        ))),
+        _ => Err(Error::InvalidDuration {
+            reason: format!("unknown unit '{unit}'. Valid units: ms, s, m, h, d, w, M, y"),
+        }),
     }
 }
 
@@ -250,18 +253,18 @@ fn split_number_unit(s: &str) -> Result<(&str, &str)> {
         .unwrap_or(s.len());
 
     if num_end == 0 {
-        return Err(Error::InvalidInput(format!(
-            "duration must start with a number: '{s}'"
-        )));
+        return Err(Error::InvalidDuration {
+            reason: format!("must start with a number: '{s}'"),
+        });
     }
 
     let num_str = &s[..num_end];
     let unit = &s[num_end..];
 
     if unit.is_empty() {
-        return Err(Error::InvalidInput(format!(
-            "duration missing unit: '{s}'. Valid units: ms, s, m, h, d, w, M, y"
-        )));
+        return Err(Error::InvalidDuration {
+            reason: format!("missing unit: '{s}'. Valid units: ms, s, m, h, d, w, M, y"),
+        });
     }
 
     Ok((num_str, unit))

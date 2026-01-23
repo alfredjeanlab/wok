@@ -169,7 +169,7 @@ load '../../helpers/common'
     # Invalid expression shows error
     run "$WK_BIN" search "test" --filter "invalid < 3d"
     assert_failure
-    assert_output --partial "unknown field"
+    assert_output --partial "unknown filter field"
 }
 
 @test "search --limit overrides default limit" {
