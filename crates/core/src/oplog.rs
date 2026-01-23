@@ -11,12 +11,11 @@
 //! Each operation is appended with fsync for durability.
 
 use std::collections::HashSet;
-use std::fs::{File, OpenOptions};
-use std::io::{BufRead, BufReader, Write};
 use std::path::{Path, PathBuf};
 
 use crate::error::Result;
 use crate::hlc::Hlc;
+use crate::jsonl;
 use crate::op::Op;
 
 /// Append-only operation log stored as JSONL.
@@ -34,18 +33,9 @@ impl Oplog {
         let path = path.as_ref().to_path_buf();
         let mut seen_ids = HashSet::new();
 
-        if path.exists() {
-            let file = File::open(&path)?;
-            let reader = BufReader::new(file);
-
-            for line in reader.lines() {
-                let line = line?;
-                if line.trim().is_empty() {
-                    continue;
-                }
-                let op: Op = serde_json::from_str(&line)?;
-                seen_ids.insert(op.id);
-            }
+        let ops: Vec<Op> = jsonl::read_all(&path)?;
+        for op in ops {
+            seen_ids.insert(op.id);
         }
 
         Ok(Oplog { path, seen_ids })
@@ -71,14 +61,7 @@ impl Oplog {
 
         // Append to file if we have a real path
         if !self.path.as_os_str().is_empty() {
-            let mut file = OpenOptions::new()
-                .create(true)
-                .append(true)
-                .open(&self.path)?;
-
-            let json = serde_json::to_string(op)?;
-            writeln!(file, "{json}")?;
-            file.sync_all()?;
+            jsonl::append(&self.path, op)?;
         }
 
         self.seen_ids.insert(op.id);
@@ -93,25 +76,8 @@ impl Oplog {
             return Ok(Vec::new());
         }
 
-        if !self.path.exists() {
-            return Ok(Vec::new());
-        }
-
-        let file = File::open(&self.path)?;
-        let reader = BufReader::new(file);
-
-        let mut ops = Vec::new();
-        for line in reader.lines() {
-            let line = line?;
-            if line.trim().is_empty() {
-                continue;
-            }
-            let op: Op = serde_json::from_str(&line)?;
-            if op.id > since {
-                ops.push(op);
-            }
-        }
-
+        let all_ops: Vec<Op> = jsonl::read_all(&self.path)?;
+        let mut ops: Vec<Op> = all_ops.into_iter().filter(|op| op.id > since).collect();
         ops.sort();
         Ok(ops)
     }
