@@ -12,7 +12,7 @@ use crate::models::{IssueType, Status};
 use crate::schema::search::SearchOutputJson;
 use crate::schema::IssueJson;
 
-use super::list::{matches_filter_groups, matches_label_groups, parse_filter_groups};
+use super::filtering::{matches_filter_groups, matches_label_groups, parse_filter_groups};
 use super::open_db;
 
 /// Default limit for search results in text output.

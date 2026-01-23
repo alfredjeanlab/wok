@@ -5,6 +5,7 @@ pub mod config;
 pub mod dep;
 pub mod edit;
 pub mod export;
+pub mod filtering;
 pub mod hooks;
 pub mod import;
 pub mod init;

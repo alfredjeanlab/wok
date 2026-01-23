@@ -14,7 +14,7 @@ use crate::models::{Issue, IssueType, Status};
 use crate::schema::ready::ReadyOutputJson;
 use crate::schema::IssueJson;
 
-use super::list::{matches_filter_groups, matches_label_groups, parse_filter_groups};
+use super::filtering::{matches_filter_groups, matches_label_groups, parse_filter_groups};
 use super::open_db;
 
 /// Maximum number of issues to show in ready output.
