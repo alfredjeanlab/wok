@@ -76,8 +76,8 @@ fn all_schema_commands_produce_output() {
 }
 
 #[test]
-fn schema_list_issue_has_all_fields() {
-    let schema = schemars::schema_for!(list::ListIssueJson);
+fn schema_issue_json_has_all_fields() {
+    let schema = schemars::schema_for!(crate::schema::IssueJson);
     let json = serde_json::to_string(&schema).unwrap();
 
     // Check all required fields

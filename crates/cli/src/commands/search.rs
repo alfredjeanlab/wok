@@ -2,7 +2,6 @@
 // Copyright (c) 2026 Alfred Jean LLC
 
 use chrono::Utc;
-use serde::Serialize;
 
 use crate::cli::OutputFormat;
 use crate::db::Database;
@@ -10,33 +9,11 @@ use crate::display::format_issue_line;
 use crate::error::Result;
 use crate::filter::{parse_filter, FilterExpr};
 use crate::models::{IssueType, Status};
+use crate::schema::search::SearchOutputJson;
+use crate::schema::IssueJson;
 
 use super::list::{matches_filter_groups, matches_label_groups, parse_filter_groups};
 use super::open_db;
-
-/// JSON representation of an issue for search output.
-#[derive(Serialize)]
-struct SearchIssueJson {
-    id: String,
-    issue_type: IssueType,
-    status: Status,
-    title: String,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    assignee: Option<String>,
-    labels: Vec<String>,
-}
-
-/// JSON output structure for the search command.
-#[derive(Serialize)]
-struct SearchOutputJson {
-    issues: Vec<SearchIssueJson>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    filters_applied: Option<Vec<String>>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    limit: Option<usize>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    more: Option<usize>,
-}
 
 /// Default limit for search results in text output.
 const DEFAULT_LIMIT: usize = 25;
@@ -159,14 +136,14 @@ pub(crate) fn run_impl(
             let mut json_issues = Vec::new();
             for issue in issues.iter().take(effective_limit) {
                 let labels = db.get_labels(&issue.id)?;
-                json_issues.push(SearchIssueJson {
-                    id: issue.id.clone(),
-                    issue_type: issue.issue_type,
-                    status: issue.status,
-                    title: issue.title.clone(),
-                    assignee: issue.assignee.clone(),
+                json_issues.push(IssueJson::new(
+                    issue.id.clone(),
+                    issue.issue_type,
+                    issue.status,
+                    issue.title.clone(),
+                    issue.assignee.clone(),
                     labels,
-                });
+                ));
             }
             let filters_applied = if filter.is_empty() {
                 None

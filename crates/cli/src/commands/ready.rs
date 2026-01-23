@@ -5,13 +5,14 @@ use std::collections::{HashMap, HashSet};
 use std::path::Path;
 
 use chrono::{Duration, Utc};
-use serde::Serialize;
 
 use crate::cli::OutputFormat;
 use crate::db::Database;
 use crate::display::format_issue_line;
 use crate::error::Result;
 use crate::models::{Issue, IssueType, Status};
+use crate::schema::ready::ReadyOutputJson;
+use crate::schema::IssueJson;
 
 use super::list::{matches_filter_groups, matches_label_groups, parse_filter_groups};
 use super::open_db;
@@ -19,18 +20,6 @@ use super::open_db;
 /// Maximum number of issues to show in ready output.
 /// Keeps output manageable - you can only work on a few things at once.
 const MAX_READY_ISSUES: usize = 5;
-
-/// JSON representation of an issue for ready output.
-#[derive(Serialize)]
-struct ReadyIssueJson {
-    id: String,
-    issue_type: IssueType,
-    status: Status,
-    title: String,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    assignee: Option<String>,
-    labels: Vec<String>,
-}
 
 /// Assignee filter mode for the ready command.
 enum AssigneeFilter {
@@ -75,12 +64,6 @@ fn get_default_assignee_filter(work_dir: &Path) -> AssigneeFilter {
         }
     }
     AssigneeFilter::Unassigned
-}
-
-/// JSON output structure for the ready command.
-#[derive(Serialize)]
-struct ReadyOutputJson {
-    issues: Vec<ReadyIssueJson>,
 }
 
 pub fn run(
@@ -219,14 +202,14 @@ pub(crate) fn run_impl(
             for issue in &ready_issues {
                 // Use pre-fetched labels - no additional DB access
                 let labels = labels_map.get(&issue.id).cloned().unwrap_or_default();
-                json_issues.push(ReadyIssueJson {
-                    id: issue.id.clone(),
-                    issue_type: issue.issue_type,
-                    status: issue.status,
-                    title: issue.title.clone(),
-                    assignee: issue.assignee.clone(),
+                json_issues.push(IssueJson::new(
+                    issue.id.clone(),
+                    issue.issue_type,
+                    issue.status,
+                    issue.title.clone(),
+                    issue.assignee.clone(),
                     labels,
-                });
+                ));
             }
             let output = ReadyOutputJson {
                 issues: json_issues,

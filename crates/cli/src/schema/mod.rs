@@ -6,8 +6,9 @@
 //! These are separate from runtime types to allow schema-specific annotations
 //! and to avoid adding schemars dependency to production output paths.
 //!
-//! Note: Types in this module are not constructed directly - they exist purely
-//! for deriving JSON Schema definitions via schemars.
+//! [`IssueJson`] is the unified issue summary type used by list, ready, and
+//! search commands. Other types exist purely for deriving JSON Schema
+//! definitions via schemars.
 
 // Allow unused variants - these types exist only for schema generation
 #![allow(dead_code)]
@@ -21,6 +22,46 @@ pub mod ready;
 pub mod search;
 pub mod show;
 
+/// JSON representation of an issue summary.
+/// Used by list, ready, and search command outputs.
+#[derive(JsonSchema, Serialize)]
+pub struct IssueJson {
+    /// Unique issue identifier.
+    pub id: String,
+    /// Classification of the issue.
+    pub issue_type: IssueType,
+    /// Current workflow state.
+    pub status: Status,
+    /// Short description of the work.
+    pub title: String,
+    /// Person or queue this issue is assigned to.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub assignee: Option<String>,
+    /// Labels attached to the issue.
+    pub labels: Vec<String>,
+}
+
+impl IssueJson {
+    /// Create a new IssueJson from runtime issue data.
+    pub fn new(
+        id: String,
+        issue_type: wk_core::IssueType,
+        status: crate::models::Status,
+        title: String,
+        assignee: Option<String>,
+        labels: Vec<String>,
+    ) -> Self {
+        IssueJson {
+            id,
+            issue_type: issue_type.into(),
+            status: status.into(),
+            title,
+            assignee,
+            labels,
+        }
+    }
+}
+
 /// Issue type classification.
 #[derive(JsonSchema, Serialize)]
 #[serde(rename_all = "snake_case")]
@@ -32,6 +73,18 @@ pub enum IssueType {
     Idea,
 }
 
+impl From<wk_core::IssueType> for IssueType {
+    fn from(value: wk_core::IssueType) -> Self {
+        match value {
+            wk_core::IssueType::Feature => IssueType::Feature,
+            wk_core::IssueType::Task => IssueType::Task,
+            wk_core::IssueType::Bug => IssueType::Bug,
+            wk_core::IssueType::Chore => IssueType::Chore,
+            wk_core::IssueType::Idea => IssueType::Idea,
+        }
+    }
+}
+
 /// Workflow status of an issue.
 #[derive(JsonSchema, Serialize)]
 #[serde(rename_all = "snake_case")]
@@ -40,6 +93,17 @@ pub enum Status {
     InProgress,
     Done,
     Closed,
+}
+
+impl From<crate::models::Status> for Status {
+    fn from(value: crate::models::Status) -> Self {
+        match value {
+            crate::models::Status::Todo => Status::Todo,
+            crate::models::Status::InProgress => Status::InProgress,
+            crate::models::Status::Done => Status::Done,
+            crate::models::Status::Closed => Status::Closed,
+        }
+    }
 }
 
 /// Types of actions that can be recorded in the event log.

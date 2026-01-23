@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Alfred Jean LLC
 
+use std::collections::HashSet;
+
 use chrono::Utc;
-use serde::Serialize;
 
 use crate::cli::OutputFormat;
 use crate::db::Database;
@@ -10,36 +11,14 @@ use crate::display::format_issue_line;
 use crate::error::Result;
 use crate::filter::{parse_filter, FilterExpr, FilterField};
 use crate::models::{IssueType, Status};
-
-use std::collections::HashSet;
+use crate::schema::list::ListOutputJson;
+use crate::schema::IssueJson;
 
 use super::open_db;
 
 /// Default limit for list output when not explicitly specified.
 /// Prevents large result sets from overwhelming terminal output.
 const DEFAULT_LIMIT: usize = 100;
-
-/// JSON representation of an issue for list output.
-#[derive(Serialize)]
-struct ListIssueJson {
-    id: String,
-    issue_type: IssueType,
-    status: Status,
-    title: String,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    assignee: Option<String>,
-    labels: Vec<String>,
-}
-
-/// JSON output structure for the list command.
-#[derive(Serialize)]
-struct ListOutputJson {
-    issues: Vec<ListIssueJson>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    filters_applied: Option<Vec<String>>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    limit: Option<usize>,
-}
 
 /// Parse filter values: comma-separated values within each Vec entry are OR'd,
 /// multiple Vec entries are AND'd together.
@@ -249,14 +228,14 @@ pub(crate) fn run_impl(
             let mut json_issues = Vec::new();
             for issue in &issues {
                 let labels = db.get_labels(&issue.id)?;
-                json_issues.push(ListIssueJson {
-                    id: issue.id.clone(),
-                    issue_type: issue.issue_type,
-                    status: issue.status,
-                    title: issue.title.clone(),
-                    assignee: issue.assignee.clone(),
+                json_issues.push(IssueJson::new(
+                    issue.id.clone(),
+                    issue.issue_type,
+                    issue.status,
+                    issue.title.clone(),
+                    issue.assignee.clone(),
                     labels,
-                });
+                ));
             }
             let filters_applied = if filter.is_empty() {
                 None
