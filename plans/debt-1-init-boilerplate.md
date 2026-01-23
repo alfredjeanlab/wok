@@ -1,5 +1,7 @@
 # Plan: Consolidate Database Initialization Boilerplate
 
+**Root Feature:** `wok-0791`
+
 ## Overview
 
 Refactor CLI command files to consistently use the `open_db()` helper instead of repeating the 4-line database initialization pattern. The existing helper needs to be extended to also return `work_dir`, which is required by commands that call `queue_op()`.
