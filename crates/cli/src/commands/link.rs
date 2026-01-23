@@ -12,7 +12,7 @@ use super::open_db;
 
 /// Add an external link to an issue.
 pub fn add(id: &str, url: &str, reason: Option<String>) -> Result<()> {
-    let (db, _) = open_db()?;
+    let (db, _, _) = open_db()?;
     add_impl(&db, id, url, reason)
 }
 

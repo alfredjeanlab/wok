@@ -120,7 +120,7 @@ pub fn run(
     all: bool,
     format: OutputFormat,
 ) -> Result<()> {
-    let (db, _) = open_db()?;
+    let (db, _, _) = open_db()?;
     run_impl(
         &db,
         status,

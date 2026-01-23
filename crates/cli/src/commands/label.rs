@@ -5,8 +5,10 @@ use std::path::Path;
 
 use wk_core::OpPayload;
 
-use crate::config::{find_work_dir, get_db_path, Config};
+use crate::config::Config;
 use crate::db::Database;
+
+use super::open_db;
 use crate::error::Result;
 use crate::models::{Action, Event};
 use crate::validate::{validate_label, validate_label_count};
@@ -14,10 +16,7 @@ use crate::validate::{validate_label, validate_label_count};
 use super::queue_op;
 
 pub fn add(ids: &[String], label: &str) -> Result<()> {
-    let work_dir = find_work_dir()?;
-    let config = Config::load(&work_dir)?;
-    let db_path = get_db_path(&work_dir, &config);
-    let db = Database::open(&db_path)?;
+    let (db, config, work_dir) = open_db()?;
     add_impl(&db, &config, &work_dir, ids, label)
 }
 
@@ -71,10 +70,7 @@ fn add_single(
 }
 
 pub fn remove(ids: &[String], label: &str) -> Result<()> {
-    let work_dir = find_work_dir()?;
-    let config = Config::load(&work_dir)?;
-    let db_path = get_db_path(&work_dir, &config);
-    let db = Database::open(&db_path)?;
+    let (db, config, work_dir) = open_db()?;
     remove_impl(&db, &config, &work_dir, ids, label)
 }
 

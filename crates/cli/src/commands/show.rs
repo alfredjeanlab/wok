@@ -25,7 +25,7 @@ struct IssueDetails {
 }
 
 pub fn run(id: &str, format: &str) -> Result<()> {
-    let (db, _) = open_db()?;
+    let (db, _, _) = open_db()?;
     run_impl(&db, id, format)
 }
 

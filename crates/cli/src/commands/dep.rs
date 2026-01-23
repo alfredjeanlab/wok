@@ -5,18 +5,17 @@ use std::path::Path;
 
 use wk_core::OpPayload;
 
-use crate::config::{find_work_dir, get_db_path, Config};
+use crate::config::Config;
 use crate::db::Database;
+
+use super::open_db;
 use crate::error::Result;
 use crate::models::{Action, Event, Relation, UserRelation};
 
 use super::queue_op;
 
 pub fn add(from_id: &str, rel: &str, to_ids: &[String]) -> Result<()> {
-    let work_dir = find_work_dir()?;
-    let config = Config::load(&work_dir)?;
-    let db_path = get_db_path(&work_dir, &config);
-    let db = Database::open(&db_path)?;
+    let (db, config, work_dir) = open_db()?;
     add_impl(&db, &config, &work_dir, from_id, rel, to_ids)
 }
 
@@ -151,10 +150,7 @@ pub(crate) fn add_impl(
 }
 
 pub fn remove(from_id: &str, rel: &str, to_ids: &[String]) -> Result<()> {
-    let work_dir = find_work_dir()?;
-    let config = Config::load(&work_dir)?;
-    let db_path = get_db_path(&work_dir, &config);
-    let db = Database::open(&db_path)?;
+    let (db, config, work_dir) = open_db()?;
     remove_impl(&db, &config, &work_dir, from_id, rel, to_ids)
 }
 

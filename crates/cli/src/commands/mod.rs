@@ -26,7 +26,7 @@ pub mod show;
 pub mod testing;
 pub mod tree;
 
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use wk_core::{Hlc, HlcClock, Op, OpPayload};
 
@@ -37,12 +37,12 @@ use crate::sync::OfflineQueue;
 use crate::wal::Wal;
 
 /// Helper to open the database from the current context
-pub fn open_db() -> Result<(Database, Config)> {
+pub fn open_db() -> Result<(Database, Config, PathBuf)> {
     let work_dir = find_work_dir()?;
     let config = Config::load(&work_dir)?;
     let db_path = get_db_path(&work_dir, &config);
     let db = Database::open(&db_path)?;
-    Ok((db, config))
+    Ok((db, config, work_dir))
 }
 
 /// Get the path to the persisted local HLC file (for generating new ops).

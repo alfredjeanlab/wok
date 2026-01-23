@@ -5,8 +5,10 @@ use std::path::Path;
 
 use wk_core::OpPayload;
 
-use crate::config::{find_work_dir, get_db_path, Config};
+use crate::config::Config;
 use crate::db::Database;
+
+use super::open_db;
 use crate::error::{Error, Result};
 use crate::models::{Action, Event, Status};
 use crate::validate::validate_and_trim_note;
@@ -14,10 +16,7 @@ use crate::validate::validate_and_trim_note;
 use super::queue_op;
 
 pub fn run(id: &str, content: &str, replace: bool) -> Result<()> {
-    let work_dir = find_work_dir()?;
-    let config = Config::load(&work_dir)?;
-    let db_path = get_db_path(&work_dir, &config);
-    let db = Database::open(&db_path)?;
+    let (db, config, work_dir) = open_db()?;
     run_impl(&db, &config, &work_dir, id, content, replace)
 }
 

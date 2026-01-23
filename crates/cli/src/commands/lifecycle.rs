@@ -7,8 +7,10 @@ use wk_core::detect::is_human_interactive;
 use wk_core::identity::get_user_name;
 use wk_core::OpPayload;
 
-use crate::config::{find_work_dir, get_db_path, Config};
+use crate::config::Config;
 use crate::db::Database;
+
+use super::open_db;
 use crate::error::{Error, Result};
 use crate::models::{Action, Event, Status};
 use crate::validate::validate_and_trim_reason;
@@ -74,10 +76,7 @@ fn print_bulk_summary(result: &BulkResult, action_verb: &str) {
 }
 
 pub fn start(ids: &[String]) -> Result<()> {
-    let work_dir = find_work_dir()?;
-    let config = Config::load(&work_dir)?;
-    let db_path = get_db_path(&work_dir, &config);
-    let db = Database::open(&db_path)?;
+    let (db, config, work_dir) = open_db()?;
     start_impl(&db, &config, &work_dir, ids)
 }
 
@@ -181,10 +180,7 @@ pub fn done(ids: &[String], reason: Option<&str>) -> Result<()> {
         None
     };
 
-    let work_dir = find_work_dir()?;
-    let config = Config::load(&work_dir)?;
-    let db_path = get_db_path(&work_dir, &config);
-    let db = Database::open(&db_path)?;
+    let (db, config, work_dir) = open_db()?;
     done_impl(&db, &config, &work_dir, ids, trimmed_reason.as_deref())
 }
 
@@ -363,10 +359,7 @@ fn done_single_with_reason(
 pub fn close(ids: &[String], reason: Option<&str>) -> Result<()> {
     let effective_reason = resolve_reason(reason, "closed")?;
 
-    let work_dir = find_work_dir()?;
-    let config = Config::load(&work_dir)?;
-    let db_path = get_db_path(&work_dir, &config);
-    let db = Database::open(&db_path)?;
+    let (db, config, work_dir) = open_db()?;
     close_impl(&db, &config, &work_dir, ids, &effective_reason)
 }
 
@@ -485,10 +478,7 @@ pub fn reopen(ids: &[String], reason: Option<&str>) -> Result<()> {
         None
     };
 
-    let work_dir = find_work_dir()?;
-    let config = Config::load(&work_dir)?;
-    let db_path = get_db_path(&work_dir, &config);
-    let db = Database::open(&db_path)?;
+    let (db, config, work_dir) = open_db()?;
     reopen_impl(&db, &config, &work_dir, ids, trimmed_reason.as_deref())
 }
 
