@@ -174,3 +174,44 @@ fn test_validate_and_trim_reason_trimmed() {
     let result = validate_and_trim_reason("  Reason  ").unwrap();
     assert_eq!(result, "Reason");
 }
+
+#[test]
+fn test_validate_description_too_long_error_type() {
+    let long_desc = "x".repeat(MAX_DESCRIPTION_LENGTH + 1);
+    let result = validate_description(&long_desc);
+    assert!(matches!(
+        result,
+        Err(Error::FieldTooLong {
+            field: "Description",
+            ..
+        })
+    ));
+}
+
+#[test]
+fn test_validate_and_normalize_title_empty_error_type() {
+    let result = validate_and_normalize_title("");
+    assert!(matches!(result, Err(Error::FieldEmpty { field: "Title" })));
+}
+
+#[test]
+fn test_validate_label_too_long_error_type() {
+    let long_label = "x".repeat(MAX_LABEL_LENGTH + 1);
+    let result = validate_label(&long_label);
+    assert!(matches!(
+        result,
+        Err(Error::FieldTooLong { field: "Label", .. })
+    ));
+}
+
+#[test]
+fn test_validate_label_count_exceeded_error_type() {
+    let result = validate_label_count(MAX_LABELS_PER_ISSUE);
+    assert!(matches!(result, Err(Error::LabelLimitExceeded { .. })));
+}
+
+#[test]
+fn test_validate_export_path_empty_error_type() {
+    let result = validate_export_path("");
+    assert!(matches!(result, Err(Error::ExportPathEmpty)));
+}

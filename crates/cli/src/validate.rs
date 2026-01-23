@@ -16,11 +16,11 @@ pub const MAX_ASSIGNEE_LENGTH: usize = 100;
 /// Validate that a description is within length limits
 pub fn validate_description(description: &str) -> Result<()> {
     if description.len() > MAX_DESCRIPTION_LENGTH {
-        return Err(Error::InvalidInput(format!(
-            "Description too long ({} chars, max {})",
-            description.len(),
-            MAX_DESCRIPTION_LENGTH
-        )));
+        return Err(Error::FieldTooLong {
+            field: "Description",
+            actual: description.len(),
+            max: MAX_DESCRIPTION_LENGTH,
+        });
     }
     Ok(())
 }
@@ -28,11 +28,11 @@ pub fn validate_description(description: &str) -> Result<()> {
 /// Validate that a label is within length limits
 pub fn validate_label(label: &str) -> Result<()> {
     if label.len() > MAX_LABEL_LENGTH {
-        return Err(Error::InvalidInput(format!(
-            "Label too long ({} chars, max {})",
-            label.len(),
-            MAX_LABEL_LENGTH
-        )));
+        return Err(Error::FieldTooLong {
+            field: "Label",
+            actual: label.len(),
+            max: MAX_LABEL_LENGTH,
+        });
     }
     Ok(())
 }
@@ -41,14 +41,14 @@ pub fn validate_label(label: &str) -> Result<()> {
 pub fn validate_assignee(assignee: &str) -> Result<()> {
     let trimmed = assignee.trim();
     if trimmed.is_empty() {
-        return Err(Error::InvalidInput("Assignee cannot be empty".into()));
+        return Err(Error::FieldEmpty { field: "Assignee" });
     }
     if trimmed.len() > MAX_ASSIGNEE_LENGTH {
-        return Err(Error::InvalidInput(format!(
-            "Assignee too long ({} chars, max {})",
-            trimmed.len(),
-            MAX_ASSIGNEE_LENGTH
-        )));
+        return Err(Error::FieldTooLong {
+            field: "Assignee",
+            actual: trimmed.len(),
+            max: MAX_ASSIGNEE_LENGTH,
+        });
     }
     Ok(())
 }
@@ -56,11 +56,11 @@ pub fn validate_assignee(assignee: &str) -> Result<()> {
 /// Validate that a note is within length limits
 pub fn validate_note(note: &str) -> Result<()> {
     if note.len() > MAX_NOTE_LENGTH {
-        return Err(Error::InvalidInput(format!(
-            "Note too long ({} chars, max {})",
-            note.len(),
-            MAX_NOTE_LENGTH
-        )));
+        return Err(Error::FieldTooLong {
+            field: "Note",
+            actual: note.len(),
+            max: MAX_NOTE_LENGTH,
+        });
     }
     Ok(())
 }
@@ -68,11 +68,11 @@ pub fn validate_note(note: &str) -> Result<()> {
 /// Validate that a reason is within length limits
 pub fn validate_reason(reason: &str) -> Result<()> {
     if reason.len() > MAX_REASON_LENGTH {
-        return Err(Error::InvalidInput(format!(
-            "Reason too long ({} chars, max {})",
-            reason.len(),
-            MAX_REASON_LENGTH
-        )));
+        return Err(Error::FieldTooLong {
+            field: "Reason",
+            actual: reason.len(),
+            max: MAX_REASON_LENGTH,
+        });
     }
     Ok(())
 }
@@ -80,10 +80,9 @@ pub fn validate_reason(reason: &str) -> Result<()> {
 /// Validate that adding a label won't exceed the label limit
 pub fn validate_label_count(current_count: usize) -> Result<()> {
     if current_count >= MAX_LABELS_PER_ISSUE {
-        return Err(Error::InvalidInput(format!(
-            "Too many labels (max {} per issue)",
-            MAX_LABELS_PER_ISSUE
-        )));
+        return Err(Error::LabelLimitExceeded {
+            max: MAX_LABELS_PER_ISSUE,
+        });
     }
     Ok(())
 }
@@ -91,9 +90,7 @@ pub fn validate_label_count(current_count: usize) -> Result<()> {
 /// Validate an export file path
 pub fn validate_export_path(path: &str) -> Result<()> {
     if path.trim().is_empty() {
-        return Err(Error::InvalidInput(
-            "Export path cannot be empty".to_string(),
-        ));
+        return Err(Error::ExportPathEmpty);
     }
     Ok(())
 }
@@ -104,26 +101,26 @@ pub fn validate_and_normalize_title(title: &str) -> Result<NormalizedTitle> {
 
     // Check if result is empty after normalization
     if normalized.title.is_empty() {
-        return Err(Error::InvalidInput("Title cannot be empty".to_string()));
+        return Err(Error::FieldEmpty { field: "Title" });
     }
 
     // Validate length of normalized title
     if normalized.title.len() > MAX_TITLE_LENGTH {
-        return Err(Error::InvalidInput(format!(
-            "Title too long ({} chars, max {})",
-            normalized.title.len(),
-            MAX_TITLE_LENGTH
-        )));
+        return Err(Error::FieldTooLong {
+            field: "Title",
+            actual: normalized.title.len(),
+            max: MAX_TITLE_LENGTH,
+        });
     }
 
     // Validate extracted description if present
     if let Some(ref desc) = normalized.extracted_description {
         if desc.len() > MAX_DESCRIPTION_LENGTH {
-            return Err(Error::InvalidInput(format!(
-                "Extracted description too long ({} chars, max {})",
-                desc.len(),
-                MAX_DESCRIPTION_LENGTH
-            )));
+            return Err(Error::FieldTooLong {
+                field: "Extracted description",
+                actual: desc.len(),
+                max: MAX_DESCRIPTION_LENGTH,
+            });
         }
     }
 

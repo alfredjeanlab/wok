@@ -129,3 +129,38 @@ fn test_error_from_json() {
     let err: Error = json_err.into();
     assert!(err.to_string().contains("json error"));
 }
+
+#[test]
+fn test_error_field_too_long_display() {
+    let err = Error::FieldTooLong {
+        field: "Description",
+        actual: 15000,
+        max: 10000,
+    };
+    let msg = err.to_string();
+    assert!(msg.contains("Description"));
+    assert!(msg.contains("15000"));
+    assert!(msg.contains("10000"));
+    assert!(msg.contains("too long"));
+}
+
+#[test]
+fn test_error_field_empty_display() {
+    let err = Error::FieldEmpty { field: "Title" };
+    assert!(err.to_string().contains("Title"));
+    assert!(err.to_string().contains("cannot be empty"));
+}
+
+#[test]
+fn test_error_label_limit_exceeded_display() {
+    let err = Error::LabelLimitExceeded { max: 20 };
+    assert!(err.to_string().contains("too many labels"));
+    assert!(err.to_string().contains("20"));
+}
+
+#[test]
+fn test_error_export_path_empty_display() {
+    let err = Error::ExportPathEmpty;
+    assert!(err.to_string().contains("export path"));
+    assert!(err.to_string().contains("cannot be empty"));
+}
