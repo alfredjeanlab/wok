@@ -8,10 +8,9 @@
 //! server in order.
 
 use std::fs::{File, OpenOptions};
-use std::io::{BufRead, BufReader, Write};
 use std::path::{Path, PathBuf};
 
-use wk_core::Op;
+use wk_core::{jsonl, Op};
 
 /// Error type for queue operations.
 #[derive(Debug, thiserror::Error)]
@@ -23,6 +22,16 @@ pub enum QueueError {
     /// Serialization error.
     #[error("serialization error: {0}")]
     Serialization(#[from] serde_json::Error),
+}
+
+impl From<wk_core::Error> for QueueError {
+    fn from(e: wk_core::Error) -> Self {
+        match e {
+            wk_core::Error::Io(e) => QueueError::Io(e),
+            wk_core::Error::Json(e) => QueueError::Serialization(e),
+            other => QueueError::Io(std::io::Error::other(other.to_string())),
+        }
+    }
 }
 
 /// Result type for queue operations.
@@ -52,40 +61,13 @@ impl OfflineQueue {
     ///
     /// The operation is immediately persisted to disk.
     pub fn enqueue(&mut self, op: &Op) -> QueueResult<()> {
-        let mut file = OpenOptions::new()
-            .create(true)
-            .append(true)
-            .open(&self.path)?;
-
-        let json = serde_json::to_string(op)?;
-        writeln!(file, "{}", json)?;
-        file.sync_all()?;
-
+        jsonl::append(&self.path, op)?;
         Ok(())
     }
 
     /// Read all queued operations without removing them.
     pub fn peek_all(&self) -> QueueResult<Vec<Op>> {
-        let file = match File::open(&self.path) {
-            Ok(f) => f,
-            Err(e) if e.kind() == std::io::ErrorKind::NotFound => {
-                return Ok(Vec::new());
-            }
-            Err(e) => return Err(e.into()),
-        };
-
-        let reader = BufReader::new(file);
-        let mut ops = Vec::new();
-
-        for line in reader.lines() {
-            let line = line?;
-            if line.trim().is_empty() {
-                continue;
-            }
-            let op: Op = serde_json::from_str(&line)?;
-            ops.push(op);
-        }
-
+        let ops = jsonl::read_all(&self.path)?;
         Ok(ops)
     }
 
@@ -117,15 +99,8 @@ impl OfflineQueue {
             return self.clear();
         }
 
-        // Rewrite the file without the first N ops
         let remaining = &ops[count..];
-        let mut file = File::create(&self.path)?;
-        for op in remaining {
-            let json = serde_json::to_string(op)?;
-            writeln!(file, "{}", json)?;
-        }
-        file.sync_all()?;
-
+        jsonl::write_all(&self.path, remaining)?;
         Ok(())
     }
 }

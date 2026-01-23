@@ -13,6 +13,7 @@ pub mod hlc;
 pub mod hooks;
 pub mod identity;
 pub mod issue;
+pub mod jsonl;
 pub mod merge;
 pub mod op;
 pub mod oplog;
