@@ -67,6 +67,22 @@ pub enum Error {
     #[error("{0}")]
     InvalidInput(String),
 
+    #[error("{field} too long ({actual} chars, max {max})")]
+    FieldTooLong {
+        field: &'static str,
+        actual: usize,
+        max: usize,
+    },
+
+    #[error("{field} cannot be empty")]
+    FieldEmpty { field: &'static str },
+
+    #[error("too many labels (max {max} per issue)")]
+    LabelLimitExceeded { max: usize },
+
+    #[error("export path cannot be empty")]
+    ExportPathEmpty,
+
     #[error("database error: {0}")]
     Database(#[from] rusqlite::Error),
 
