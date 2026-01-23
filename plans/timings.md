@@ -22,12 +22,12 @@ Add `WK_TIMINGS=1` environment variable to output phase durations to stderr for 
 crates/cli/src/
 ├── timings.rs           # NEW: Timing helper macro and utilities
 ├── lib.rs               # Add timings module
-├── db/
-│   ├── mod.rs           # Instrument open_db (line 72)
-│   └── issues.rs        # Instrument list_issues (line 165), get_blocked_issue_ids (line 307)
 ├── commands/
-│   └── list.rs          # Instrument filter::labels (~line 192), sort (~line 223)
-└── display.rs           # Instrument format output
+│   ├── mod.rs           # Instrument db::open in open_db() (line 49)
+│   └── list.rs          # Instrument filter::labels (~line 106), filter::blocked (~line 133),
+│                        # sort (~line 138), format (~line 156)
+└── db/
+    └── issues.rs        # get_blocked_issue_ids called from list.rs (line 307)
 ```
 
 ## Dependencies
@@ -102,7 +102,7 @@ pub mod timings;
 
 **File:** `crates/cli/src/commands/mod.rs`
 
-**Current code (line 40-46):**
+**Current code (line 45-51):**
 ```rust
 pub fn open_db() -> Result<(Database, Config, PathBuf)> {
     let work_dir = find_work_dir()?;
@@ -136,7 +136,7 @@ WK_TIMINGS=1 wk list 2>&1 | grep "db::open"
 
 **File:** `crates/cli/src/commands/list.rs`
 
-**Current code (line 175):**
+**Current code (line 89):**
 ```rust
 let mut issues = db.list_issues(None, None, None)?;
 ```
@@ -158,7 +158,7 @@ WK_TIMINGS=1 wk list 2>&1 | grep "db::query"
 
 **File:** `crates/cli/src/commands/list.rs`
 
-**Current code (lines 192-197):**
+**Current code (lines 106-111):**
 ```rust
 // Filter by label groups
 if label_groups.is_some() {
@@ -196,7 +196,7 @@ WK_TIMINGS=1 wk list --label foo 2>&1 | grep "filter::labels"
 
 **File:** `crates/cli/src/commands/list.rs`
 
-**Current code (lines 218-221):**
+**Current code (lines 132-135):**
 ```rust
 if blocked_only {
     let blocked_ids: HashSet<String> = db.get_blocked_issue_ids()?.into_iter().collect();
@@ -226,7 +226,7 @@ WK_TIMINGS=1 wk list --blocked 2>&1 | grep "filter::blocked"
 
 **File:** `crates/cli/src/commands/list.rs`
 
-**Current code (lines 223-234):**
+**Current code (lines 137-148):**
 ```rust
 // Sort by priority ASC, then created_at DESC
 issues.sort_by(|a, b| {
@@ -272,7 +272,7 @@ WK_TIMINGS=1 wk list 2>&1 | grep "sort"
 
 **File:** `crates/cli/src/commands/list.rs`
 
-**Current code (lines 242-279):**
+**Current code (lines 156-193):**
 ```rust
 match format {
     OutputFormat::Text => {
@@ -361,9 +361,13 @@ wk list 2>&1 | grep timings
 WK_TIMINGS=1 wk list 2>&1 | grep timings
 # Expected: timing lines for each phase
 
-# Verify all phases appear
+# Verify all phases appear (with --label filter)
 WK_TIMINGS=1 wk list --label test 2>&1 | grep -c timings
 # Expected: 5 (db::open, db::query, filter::labels, sort, format)
+
+# Verify basic list (no label filter)
+WK_TIMINGS=1 wk list 2>&1 | grep -c timings
+# Expected: 4 (db::open, db::query, sort, format)
 
 # Verify blocked filter
 WK_TIMINGS=1 wk list --blocked 2>&1 | grep "filter::blocked"

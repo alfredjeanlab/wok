@@ -86,7 +86,7 @@ pub(crate) fn run_impl(
     });
 
     // Get all issues (we'll filter in-memory for complex multi-value logic)
-    let mut issues = db.list_issues(None, None, None)?;
+    let mut issues = crate::time_phase!("db::query", { db.list_issues(None, None, None)? });
 
     // Default: show open issues (todo + in_progress) when no status filter and not --all
     // Exception: when terminal filter is used, include closed issues (they're the target)
@@ -104,10 +104,12 @@ pub(crate) fn run_impl(
 
     // Filter by label groups
     if label_groups.is_some() {
+        let start = std::time::Instant::now();
         issues.retain(|issue| {
             let issue_labels = db.get_labels(&issue.id).unwrap_or_default();
             matches_label_groups(&label_groups, &issue_labels)
         });
+        crate::timings::print_timing("filter::labels", start);
     }
 
     // Filter by assignee
@@ -130,11 +132,14 @@ pub(crate) fn run_impl(
 
     // Apply blocked filter if specified
     if blocked_only {
-        let blocked_ids: HashSet<String> = db.get_blocked_issue_ids()?.into_iter().collect();
+        let blocked_ids: HashSet<String> = crate::time_phase!("filter::blocked", {
+            db.get_blocked_issue_ids()?.into_iter().collect()
+        });
         issues.retain(|issue| blocked_ids.contains(&issue.id));
     }
 
     // Sort by priority ASC, then created_at DESC
+    let sort_start = std::time::Instant::now();
     issues.sort_by(|a, b| {
         let tags_a = db.get_labels(&a.id).unwrap_or_default();
         let tags_b = db.get_labels(&b.id).unwrap_or_default();
@@ -146,6 +151,7 @@ pub(crate) fn run_impl(
             other => other,
         }
     });
+    crate::timings::print_timing("sort", sort_start);
 
     // Apply limit after sorting (default 100, or explicit value, 0 = unlimited)
     let effective_limit = limit.unwrap_or(DEFAULT_LIMIT);
@@ -153,6 +159,7 @@ pub(crate) fn run_impl(
         issues.truncate(effective_limit);
     }
 
+    let format_start = std::time::Instant::now();
     match format {
         OutputFormat::Text => {
             for issue in &issues {
@@ -191,6 +198,7 @@ pub(crate) fn run_impl(
             }
         }
     }
+    crate::timings::print_timing("format", format_start);
 
     Ok(())
 }
