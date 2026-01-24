@@ -8,18 +8,22 @@ INSTALL_DIR="$HOME/.local/bin"
 # Ensure install directory exists
 mkdir -p "$INSTALL_DIR"
 
-# Build wk CLI
-echo "Building wk..."
+# Build wok CLI
+echo "Building wok..."
 cd "$ROOT_DIR"
 cargo build --release -p wk
 
 # Install to ~/.local/bin/
-echo "Installing to $INSTALL_DIR/wk..."
-/bin/cp "$ROOT_DIR/target/release/wk" "$INSTALL_DIR/wk"
+echo "Installing to $INSTALL_DIR/wok..."
+/bin/cp "$ROOT_DIR/target/release/wk" "$INSTALL_DIR/wok"
 
 # Re-sign the binary after copying (required on macOS for adhoc-signed binaries)
 if [[ "$(uname)" == "Darwin" ]]; then
-    codesign --force --sign - "$INSTALL_DIR/wk"
+    codesign --force --sign - "$INSTALL_DIR/wok"
 fi
+
+# Create wk symlink
+echo "Creating symlink $INSTALL_DIR/wk -> wok..."
+ln -sf wok "$INSTALL_DIR/wk"
 
 echo "Done."

@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [Unreleased]
+
+### Changed
+
+- **Binary renamed to `wok`**: The primary binary is now `wok` instead of `wk`. The short name `wk` is installed as a symlink for convenience. This affects all installation methods (make install, curlpipe, and Homebrew).
+
 ## [0.2.1] - 2026-01-21
 
 ### Added

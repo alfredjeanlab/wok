@@ -115,9 +115,12 @@ tar -xzf "${TARBALL}"
 # Install binaries
 mkdir -p "$WOK_INSTALL"
 info "Installing to ${WOK_INSTALL}..."
-cp wk "$WOK_INSTALL/wk"
+cp wk "$WOK_INSTALL/wok"
 cp wk-remote "$WOK_INSTALL/wk-remote"
-chmod +x "$WOK_INSTALL/wk" "$WOK_INSTALL/wk-remote"
+chmod +x "$WOK_INSTALL/wok" "$WOK_INSTALL/wk-remote"
+
+# Create wk symlink for convenience
+ln -sf wok "$WOK_INSTALL/wk"
 
 echo ""
 info "wok v${WOK_VERSION} installed successfully!"
@@ -134,4 +137,4 @@ fi
 echo ""
 echo "To get started in a project:"
 echo "  cd /path/to/your/project"
-echo "  wk init"
+echo "  wok init"

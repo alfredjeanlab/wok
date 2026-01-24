@@ -7,7 +7,7 @@ SPECS_DIR := checks/specs
 
 help:
 	@echo "Targets:"
-	@echo "  make install     - Build and install wk to ~/.local/bin"
+	@echo "  make install     - Build and install wok to ~/.local/bin"
 	@echo "  make check       - Run fmt, clippy, check, audit, test"
 	@echo "  make validate    - Run all validation checks"
 	@echo "  make quality     - Run quality evaluation"
