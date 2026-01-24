@@ -45,9 +45,3 @@ make spec-cli ARGS='--filter "list"'
 # Run unimplemented specs
 make spec-todo
 ```
-
-## Landing Checklist
-
-Specs may be merged before implementation exists. Failing tests are expected until implementation catches up.
-
-- [ ] New specs align with REQUIREMENTS.md

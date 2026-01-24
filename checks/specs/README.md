@@ -45,7 +45,7 @@ WK_BIN=crates/cli/target/release/wk make spec
 
 ## Test Structure
 
-```
+```text
 specs/
 ├── bats/                     # BATS framework (local installation)
 │   ├── install.sh            # Downloads bats libraries
@@ -54,32 +54,16 @@ specs/
 │   └── bats-support/         # Downloaded by install.sh
 ├── helpers/
 │   └── common.bash           # Shared setup/teardown utilities
-├── unit/                     # Per-command tests
-│   ├── help.bats
-│   ├── init.bats
-│   ├── new.bats
-│   ├── lifecycle.bats
-│   ├── list.bats
-│   ├── show.bats
-│   ├── dep.bats
-│   ├── label.bats
-│   ├── note.bats
-│   ├── log.bats
-│   ├── edit.bats
-│   ├── tree.bats
-│   ├── export.bats
-│   └── sync.bats
-├── integration/              # Cross-feature tests
-│   ├── workflow.bats
-│   ├── state_machine.bats
-│   ├── dependencies.bats
-│   └── filtering.bats
-├── edge_cases/               # Edge case and error tests
-│   ├── cycles.bats
-│   ├── collisions.bats
-│   ├── special_chars.bats
-│   ├── empty_db.bats
-│   └── errors.bats
+├── cli/                      # CLI tests
+│   ├── unit/                 # Per-command tests
+│   ├── integration/          # Cross-feature tests
+│   ├── edge_cases/           # Edge case and error tests
+│   └── consistency/          # Flag consistency tests
+└── remote/                   # Remote/sync tests
+    ├── unit/                 # Remote command tests
+    ├── integration/          # Multi-client tests
+    ├── edge_cases/           # Recovery and conflict tests
+    └── helpers/              # Remote test utilities
 ```
 
 ## Environment Variables
