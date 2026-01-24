@@ -11,30 +11,17 @@ env:
   RUST_BACKTRACE: 1
 
 jobs:
-  build:
+  fmt:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
-      - uses: Swatinem/rust-cache@v2
-      - name: Build
-        run: cargo build --release
-      - name: Upload binary
-        uses: actions/upload-artifact@v4
         with:
-          name: wk-linux
-          path: target/release/wk
+          components: rustfmt
+      - name: cargo fmt --check
+        run: cargo fmt --check
 
-  test:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
-      - uses: Swatinem/rust-cache@v2
-      - name: Run tests
-        run: cargo test --workspace
-
-  lint:
+  clippy:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -42,18 +29,26 @@ jobs:
         with:
           components: clippy
       - uses: Swatinem/rust-cache@v2
-      - name: Clippy
-        run: cargo clippy --workspace -- -D warnings
+      - name: cargo clippy
+        run: cargo clippy -- -D warnings
 
-  format:
+  check:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
-        with:
-          components: rustfmt
-      - name: Format check
-        run: cargo fmt --all -- --check
+      - uses: Swatinem/rust-cache@v2
+      - name: cargo check
+        run: cargo check
+
+  quench:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install quench
+        run: curl -fsSL https://github.com/alfredjeanlab/quench/releases/latest/download/install.sh | bash
+      - name: quench check --fix
+        run: quench check --fix
 
   audit:
     runs-on: ubuntu-latest
@@ -62,5 +57,28 @@ jobs:
       - uses: taiki-e/install-action@v2
         with:
           tool: cargo-audit
-      - name: Security audit
+      - name: cargo audit
         run: cargo audit
+
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - name: cargo build --workspace
+        run: cargo build --workspace
+      - name: Upload binary
+        uses: actions/upload-artifact@v4
+        with:
+          name: wk-linux
+          path: target/debug/wk
+
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - name: cargo test
+        run: cargo test
