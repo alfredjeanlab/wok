@@ -1,5 +1,7 @@
 # Default Local Mode for `wk init`
 
+**Root Feature:** `wok-f5ed`
+
 ## Overview
 
 Change the default behavior of `wk init` from automatically setting up git-based remote sync (`git:.`) to local-only mode with no remote configuration. Users who want remote sync will explicitly specify `--remote .` or `--remote <url>`.
