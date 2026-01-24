@@ -93,7 +93,7 @@ struct WkIssue {
     deps: Vec<WkDependency>,
     #[serde(default)]
     links: Vec<Link>,
-    // Deserialized from JSON but not currently used
+    // NOTE(compat): Required for JSON deserialization
     #[allow(dead_code)]
     events: Vec<Event>,
 }
@@ -101,15 +101,15 @@ struct WkIssue {
 // Note format in wk export (uses Status enum)
 #[derive(Deserialize)]
 struct WkNote {
-    // Deserialized from JSON but not used after parsing
+    // NOTE(compat): Required for JSON deserialization
     #[allow(dead_code)]
     id: i64,
-    // Deserialized from JSON but not used after parsing
+    // NOTE(compat): Required for JSON deserialization
     #[allow(dead_code)]
     issue_id: String,
     status: Status,
     content: String,
-    // Deserialized from JSON but not used after parsing
+    // NOTE(compat): Required for JSON deserialization
     #[allow(dead_code)]
     created_at: chrono::DateTime<chrono::Utc>,
 }
@@ -120,7 +120,7 @@ struct WkDependency {
     from_id: String,
     to_id: String,
     relation: Relation,
-    // Deserialized from JSON but not used after parsing
+    // NOTE(compat): Required for JSON deserialization
     #[allow(dead_code)]
     created_at: chrono::DateTime<chrono::Utc>,
 }
@@ -161,7 +161,7 @@ struct BeadsDependency {
 struct BeadsComment {
     #[serde(alias = "content")] // Accept both "text" and "content" for backwards compat
     text: String,
-    // Deserialized from JSON but not used after parsing
+    // NOTE(compat): Required for JSON deserialization
     #[allow(dead_code)]
     created_at: String,
 }
@@ -367,7 +367,7 @@ fn convert_wk_issue(wk: WkIssue) -> ImportedIssue {
     (wk.issue, wk.labels, notes, deps, None, links) // wk format has no close_data
 }
 
-// CLI entry point requires all filter options as separate parameters
+// TODO(refactor): Consider using an options struct to bundle parameters
 #[allow(clippy::too_many_arguments)]
 pub fn run(
     file: Option<String>,
@@ -393,7 +393,7 @@ pub fn run(
     )
 }
 
-// Testable implementation with injected database
+// TODO(refactor): Consider using an options struct to bundle parameters
 #[allow(clippy::too_many_arguments)]
 pub(crate) fn run_impl(
     db: &Database,

@@ -18,7 +18,7 @@ use super::open_db;
 /// Default limit for search results in text output.
 const DEFAULT_LIMIT: usize = 25;
 
-// CLI entry point requires all filter options as separate parameters
+// TODO(refactor): Consider using an options struct to bundle parameters
 #[allow(clippy::too_many_arguments)]
 pub fn run(
     query: &str,
@@ -38,7 +38,7 @@ pub fn run(
 }
 
 /// Internal implementation that accepts db for testing.
-#[allow(clippy::too_many_arguments)]
+#[allow(clippy::too_many_arguments)] // TODO(refactor): Consider using an options struct to bundle parameters
 pub(crate) fn run_impl(
     db: &Database,
     query: &str,

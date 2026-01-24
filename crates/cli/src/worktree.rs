@@ -34,7 +34,8 @@ pub struct OplogWorktree {
     /// The branch name (e.g., "wk/oplog").
     pub branch: String,
     /// Whether this is a same-repo worktree (git:.) or separate repo.
-    #[allow(dead_code)] // Used for future sync optimizations
+    // KEEP UNTIL: Worktree validation feature
+    #[allow(dead_code)]
     pub is_same_repo: bool,
 }
 
@@ -405,7 +406,8 @@ fn is_valid_worktree(path: &Path) -> bool {
 }
 
 /// Checks if a path is inside a git worktree.
-#[allow(dead_code)] // Will be used for worktree validation
+// KEEP UNTIL: Worktree validation feature
+#[allow(dead_code)]
 pub fn is_worktree(path: &Path) -> bool {
     let git_dir = path.join(".git");
     if git_dir.is_file() {
@@ -418,7 +420,8 @@ pub fn is_worktree(path: &Path) -> bool {
 }
 
 /// Gets the oplog path for an existing worktree, verifying it exists.
-#[allow(dead_code)] // Part of public worktree API
+// KEEP UNTIL: Worktree validation feature
+#[allow(dead_code)]
 pub fn get_oplog_path(worktree: &OplogWorktree) -> Result<&Path> {
     if !worktree.oplog_path.exists() {
         // Create empty oplog file if it doesn't exist

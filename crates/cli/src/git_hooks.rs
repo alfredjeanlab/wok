@@ -106,7 +106,8 @@ fn install_hook(hooks_dir: &Path, name: &str, content: &str) -> Result<()> {
 }
 
 /// Uninstall wk git hooks from a repository.
-#[allow(dead_code)] // Will be used by future `wk remote hooks uninstall` command
+// KEEP UNTIL: wk remote hooks uninstall command is implemented
+#[allow(dead_code)]
 pub fn uninstall_hooks(repo_path: &Path) -> Result<()> {
     let git_dir = find_git_dir(repo_path)?;
     let hooks_dir = git_dir.join("hooks");
@@ -165,7 +166,8 @@ fn uninstall_hook(hooks_dir: &Path, name: &str) -> Result<()> {
 }
 
 /// Check if wk hooks are installed in a repository.
-#[allow(dead_code)] // Will be used by future `wk remote hooks status` command
+// KEEP UNTIL: wk remote hooks status command is implemented
+#[allow(dead_code)]
 pub fn hooks_installed(repo_path: &Path) -> bool {
     let git_dir = match find_git_dir(repo_path) {
         Ok(dir) => dir,

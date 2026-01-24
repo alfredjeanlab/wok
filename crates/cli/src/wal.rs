@@ -36,7 +36,8 @@ impl Wal {
     }
 
     /// Returns the path to the WAL file.
-    #[allow(dead_code)] // Part of public WAL API for future CLI commands
+    // KEEP UNTIL: WAL inspection commands are implemented
+    #[allow(dead_code)]
     pub fn path(&self) -> &Path {
         &self.path
     }
@@ -44,7 +45,8 @@ impl Wal {
     /// Appends an operation to the WAL.
     ///
     /// The operation is written with fsync for durability.
-    #[allow(dead_code)] // Part of public WAL API for future CLI commands
+    // KEEP UNTIL: WAL inspection commands are implemented
+    #[allow(dead_code)]
     pub fn append(&self, op: &Op) -> Result<()> {
         let mut file = OpenOptions::new()
             .create(true)
@@ -59,7 +61,8 @@ impl Wal {
     }
 
     /// Appends multiple operations to the WAL atomically.
-    #[allow(dead_code)] // Part of public WAL API for future CLI commands
+    // KEEP UNTIL: WAL inspection commands are implemented
+    #[allow(dead_code)]
     pub fn append_batch(&self, ops: &[Op]) -> Result<()> {
         if ops.is_empty() {
             return Ok(());
@@ -140,7 +143,8 @@ impl Wal {
     }
 
     /// Returns true if the WAL has pending operations.
-    #[allow(dead_code)] // Part of public WAL API for future CLI commands
+    // KEEP UNTIL: WAL inspection commands are implemented
+    #[allow(dead_code)]
     pub fn has_pending(&self) -> bool {
         if !self.path.exists() {
             return false;

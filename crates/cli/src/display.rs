@@ -103,7 +103,7 @@ pub fn format_issue_line(issue: &Issue) -> String {
 }
 
 /// Format issue details for show command
-#[allow(clippy::too_many_arguments)] // Display function aggregates all issue data for show command
+#[allow(clippy::too_many_arguments)] // TODO(refactor): Consider using an options struct to bundle parameters
 pub fn format_issue_details(
     issue: &Issue,
     labels: &[String],

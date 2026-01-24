@@ -90,7 +90,7 @@ pub fn run(
 }
 
 /// Internal implementation that accepts db for testing.
-#[allow(clippy::too_many_arguments)]
+#[allow(clippy::too_many_arguments)] // TODO(refactor): Consider using an options struct to bundle parameters
 pub(crate) fn run_impl(
     db: &Database,
     work_dir: &Path,

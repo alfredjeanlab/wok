@@ -10,7 +10,7 @@
 //! search commands. Other types exist purely for deriving JSON Schema
 //! definitions via schemars.
 
-// Allow unused variants - these types exist only for schema generation
+// NOTE(compat): Types exist for schema generation only
 #![allow(dead_code)]
 
 use chrono::{DateTime, Utc};

@@ -133,7 +133,8 @@ impl ServerState {
     }
 
     /// Generate a new HLC timestamp.
-    #[allow(dead_code)] // May be used for server-initiated ops
+    // KEEP UNTIL: Server-initiated timestamp generation
+    #[allow(dead_code)]
     pub fn now(&self) -> Hlc {
         self.inner.clock.now()
     }

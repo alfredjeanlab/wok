@@ -27,7 +27,8 @@ pub struct GitBackingConfig {
     /// Remote name for pushing (None = no push).
     pub remote: Option<String>,
     /// Push interval (how often to push to remote).
-    #[allow(dead_code)] // Reserved for future separate push scheduling
+    // KEEP UNTIL: Separate push scheduling
+    #[allow(dead_code)]
     pub push_interval: Option<Duration>,
 }
 

@@ -242,7 +242,8 @@ pub fn install_all() -> Result<()> {
 }
 
 /// Remove wk completion sourcing from shell RC files.
-#[allow(dead_code)] // Will be used by future uninstall command
+// KEEP UNTIL: Uninstall command is implemented
+#[allow(dead_code)]
 pub fn uninstall_all() -> Result<()> {
     for shell in [ShellKind::Bash, ShellKind::Zsh, ShellKind::Fish] {
         if let Some(rc_path) = shell.rc_file() {

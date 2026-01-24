@@ -20,6 +20,7 @@ use crate::validate::{
 use super::apply_mutation;
 use super::link::add_link_impl;
 
+// TODO(refactor): Consider using an options struct to bundle parameters
 #[allow(clippy::too_many_arguments)]
 pub fn run(
     type_or_title: String,
@@ -120,7 +121,7 @@ fn is_unique_constraint_error(err: &rusqlite::Error) -> bool {
 }
 
 /// Internal implementation that accepts db/config for testing.
-#[allow(clippy::too_many_arguments)]
+#[allow(clippy::too_many_arguments)] // TODO(refactor): Consider using an options struct to bundle parameters
 pub(crate) fn run_impl(
     db: &Database,
     config: &Config,

@@ -73,7 +73,8 @@ impl SharedConnectionState {
     /// Get a human-readable status string.
     ///
     /// Used for enhanced status reporting in IPC responses.
-    #[allow(dead_code)] // Reserved for future status message enhancement
+    // KEEP UNTIL: Enhanced IPC status reporting
+    #[allow(dead_code)]
     pub fn status_string(&self) -> String {
         match self.get() {
             STATE_DISCONNECTED => "disconnected".to_string(),
@@ -188,7 +189,8 @@ impl ConnectionManager {
     /// Get a cancellation token for this manager.
     ///
     /// Allows external code to monitor or trigger cancellation.
-    #[allow(dead_code)] // Public API for advanced cancellation patterns
+    // KEEP UNTIL: Enhanced IPC status reporting
+    #[allow(dead_code)]
     pub fn cancel_token(&self) -> CancellationToken {
         self.cancel_token.clone()
     }

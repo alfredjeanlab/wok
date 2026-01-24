@@ -58,6 +58,10 @@ PACKAGES=(
 # Exclude test files (_tests.rs) and test utilities (testing.rs) from source counts
 TEST_EXCLUDE="_tests\.rs|/testing\.rs"
 
+# Pattern for finding mem::transmute (stored as variable to avoid false positives in linters)
+# SAFETY: This is a search pattern string, not actual transmute usage
+TRANSMUTE_PATTERN='mem::transmute'
+
 echo "=== Per-Package ==="
 echo ""
 
@@ -79,7 +83,7 @@ for pkg_def in "${PACKAGES[@]}"; do
     unwrap_count=$(count_pattern '\.unwrap()' "$src_path" "*.rs" "$TEST_EXCLUDE")
     expect_count=$(count_pattern '\.expect(' "$src_path" "*.rs" "$TEST_EXCLUDE")
     cast_count=$(count_pattern ' as [ui]' "$src_path" "*.rs" "$TEST_EXCLUDE")
-    transmute_count=$(count_pattern 'mem::transmute' "$src_path" "*.rs" "$TEST_EXCLUDE")
+    transmute_count=$(count_pattern "$TRANSMUTE_PATTERN" "$src_path" "*.rs" "$TEST_EXCLUDE")
 
     high_risk=$((unsafe_count + unwrap_count + expect_count + transmute_count))
 
@@ -119,11 +123,11 @@ echo ""
 echo "as casts (numeric): $total_cast"
 
 echo ""
-echo "mem::transmute: $total_transmute"
+echo "$TRANSMUTE_PATTERN: $total_transmute"
 if [ "$total_transmute" -gt 0 ]; then
     for pkg_def in "${PACKAGES[@]}"; do
         IFS=':' read -r _ src_path <<< "$pkg_def"
-        [ -d "$src_path" ] && show_matches 'mem::transmute' "$src_path" "*.rs" "$TEST_EXCLUDE" 3
+        [ -d "$src_path" ] && show_matches "$TRANSMUTE_PATTERN" "$src_path" "*.rs" "$TEST_EXCLUDE" 3
     done
 fi
 
@@ -163,7 +167,7 @@ fi
 echo ""
 
 echo "Legend:"
-echo "  High risk: unsafe, mem::transmute"
+echo "  High risk: unsafe, $TRANSMUTE_PATTERN"
 echo "  Medium risk: unwrap, expect (panics on None/Err)"
 echo "  Low risk: #[allow(...)] (lint suppression)"
 echo "  Context matters: unwrap/expect/allow in tests is acceptable"
