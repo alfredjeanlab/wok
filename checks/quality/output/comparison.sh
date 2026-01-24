@@ -39,37 +39,26 @@ fmt_delta_bytes() {
     fi
 }
 
-# Find previous report for comparison
-# Sets PREV_REPORT global variable
+# Find the previous report directory for comparison
 find_previous_report() {
     local cache_dir="$1"
     local current_name="$2"
 
-    PREV_REPORT=""
-
-    # Get sorted list of report directories, find the one before current
     for dir in $(ls -1d "$cache_dir"/20* 2>/dev/null | sort -r); do
         dir_name=$(basename "$dir")
         if [ "$dir_name" != "$current_name" ] && [ -f "$dir/metrics.json" ]; then
-            PREV_REPORT="$dir"
-            break
+            echo "$dir"
+            return
         fi
     done
 }
 
-# Generate comparison report if previous report exists
+# Generate comparison report - sets global variables for use in summary
 generate_comparison() {
     local report_dir="$1"
     local prev_report="$2"
 
-    [ -z "$prev_report" ] || [ ! -f "$prev_report/metrics.json" ] && return 0
-
-    echo ""
-    echo "=== Comparison with $(basename "$prev_report") ==="
-
     # Read previous values
-    local prev_source_loc prev_test_loc prev_coverage prev_escapes prev_test_count prev_binary
-    local prev_source_max prev_test_max
     prev_source_loc=$(jq -r '.loc.source' "$prev_report/metrics.json" 2>/dev/null || echo 0)
     prev_test_loc=$(jq -r '.loc.test' "$prev_report/metrics.json" 2>/dev/null || echo 0)
     prev_coverage=$(jq -r '.coverage.line_percent' "$prev_report/metrics.json" 2>/dev/null || echo 0)
@@ -80,7 +69,6 @@ generate_comparison() {
     prev_test_max=$(jq -r '.file_size.test_max' "$prev_report/metrics.json" 2>/dev/null || echo 0)
 
     # Read previous work tracking values
-    local prev_commits_total prev_bugs_open prev_bugs_fixed prev_tasks_open prev_tasks_closed prev_epics_done
     prev_commits_total=$(jq -r '.work_tracking.commits.total // 0' "$prev_report/metrics.json" 2>/dev/null || echo 0)
     prev_bugs_open=$(jq -r '.work_tracking.bugs.open // 0' "$prev_report/metrics.json" 2>/dev/null || echo 0)
     prev_bugs_fixed=$(jq -r '.work_tracking.bugs.fixed // 0' "$prev_report/metrics.json" 2>/dev/null || echo 0)
@@ -89,7 +77,6 @@ generate_comparison() {
     prev_epics_done=$(jq -r '.work_tracking.epics.done // 0' "$prev_report/metrics.json" 2>/dev/null || echo 0)
 
     # Calculate deltas
-    local delta_source_loc delta_test_loc delta_coverage delta_escapes delta_test_count delta_binary
     delta_source_loc=$((json_source_loc - prev_source_loc))
     delta_test_loc=$((json_test_loc - prev_test_loc))
     delta_coverage=$(echo "$json_coverage - $prev_coverage" | bc 2>/dev/null || echo 0)
@@ -98,13 +85,15 @@ generate_comparison() {
     delta_binary=$((json_binary_stripped - prev_binary))
 
     # Calculate work tracking deltas
-    local delta_commits delta_bugs_open delta_bugs_fixed delta_tasks_open delta_tasks_closed delta_epics_done
     delta_commits=$((json_commits_total - prev_commits_total))
     delta_bugs_open=$((json_bugs_open - prev_bugs_open))
     delta_bugs_fixed=$((json_bugs_fixed - prev_bugs_fixed))
     delta_tasks_open=$((json_tasks_open - prev_tasks_open))
     delta_tasks_closed=$((json_tasks_closed - prev_tasks_closed))
     delta_epics_done=$((json_epics_done - prev_epics_done))
+
+    echo ""
+    echo "=== Comparison with $(basename "$prev_report") ==="
 
     # Write comparison markdown
     cat > "$report_dir/comparison.md" << EOF
@@ -174,9 +163,4 @@ EOF
     echo "---" >> "$report_dir/comparison.md"
     echo "" >> "$report_dir/comparison.md"
     echo "*Generated from reports/quality/$(basename "$report_dir")*" >> "$report_dir/comparison.md"
-
-    # Export comparison data for summary module
-    export PREV_REPORT="$prev_report"
-    export prev_source_loc prev_test_loc prev_coverage prev_escapes prev_test_count prev_binary
-    export delta_source_loc delta_test_loc delta_coverage delta_escapes delta_test_count delta_binary
 }

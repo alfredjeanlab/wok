@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: MIT
 # Copyright (c) 2026 Alfred Jean LLC
 #
-# JSON output generation for quality evaluation.
+# JSON metrics generation for quality evaluation.
 # Sourced by evaluate.sh - uses global variables set during metric parsing.
 
 generate_metrics_json() {
