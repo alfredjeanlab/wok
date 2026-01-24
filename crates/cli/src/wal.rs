@@ -35,18 +35,9 @@ impl Wal {
         Ok(Wal { path })
     }
 
-    /// Returns the path to the WAL file.
-    // KEEP UNTIL: WAL inspection commands are implemented
-    #[allow(dead_code)]
-    pub fn path(&self) -> &Path {
-        &self.path
-    }
-
     /// Appends an operation to the WAL.
     ///
     /// The operation is written with fsync for durability.
-    // KEEP UNTIL: WAL inspection commands are implemented
-    #[allow(dead_code)]
     pub fn append(&self, op: &Op) -> Result<()> {
         let mut file = OpenOptions::new()
             .create(true)
@@ -55,28 +46,6 @@ impl Wal {
 
         let json = serde_json::to_string(op)?;
         writeln!(file, "{}", json)?;
-        file.sync_all()?;
-
-        Ok(())
-    }
-
-    /// Appends multiple operations to the WAL atomically.
-    // KEEP UNTIL: WAL inspection commands are implemented
-    #[allow(dead_code)]
-    pub fn append_batch(&self, ops: &[Op]) -> Result<()> {
-        if ops.is_empty() {
-            return Ok(());
-        }
-
-        let mut file = OpenOptions::new()
-            .create(true)
-            .append(true)
-            .open(&self.path)?;
-
-        for op in ops {
-            let json = serde_json::to_string(op)?;
-            writeln!(file, "{}", json)?;
-        }
         file.sync_all()?;
 
         Ok(())
@@ -140,17 +109,6 @@ impl Wal {
             self.clear()?;
         }
         Ok(ops)
-    }
-
-    /// Returns true if the WAL has pending operations.
-    // KEEP UNTIL: WAL inspection commands are implemented
-    #[allow(dead_code)]
-    pub fn has_pending(&self) -> bool {
-        if !self.path.exists() {
-            return false;
-        }
-
-        self.count().map(|c| c > 0).unwrap_or(false)
     }
 }
 

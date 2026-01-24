@@ -131,11 +131,4 @@ impl ServerState {
     pub fn subscribe(&self) -> tokio::sync::broadcast::Receiver<ServerMessage> {
         self.inner.broadcast_tx.subscribe()
     }
-
-    /// Generate a new HLC timestamp.
-    // KEEP UNTIL: Server-initiated timestamp generation
-    #[allow(dead_code)]
-    pub fn now(&self) -> Hlc {
-        self.inner.clock.now()
-    }
 }

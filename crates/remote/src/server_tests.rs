@@ -451,59 +451,11 @@ mod tests {
     #[test]
     fn test_server_state_new_creates_database() {
         let temp = tempfile::tempdir().unwrap();
-        let state = ServerState::new(temp.path(), None).unwrap();
+        let _state = ServerState::new(temp.path(), None).unwrap();
 
         // Verify the database file was created
         assert!(temp.path().join("issues.db").exists());
         // Note: oplog.jsonl is created lazily on first append
-
-        // Verify state is functional by generating an HLC
-        let hlc = state.now();
-        assert!(hlc.wall_ms > 0);
-    }
-
-    #[test]
-    fn test_server_state_new_generates_consistent_node_id() {
-        let temp = tempfile::tempdir().unwrap();
-
-        // Create two states from the same path - should get same node ID
-        // (verified indirectly through HLC node field)
-        let state1 = ServerState::new(temp.path(), None).unwrap();
-        let state2 = ServerState::new(temp.path(), None).unwrap();
-
-        let hlc1 = state1.now();
-        let hlc2 = state2.now();
-
-        // Node IDs should match since they're derived from the same path
-        assert_eq!(hlc1.node_id, hlc2.node_id);
-    }
-
-    #[test]
-    fn test_server_state_new_different_paths_different_node_ids() {
-        let temp1 = tempfile::tempdir().unwrap();
-        let temp2 = tempfile::tempdir().unwrap();
-
-        let state1 = ServerState::new(temp1.path(), None).unwrap();
-        let state2 = ServerState::new(temp2.path(), None).unwrap();
-
-        let hlc1 = state1.now();
-        let hlc2 = state2.now();
-
-        // Different paths should (likely) have different node IDs
-        // Note: This could theoretically fail due to hash collision, but very unlikely
-        assert_ne!(hlc1.node_id, hlc2.node_id);
-    }
-
-    #[test]
-    fn test_server_state_clone_shares_inner() {
-        let temp = tempfile::tempdir().unwrap();
-        let state = ServerState::new(temp.path(), None).unwrap();
-        let cloned = state.clone();
-
-        // Both should produce HLCs from the same clock (monotonically increasing)
-        let hlc1 = state.now();
-        let hlc2 = cloned.now();
-        assert!(hlc2 > hlc1);
     }
 
     #[test]
@@ -514,15 +466,6 @@ mod tests {
         // Should be able to subscribe multiple times
         let _rx1 = state.subscribe();
         let _rx2 = state.subscribe();
-    }
-
-    #[tokio::test]
-    async fn test_now_generates_hlc() {
-        let temp = tempfile::tempdir().unwrap();
-        let state = ServerState::new(temp.path(), None).unwrap();
-        let hlc1 = state.now();
-        let hlc2 = state.now();
-        assert!(hlc2 > hlc1, "HLC should be monotonically increasing");
     }
 
     #[tokio::test]
@@ -544,30 +487,6 @@ mod tests {
         let (_, _, new_hlc) = state.snapshot().await.unwrap();
         assert!(new_hlc > initial_hlc, "HLC should be updated after op");
         assert_eq!(new_hlc.wall_ms, 5000);
-    }
-
-    #[tokio::test]
-    async fn test_clock_advances_on_receive() {
-        let temp = tempfile::tempdir().unwrap();
-        let state = ServerState::new(temp.path(), None).unwrap();
-
-        // Get initial clock value
-        let initial_hlc = state.now();
-
-        // Apply an op from "the future" (wall time much later than current)
-        let future_wall = initial_hlc.wall_ms + 10_000_000; // 10 seconds ahead
-        let op = Op::new(
-            Hlc::new(future_wall, 0, 999),
-            OpPayload::create_issue("future-test".into(), IssueType::Task, "Future Op".into()),
-        );
-        state.apply_op(op).await.unwrap();
-
-        // The clock should have advanced to at least match the received op
-        let new_hlc = state.now();
-        assert!(
-            new_hlc.wall_ms >= future_wall,
-            "Clock should advance on receive from future"
-        );
     }
 
     // These tests use run_single_connection to ensure handle_connection is covered.

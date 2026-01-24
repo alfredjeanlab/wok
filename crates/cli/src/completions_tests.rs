@@ -108,51 +108,6 @@ fn test_install_completion_source_idempotent() {
     assert!(existing.contains(WK_COMPLETION_MARKER));
 }
 
-#[test]
-fn test_uninstall_from_rc() {
-    let temp = TempDir::new().unwrap();
-    let rc_path = temp.path().join(".bashrc");
-
-    // Create RC file with wk completion block
-    let content = format!(
-        "# my bashrc\nexport FOO=bar\n\n{}\n[ -f \"/path/to/wk.bash\" ] && source \"/path/to/wk.bash\"\n\nexport BAZ=qux\n",
-        WK_COMPLETION_MARKER
-    );
-    fs::write(&rc_path, &content).unwrap();
-
-    // Uninstall
-    uninstall_from_rc(&rc_path).unwrap();
-
-    let new_content = fs::read_to_string(&rc_path).unwrap();
-    assert!(!new_content.contains(WK_COMPLETION_MARKER));
-    assert!(new_content.contains("export FOO=bar"));
-    assert!(new_content.contains("export BAZ=qux"));
-}
-
-#[test]
-fn test_uninstall_from_rc_no_marker() {
-    let temp = TempDir::new().unwrap();
-    let rc_path = temp.path().join(".bashrc");
-
-    let content = "# my bashrc\nexport FOO=bar\n";
-    fs::write(&rc_path, content).unwrap();
-
-    // Should succeed without changes
-    uninstall_from_rc(&rc_path).unwrap();
-
-    let new_content = fs::read_to_string(&rc_path).unwrap();
-    assert_eq!(new_content, content);
-}
-
-#[test]
-fn test_uninstall_from_rc_nonexistent() {
-    let temp = TempDir::new().unwrap();
-    let rc_path = temp.path().join(".bashrc_nonexistent");
-
-    // Should succeed without error
-    assert!(uninstall_from_rc(&rc_path).is_ok());
-}
-
 // Note: tests that set HOME env var are fragile because dirs::home_dir()
 // may not respect HOME on all platforms (esp. macOS). These tests verify
 // behavior using the actual home directory's RC files when they exist.

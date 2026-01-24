@@ -40,25 +40,6 @@ fn test_wal_append_and_read() {
 }
 
 #[test]
-fn test_wal_append_batch() {
-    let temp = TempDir::new().unwrap();
-    let wal_path = temp.path().join("pending.jsonl");
-
-    let wal = Wal::open(&wal_path).unwrap();
-
-    let ops = vec![
-        make_op(1000, 1, 1),
-        make_op(2000, 2, 1),
-        make_op(3000, 3, 1),
-    ];
-
-    wal.append_batch(&ops).unwrap();
-
-    let read_ops = wal.read_all().unwrap();
-    assert_eq!(read_ops.len(), 3);
-}
-
-#[test]
 fn test_wal_count() {
     let temp = TempDir::new().unwrap();
     let wal_path = temp.path().join("pending.jsonl");
@@ -107,23 +88,6 @@ fn test_wal_take_all() {
 
     // WAL should be empty after take
     assert_eq!(wal.count().unwrap(), 0);
-    assert!(!wal.has_pending());
-}
-
-#[test]
-fn test_wal_has_pending() {
-    let temp = TempDir::new().unwrap();
-    let wal_path = temp.path().join("pending.jsonl");
-
-    let wal = Wal::open(&wal_path).unwrap();
-
-    assert!(!wal.has_pending());
-
-    wal.append(&make_op(1000, 1, 1)).unwrap();
-    assert!(wal.has_pending());
-
-    wal.clear().unwrap();
-    assert!(!wal.has_pending());
 }
 
 #[test]
@@ -138,7 +102,6 @@ fn test_wal_empty_file() {
 
     assert_eq!(wal.count().unwrap(), 0);
     assert_eq!(wal.read_all().unwrap().len(), 0);
-    assert!(!wal.has_pending());
 }
 
 #[test]
@@ -150,5 +113,4 @@ fn test_wal_nonexistent_file() {
 
     assert_eq!(wal.count().unwrap(), 0);
     assert_eq!(wal.read_all().unwrap().len(), 0);
-    assert!(!wal.has_pending());
 }

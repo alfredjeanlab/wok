@@ -54,10 +54,6 @@ struct Args {
     /// Git remote name for pushing (enables push)
     #[arg(long)]
     git_remote: Option<String>,
-
-    /// Git push interval in seconds (requires --git-remote)
-    #[arg(long, default_value = "3600")]
-    git_push_interval: u64,
 }
 
 #[tokio::main]
@@ -89,15 +85,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             branch: args.git_branch,
             commit_interval: Duration::from_secs(args.git_commit_interval),
             remote: args.git_remote.clone(),
-            push_interval: args
-                .git_remote
-                .as_ref()
-                .map(|_| Duration::from_secs(args.git_push_interval)),
         };
 
         if let Some(ref remote) = config.remote {
             info!("    Remote: {}", remote);
-            info!("    Push interval: {}s", args.git_push_interval);
         }
 
         let backing = Arc::new(GitBacking::new(config)?);

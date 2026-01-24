@@ -69,27 +69,6 @@ impl SharedConnectionState {
     pub fn is_connecting(&self) -> bool {
         self.get() == STATE_CONNECTING
     }
-
-    /// Get a human-readable status string.
-    ///
-    /// Used for enhanced status reporting in IPC responses.
-    // KEEP UNTIL: Enhanced IPC status reporting
-    #[allow(dead_code)]
-    pub fn status_string(&self) -> String {
-        match self.get() {
-            STATE_DISCONNECTED => "disconnected".to_string(),
-            STATE_CONNECTING => {
-                let attempt = self.attempt();
-                if attempt > 0 {
-                    format!("connecting (attempt {})", attempt)
-                } else {
-                    "connecting".to_string()
-                }
-            }
-            STATE_CONNECTED => "connected".to_string(),
-            _ => "unknown".to_string(),
-        }
-    }
 }
 
 impl Default for SharedConnectionState {
@@ -184,15 +163,6 @@ impl ConnectionManager {
         };
 
         (manager, event_rx)
-    }
-
-    /// Get a cancellation token for this manager.
-    ///
-    /// Allows external code to monitor or trigger cancellation.
-    // KEEP UNTIL: Enhanced IPC status reporting
-    #[allow(dead_code)]
-    pub fn cancel_token(&self) -> CancellationToken {
-        self.cancel_token.clone()
     }
 
     /// Request a connection attempt.

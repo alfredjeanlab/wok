@@ -26,10 +26,6 @@ pub struct GitBackingConfig {
     pub commit_interval: Duration,
     /// Remote name for pushing (None = no push).
     pub remote: Option<String>,
-    /// Push interval (how often to push to remote).
-    // KEEP UNTIL: Separate push scheduling
-    #[allow(dead_code)]
-    pub push_interval: Option<Duration>,
 }
 
 impl Default for GitBackingConfig {
@@ -39,7 +35,6 @@ impl Default for GitBackingConfig {
             branch: "wk/oplog".to_string(),
             commit_interval: Duration::from_secs(90), // 90 seconds
             remote: None,
-            push_interval: None,
         }
     }
 }
@@ -228,28 +223,6 @@ impl GitBacking {
 
         info!("Pushed to remote");
         Ok(true)
-    }
-
-    /// Forces an immediate commit and push.
-    #[allow(dead_code)] // Public API for external callers (e.g., shutdown handler)
-    pub async fn flush(&self) -> std::io::Result<()> {
-        // Commit any pending changes
-        let committed = self.commit_if_dirty().await?;
-        if committed {
-            info!("Flushed: committed pending changes");
-        }
-
-        // Push if configured
-        let pushed = self.push_if_configured().await?;
-        if pushed {
-            info!("Flushed: pushed to remote");
-        }
-
-        if !committed && !pushed {
-            info!("Flush: nothing to do");
-        }
-
-        Ok(())
     }
 
     /// Starts the background commit/push tasks.

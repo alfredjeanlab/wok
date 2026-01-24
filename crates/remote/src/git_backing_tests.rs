@@ -43,7 +43,6 @@ fn setup_test_repo() -> (TempDir, GitBacking) {
         branch: "wk/oplog".to_string(),
         commit_interval: Duration::from_secs(60),
         remote: None,
-        push_interval: None,
     };
 
     let backing = GitBacking::new(config).unwrap();
@@ -79,18 +78,6 @@ async fn test_mark_dirty_and_commit() {
     // Second commit should do nothing (not dirty anymore)
     let committed = backing.commit_if_dirty().await.unwrap();
     assert!(!committed);
-}
-
-#[tokio::test]
-async fn test_flush_without_remote() {
-    let (temp, backing) = setup_test_repo();
-
-    // Add some content
-    fs::write(temp.path().join("oplog.jsonl"), "{\"test\":true}\n").unwrap();
-    backing.mark_dirty().await;
-
-    // Flush should work without remote
-    backing.flush().await.unwrap();
 }
 
 #[test]

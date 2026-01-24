@@ -33,10 +33,6 @@ pub struct OplogWorktree {
     pub oplog_path: PathBuf,
     /// The branch name (e.g., "wk/oplog").
     pub branch: String,
-    /// Whether this is a same-repo worktree (git:.) or separate repo.
-    // KEEP UNTIL: Worktree validation feature
-    #[allow(dead_code)]
-    pub is_same_repo: bool,
 }
 
 /// Resolves the oplog worktree path based on config and environment.
@@ -168,7 +164,6 @@ pub fn init_oplog_worktree(work_dir: &Path, remote: &RemoteConfig) -> Result<Opl
         path: worktree_path,
         oplog_path,
         branch: branch.clone(),
-        is_same_repo,
     })
 }
 
@@ -403,31 +398,6 @@ fn is_valid_worktree(path: &Path) -> bool {
         }
     }
     false
-}
-
-/// Checks if a path is inside a git worktree.
-// KEEP UNTIL: Worktree validation feature
-#[allow(dead_code)]
-pub fn is_worktree(path: &Path) -> bool {
-    let git_dir = path.join(".git");
-    if git_dir.is_file() {
-        // Worktrees have a .git file pointing to the main repo
-        if let Ok(content) = fs::read_to_string(&git_dir) {
-            return content.starts_with("gitdir:");
-        }
-    }
-    false
-}
-
-/// Gets the oplog path for an existing worktree, verifying it exists.
-// KEEP UNTIL: Worktree validation feature
-#[allow(dead_code)]
-pub fn get_oplog_path(worktree: &OplogWorktree) -> Result<&Path> {
-    if !worktree.oplog_path.exists() {
-        // Create empty oplog file if it doesn't exist
-        fs::write(&worktree.oplog_path, "")?;
-    }
-    Ok(&worktree.oplog_path)
 }
 
 /// Reads all operations from the oplog file.
