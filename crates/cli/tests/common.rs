@@ -16,7 +16,7 @@ pub fn wk() -> Command {
     cargo_bin_cmd!("wk")
 }
 
-/// Helper to create an initialized temp directory (remote mode, default)
+/// Helper to create an initialized temp directory (local mode, default)
 pub fn init_temp() -> TempDir {
     let temp = TempDir::new().unwrap();
     wk().arg("init")
@@ -28,13 +28,28 @@ pub fn init_temp() -> TempDir {
     temp
 }
 
-/// Helper to create an initialized temp directory in local mode
+/// Helper to create an initialized temp directory in local mode (explicit)
+/// Note: This is now the same as init_temp() since local is the default
 pub fn init_temp_local() -> TempDir {
+    init_temp()
+}
+
+/// Helper to create an initialized temp directory in remote mode (git:.)
+pub fn init_temp_remote() -> TempDir {
     let temp = TempDir::new().unwrap();
+
+    // Initialize git repo first
+    std::process::Command::new("git")
+        .arg("init")
+        .current_dir(temp.path())
+        .status()
+        .expect("git init failed");
+
     wk().arg("init")
         .arg("--prefix")
         .arg("test")
-        .arg("--local")
+        .arg("--remote")
+        .arg(".")
         .current_dir(temp.path())
         .assert()
         .success();

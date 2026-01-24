@@ -18,7 +18,7 @@ pub fn run(
     path: Option<String>,
     workspace: Option<String>,
     remote: Option<String>,
-    local: bool,
+    _local: bool, // Kept for backwards compatibility; default is now local mode
 ) -> Result<()> {
     let target_path = match path {
         Some(p) => PathBuf::from(p),
@@ -65,15 +65,14 @@ pub fn run(
     let db_path = work_dir.join("issues.db");
     Database::open(&db_path)?;
 
-    // Create .gitignore (include config.toml if local mode)
-    write_gitignore(&work_dir, local)?;
+    // Create .gitignore (include config.toml if local mode - i.e., no remote specified)
+    write_gitignore(&work_dir, remote.is_none())?;
 
     println!("Initialized issue tracker at {}", work_dir.display());
     println!("Prefix: {}", prefix);
 
-    // Set up remote: default to "." (git orphan branch) unless --local is specified
-    if !local {
-        let remote_url = remote.as_deref().unwrap_or(".");
+    // Set up remote only if explicitly specified
+    if let Some(remote_url) = remote.as_deref() {
         setup_remote(&work_dir, &target_path, remote_url)?;
     }
 
