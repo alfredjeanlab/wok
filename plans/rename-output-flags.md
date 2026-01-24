@@ -1,5 +1,7 @@
 # Rename Output Flags: `-f/--format` → `-o/--output`
 
+**Root Feature:** `wok-9bc8`
+
 ## Overview
 
 Rename the `-f/--format` flag to `-o/--output` across all commands that use it for output format selection. This affects five commands (`list`, `ready`, `search`, `show`, `import`) and requires updates to implementation code, documentation, tests, and benchmarks.
