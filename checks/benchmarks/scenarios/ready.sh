@@ -23,7 +23,7 @@ benchmark_ready_default() {
 benchmark_ready_json() {
     for size in small medium large xlarge; do
         setup_db "$size"
-        run_benchmark "ready_json_${size}" "$WK_BIN" ready --format json
+        run_benchmark "ready_json_${size}" "$WK_BIN" ready --output json
     done
 }
 

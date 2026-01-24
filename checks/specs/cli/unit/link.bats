@@ -154,7 +154,7 @@ load '../../helpers/common'
     id=$(create_issue task "LinkJSON Test task")
     "$WK_BIN" link "$id" "https://github.com/org/repo/issues/123"
 
-    run "$WK_BIN" show "$id" --format json
+    run "$WK_BIN" show "$id" --output json
     assert_success
     assert_output --partial '"links":'
     assert_output --partial '"link_type": "github"'

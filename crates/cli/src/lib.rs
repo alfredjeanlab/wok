@@ -123,11 +123,11 @@ pub fn run(command: Command) -> Result<()> {
             limit,
             blocked,
             all,
-            format,
+            output,
         } => commands::list::run(
-            status, r#type, label, assignee, unassigned, filter, limit, blocked, all, format,
+            status, r#type, label, assignee, unassigned, filter, limit, blocked, all, output,
         ),
-        Command::Show { id, format } => commands::show::run(&id, &format),
+        Command::Show { id, output } => commands::show::run(&id, &output),
         Command::Tree { id } => commands::tree::run(&id),
         Command::Link { id, url, reason } => commands::link::add(&id, &url, reason),
         Command::Dep {
@@ -171,8 +171,8 @@ pub fn run(command: Command) -> Result<()> {
             assignee,
             unassigned,
             all_assignees,
-            format,
-        } => commands::ready::run(r#type, label, assignee, unassigned, all_assignees, format),
+            output,
+        } => commands::ready::run(r#type, label, assignee, unassigned, all_assignees, output),
         Command::Search {
             query,
             status,
@@ -182,9 +182,9 @@ pub fn run(command: Command) -> Result<()> {
             unassigned,
             filter,
             limit,
-            format,
+            output,
         } => commands::search::run(
-            &query, status, r#type, label, assignee, unassigned, filter, limit, format,
+            &query, status, r#type, label, assignee, unassigned, filter, limit, output,
         ),
         Command::Completion { shell } => {
             let mut cmd = Cli::command();

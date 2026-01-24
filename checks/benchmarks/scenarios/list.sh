@@ -166,11 +166,11 @@ benchmark_output_format() {
     # Compare text vs JSON output
     run_comparison "output_format_comparison" \
         "$WK_BIN list --all" \
-        "$WK_BIN list --all --format json"
+        "$WK_BIN list --all --output json"
 
     # Individual measurements
     run_benchmark "output_text" "$WK_BIN" list --all
-    run_benchmark "output_json" "$WK_BIN" list --all --format json
+    run_benchmark "output_json" "$WK_BIN" list --all --output json
 }
 
 # Run all output benchmarks

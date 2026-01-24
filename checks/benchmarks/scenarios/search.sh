@@ -144,11 +144,11 @@ benchmark_search_output() {
     # Compare text vs JSON output
     run_comparison "search_output_comparison" \
         "$WK_BIN search task" \
-        "$WK_BIN search task --format json"
+        "$WK_BIN search task --output json"
 
     # Individual measurements
     run_benchmark "search_output_text" "$WK_BIN" search "task"
-    run_benchmark "search_output_json" "$WK_BIN" search "task" --format json
+    run_benchmark "search_output_json" "$WK_BIN" search "task" --output json
 }
 
 # ============================================================================

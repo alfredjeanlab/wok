@@ -97,13 +97,13 @@ wk list [--status/-s <status>[,<status>...]]   # todo|in_progress|done|closed
         [--type/-t <type>[,<type>...]]         # feature|task|bug|chore
         [--label/-l <label>[,<label>...]]...   # repeatable
         [--blocked]         # show only blocked issues
-        [--format/-f text|json|ids]          # output format (default: text)
+        [--output/-o text|json|ids]          # output format (default: text)
 # Sort order: priority ASC (0=highest first), then created_at DESC (newest first)
 
 # Show ready issues (unblocked todo items only)
 wk ready [--type/-t <type>[,<type>...]]        # feature|task|bug|chore
          [--label/-l <label>[,<label>...]]...  # repeatable
-         [--format/-f text|json]            # output format (default: text)
+         [--output/-o text|json]            # output format (default: text)
 # Note: ready = unblocked todo by definition (no --status, --all, or --blocked flags)
 # Sort order:
 #   1. Recent issues (created <48h ago) come first, sorted by priority ASC
@@ -122,7 +122,7 @@ wk list --label mod:wkrs,mod:wkgo --label urgent   # (wkrs OR wkgo) AND urgent
 wk list --type task,bug --status todo          # (task OR bug) AND todo
 
 # Show single issue with full details (includes deps, notes, events)
-wk show <id> [--format json]
+wk show <id> [--output json]
 
 # Show dependency tree rooted at an issue
 wk tree <id>
@@ -133,14 +133,14 @@ wk tree <id>
 #     └── (blocked by auth-c3d4)
 
 # JSON output for list and ready commands:
-# wk list --format json
+# wk list --output json
 {
   "issues": [
     {"id": "prj-a3f2", "issue_type": "task", "status": "todo", "title": "Example", "labels": ["label1"]}
   ]
 }
 
-# wk ready --format json
+# wk ready --output json
 {
   "issues": [
     {"id": "prj-a3f2", "issue_type": "task", "status": "todo", "title": "Example", "labels": ["label1"]}

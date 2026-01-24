@@ -93,7 +93,7 @@ Short flags have consistent meaning across all commands:
 | `-q` | `--filter` | Filter expression (query) |
 | `-n` | `--limit` | Limit number of results |
 | `-i` | `--interactive` | Interactive mode |
-| `-f` | `--format` | Output format |
+| `-o` | `--output` | Output format |
 | `-y` | `--yes` | Non-interactive/auto-confirm |
 
 Flags without shorthands (to avoid ambiguity):

@@ -77,10 +77,10 @@ fn show_json_format() {
         .unwrap()
         .trim_end_matches(':');
 
-    // Show with JSON format should output valid JSON structure
+    // Show with JSON output should output valid JSON structure
     wk().arg("show")
         .arg(id)
-        .arg("--format")
+        .arg("--output")
         .arg("json")
         .current_dir(temp.path())
         .assert()
@@ -95,14 +95,14 @@ fn show_json_format() {
 }
 
 #[test]
-fn show_json_format_short_flag() {
+fn show_json_output_short_flag() {
     let temp = init_temp();
     let id = create_issue(&temp, "Test short flag");
 
-    // Short flag -f should work
+    // Short flag -o should work
     wk().arg("show")
         .arg(&id)
-        .arg("-f")
+        .arg("-o")
         .arg("json")
         .current_dir(temp.path())
         .assert()
@@ -111,14 +111,14 @@ fn show_json_format_short_flag() {
 }
 
 #[test]
-fn show_invalid_format() {
+fn show_invalid_output() {
     let temp = init_temp();
-    let id = create_issue(&temp, "Test invalid format");
+    let id = create_issue(&temp, "Test invalid output");
 
-    // Invalid format should fail
+    // Invalid output format should fail
     wk().arg("show")
         .arg(&id)
-        .arg("--format")
+        .arg("--output")
         .arg("xml")
         .current_dir(temp.path())
         .assert()

@@ -16,33 +16,33 @@ fn parse(args: &[&str]) -> Result<Cli, clap::Error> {
 fn test_show_command() {
     let cli = parse(&["wk", "show", "prj-1234"]).unwrap();
     match cli.command {
-        Command::Show { id, format } => {
+        Command::Show { id, output } => {
             assert_eq!(id, "prj-1234");
-            assert_eq!(format, "text"); // default format
+            assert_eq!(output, "text"); // default output
         }
         _ => panic!("Expected Show command"),
     }
 }
 
 #[test]
-fn test_show_command_with_json_format() {
-    let cli = parse(&["wk", "show", "prj-1234", "--format", "json"]).unwrap();
+fn test_show_command_with_json_output() {
+    let cli = parse(&["wk", "show", "prj-1234", "--output", "json"]).unwrap();
     match cli.command {
-        Command::Show { id, format } => {
+        Command::Show { id, output } => {
             assert_eq!(id, "prj-1234");
-            assert_eq!(format, "json");
+            assert_eq!(output, "json");
         }
         _ => panic!("Expected Show command"),
     }
 }
 
 #[test]
-fn test_show_command_with_format_short() {
-    let cli = parse(&["wk", "show", "prj-1234", "-f", "json"]).unwrap();
+fn test_show_command_with_output_short() {
+    let cli = parse(&["wk", "show", "prj-1234", "-o", "json"]).unwrap();
     match cli.command {
-        Command::Show { id, format } => {
+        Command::Show { id, output } => {
             assert_eq!(id, "prj-1234");
-            assert_eq!(format, "json");
+            assert_eq!(output, "json");
         }
         _ => panic!("Expected Show command"),
     }
