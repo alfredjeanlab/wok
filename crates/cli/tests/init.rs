@@ -195,3 +195,55 @@ fn init_with_workspace_rejects_invalid_prefix() {
         .assert()
         .failure();
 }
+
+#[test]
+fn init_defaults_to_local_mode() {
+    let temp = TempDir::new().unwrap();
+
+    wk().arg("init")
+        .arg("--prefix")
+        .arg("test")
+        .current_dir(temp.path())
+        .assert()
+        .success();
+
+    // Config should not have remote section
+    let config_content = std::fs::read_to_string(temp.path().join(".wok/config.toml")).unwrap();
+    assert!(
+        !config_content.contains("[remote]"),
+        "Default init should not create remote config"
+    );
+    assert!(
+        !config_content.contains("url ="),
+        "Default init should not have remote url"
+    );
+
+    // Gitignore should include config.toml (local mode)
+    let gitignore = std::fs::read_to_string(temp.path().join(".wok/.gitignore")).unwrap();
+    assert!(
+        gitignore.contains("config.toml"),
+        "Local mode should ignore config.toml"
+    );
+}
+
+#[test]
+fn init_local_flag_is_no_op() {
+    let temp = TempDir::new().unwrap();
+
+    // --local flag should work (for backwards compatibility) and behave same as default
+    wk().arg("init")
+        .arg("--prefix")
+        .arg("test")
+        .arg("--local")
+        .current_dir(temp.path())
+        .assert()
+        .success();
+
+    // Config should not have remote section
+    let config_content = std::fs::read_to_string(temp.path().join(".wok/config.toml")).unwrap();
+    assert!(!config_content.contains("[remote]"));
+
+    // Gitignore should include config.toml
+    let gitignore = std::fs::read_to_string(temp.path().join(".wok/.gitignore")).unwrap();
+    assert!(gitignore.contains("config.toml"));
+}

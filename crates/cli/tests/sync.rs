@@ -20,7 +20,7 @@ fn remote_status_local_mode() {
 
 #[test]
 fn remote_status_remote_mode() {
-    let temp = init_temp(); // Default is now remote mode with git:.
+    let temp = init_temp_remote(); // Explicitly initialize with remote mode
 
     // In remote mode, remote status should show remote URL
     wk().arg("remote")

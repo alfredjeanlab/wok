@@ -495,12 +495,13 @@ pub enum Command {
         #[arg(long, value_name = "/path/to/shared/.work")]
         workspace: Option<String>,
 
-        /// Remote URL for sync (git:., path, ssh URL, or ws://host:port)
+        /// Remote URL for sync (git:., path, ssh URL, or ws://host:port).
+        /// If not specified, initializes in local-only mode.
         #[arg(long, value_name = "URL")]
         remote: Option<String>,
 
-        /// Initialize without remote (no default sync)
-        #[arg(long)]
+        /// Initialize without remote [default behavior, kept for compatibility]
+        #[arg(long, hide = true)]
         local: bool,
     },
 

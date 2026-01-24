@@ -209,16 +209,16 @@ teardown() {
 }
 
 @test "init creates .gitignore with correct entries" {
+    # Default is now local mode - config.toml should be ignored
     run "$WK_BIN" init --prefix prj
     assert_success
     [ -f ".wok/.gitignore" ]
     grep -q "current/" .wok/.gitignore
     grep -q "issues.db" .wok/.gitignore
-    # Default (remote mode) does not ignore config.toml
-    ! grep -q "config.toml" .wok/.gitignore
+    grep -q "config.toml" .wok/.gitignore
     rm -rf .wok
 
-    # --local mode ignores config.toml
+    # --local mode also ignores config.toml (same as default, kept for compatibility)
     run "$WK_BIN" init --prefix prj --local
     assert_success
     grep -q "config.toml" .wok/.gitignore
@@ -232,6 +232,29 @@ teardown() {
     grep -q "current/" .wok/.gitignore
     grep -q "issues.db" .wok/.gitignore
     grep -q "config.toml" .wok/.gitignore
+}
+
+@test "init with --remote excludes config.toml from .gitignore" {
+    run timeout 3 git init
+    run "$WK_BIN" init --prefix prj --remote .
+    assert_success
+    [ -f ".wok/.gitignore" ]
+    grep -q "current/" .wok/.gitignore
+    grep -q "issues.db" .wok/.gitignore
+    # Remote mode - config.toml should NOT be ignored (shared via git)
+    ! grep -q "config.toml" .wok/.gitignore
+}
+
+@test "init defaults to local mode without remote" {
+    run "$WK_BIN" init --prefix prj
+    assert_success
+
+    # Should not have remote config
+    ! grep -q "\[remote\]" .wok/config.toml
+    ! grep -q "url =" .wok/config.toml
+
+    # Should not create git worktree (we're not in a git repo anyway)
+    [ ! -d ".git/wk/oplog" ]
 }
 
 @test "init with git remote creates worktree and supports sync" {
