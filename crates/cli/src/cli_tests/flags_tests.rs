@@ -21,7 +21,8 @@ fn test_flag_consistency() {
         ('l', "label"),
         ('s', "status"),
         ('i', "interactive"),
-        ('f', "format"),
+        ('f', "format"), // import input format
+        ('o', "output"), // output format
         ('y', "yes"),
         ('a', "assignee"),
         ('q', "filter"),

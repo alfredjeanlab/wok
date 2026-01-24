@@ -45,7 +45,7 @@ benchmark_edit_title() {
 
     # Get an existing issue ID to edit
     local id
-    id=$("$WK_BIN" list --limit 1 --format json | jq -r '.issues[0].id')
+    id=$("$WK_BIN" list --limit 1 --output json | jq -r '.issues[0].id')
 
     if [[ -z "$id" || "$id" == "null" ]]; then
         error "No issues found in database"
@@ -64,7 +64,7 @@ benchmark_edit_type() {
 
     # Get an existing task to change to bug
     local id
-    id=$("$WK_BIN" list --type task --limit 1 --format json | jq -r '.issues[0].id')
+    id=$("$WK_BIN" list --type task --limit 1 --output json | jq -r '.issues[0].id')
 
     if [[ -z "$id" || "$id" == "null" ]]; then
         error "No task issues found in database"
@@ -83,7 +83,7 @@ benchmark_edit_assignee() {
 
     # Get an existing issue
     local id
-    id=$("$WK_BIN" list --limit 1 --format json | jq -r '.issues[0].id')
+    id=$("$WK_BIN" list --limit 1 --output json | jq -r '.issues[0].id')
 
     if [[ -z "$id" || "$id" == "null" ]]; then
         error "No issues found in database"
@@ -106,7 +106,7 @@ benchmark_close_single() {
 
     # Get an in_progress issue (can be closed)
     local id
-    id=$("$WK_BIN" list --status in_progress --limit 1 --format json | jq -r '.issues[0].id')
+    id=$("$WK_BIN" list --status in_progress --limit 1 --output json | jq -r '.issues[0].id')
 
     if [[ -z "$id" || "$id" == "null" ]]; then
         error "No in_progress issues found in database"
@@ -126,7 +126,7 @@ benchmark_close_batch() {
 
         # Get multiple in_progress issues
         local ids
-        ids=$("$WK_BIN" list --status in_progress --limit "$count" --format json | jq -r '.issues[].id' | tr '\n' ' ')
+        ids=$("$WK_BIN" list --status in_progress --limit "$count" --output json | jq -r '.issues[].id' | tr '\n' ' ')
 
         if [[ -z "$ids" ]]; then
             warn "Not enough in_progress issues for batch close of $count"
@@ -147,7 +147,7 @@ benchmark_done_single() {
 
     # Get an in_progress issue (can transition to done)
     local id
-    id=$("$WK_BIN" list --status in_progress --limit 1 --format json | jq -r '.issues[0].id')
+    id=$("$WK_BIN" list --status in_progress --limit 1 --output json | jq -r '.issues[0].id')
 
     if [[ -z "$id" || "$id" == "null" ]]; then
         error "No in_progress issues found in database"
@@ -170,7 +170,7 @@ benchmark_start_single() {
 
     # Get a todo issue (can transition to in_progress)
     local id
-    id=$("$WK_BIN" list --status todo --limit 1 --format json | jq -r '.issues[0].id')
+    id=$("$WK_BIN" list --status todo --limit 1 --output json | jq -r '.issues[0].id')
 
     if [[ -z "$id" || "$id" == "null" ]]; then
         error "No todo issues found in database"

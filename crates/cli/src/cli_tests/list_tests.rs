@@ -156,14 +156,14 @@ fn test_ready_default() {
             assignee,
             unassigned,
             all_assignees,
-            format,
+            output,
         } => {
             assert!(r#type.is_empty());
             assert!(label.is_empty());
             assert!(assignee.is_empty());
             assert!(!unassigned);
             assert!(!all_assignees);
-            assert!(matches!(format, OutputFormat::Text));
+            assert!(matches!(output, OutputFormat::Text));
         }
         _ => panic!("Expected Ready command"),
     }

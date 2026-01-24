@@ -31,12 +31,12 @@ load '../../helpers/common'
     assert_output --partial "No ready issues"
 }
 
-@test "ready --format json outputs valid data with expected fields" {
+@test "ready --output json outputs valid data with expected fields" {
     id=$(create_issue task "JSON ready task")
     "$WK_BIN" label "$id" "module:api"
 
-    # Test --format json
-    run "$WK_BIN" ready --format json
+    # Test --output json
+    run "$WK_BIN" ready --output json
     assert_success
     echo "$output" | jq . >/dev/null
     echo "$output" | jq -e '.issues[0].id' >/dev/null
@@ -49,13 +49,13 @@ load '../../helpers/common'
     label=$(echo "$output" | jq -r '.issues[] | select(.title == "JSON ready task") | .labels[0]')
     [ "$label" = "module:api" ]
 
-    # Test -f json short flag
-    run "$WK_BIN" ready -f json
+    # Test -o json short flag
+    run "$WK_BIN" ready -o json
     assert_success
     echo "$output" | jq . >/dev/null
 }
 
-@test "ready --format json excludes blocked and respects filters" {
+@test "ready --output json excludes blocked and respects filters" {
     a=$(create_issue task "Blocker JSON ready")
     "$WK_BIN" label "$a" "test:json-blocked"
     b=$(create_issue task "Blocked JSON ready")
@@ -65,7 +65,7 @@ load '../../helpers/common'
     "$WK_BIN" label "$id" "team:backend"
 
     # Blocked issues excluded (filter by test label to avoid 5-issue limit interference)
-    run "$WK_BIN" ready --label "test:json-blocked" --format json
+    run "$WK_BIN" ready --label "test:json-blocked" --output json
     assert_success
     blocked_present=$(echo "$output" | jq --arg b "$b" '[.issues[].id] | contains([$b])')
     [ "$blocked_present" = "false" ]
@@ -73,7 +73,7 @@ load '../../helpers/common'
     [ "$blocker_present" = "true" ]
 
     # Label filter works
-    run "$WK_BIN" ready --label "team:backend" --format json
+    run "$WK_BIN" ready --label "team:backend" --output json
     assert_success
     count=$(echo "$output" | jq '.issues | length')
     [ "$count" -eq 1 ]
@@ -81,7 +81,7 @@ load '../../helpers/common'
     [ "$title" = "Labeled ready" ]
 
     # Non-matching label returns empty
-    run "$WK_BIN" ready --label "nonexistent-label-abc456" --format json
+    run "$WK_BIN" ready --label "nonexistent-label-abc456" --output json
     assert_success
     count=$(echo "$output" | jq '.issues | length')
     [ "$count" -eq 0 ]
@@ -181,7 +181,7 @@ load '../../helpers/common'
     [ "$count" -le 5 ]
 
     # JSON also respects limit
-    run "$WK_BIN" ready --format json
+    run "$WK_BIN" ready --output json
     assert_success
     count=$(echo "$output" | jq '.issues | length')
     [ "$count" -le 5 ]

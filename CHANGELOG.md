@@ -8,9 +8,9 @@ All notable changes to this project will be documented in this file.
 
 - **Idea issue type**: New `idea` type alongside task, feature, and bug. Ideas bridge informal thoughts and committed work, signaling "this might be worth doing" without commitment.
 
-- **`--format ids` option**: New output format for `list`, `ready`, and `search` commands that outputs space-separated issue IDs for shell composition:
+- **`--output ids` option**: New output format for `list`, `ready`, and `search` commands that outputs space-separated issue IDs for shell composition:
   ```bash
-  wk close $(wk list -f ids --status done) --reason outdated
+  wk close $(wk list -o ids --status done) --reason outdated
   ```
 
 - **Distinct filter fields for terminal states**: Filter expressions can now distinguish between completed and cancelled issues:

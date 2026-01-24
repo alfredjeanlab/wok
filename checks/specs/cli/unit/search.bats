@@ -95,16 +95,16 @@ load '../../helpers/common'
     refute_output --partial "SearchFilter Task B"
 }
 
-@test "search --format json outputs valid JSON (including short flag)" {
+@test "search --output json outputs valid JSON (including short flag)" {
     create_issue task "SearchJSON test task"
     create_issue task "SearchJSON Short flag test"
 
-    run "$WK_BIN" search "SearchJSON" --format json
+    run "$WK_BIN" search "SearchJSON" --output json
     assert_success
     echo "$output" | jq . >/dev/null
 
-    # -f short flag works
-    run "$WK_BIN" search "SearchJSON Short" -f json
+    # -o short flag works
+    run "$WK_BIN" search "SearchJSON Short" -o json
     assert_success
     echo "$output" | jq . >/dev/null
 }
@@ -127,7 +127,7 @@ load '../../helpers/common'
     assert_output --partial "... 5 more"
 
     # JSON includes more field
-    run "$WK_BIN" search "SearchLimit test" --format json
+    run "$WK_BIN" search "SearchLimit test" --output json
     assert_success
     echo "$output" | jq . >/dev/null
     local more=$(echo "$output" | jq '.more')
@@ -144,7 +144,7 @@ load '../../helpers/common'
     refute_output --partial "more"
 
     # JSON omits more field when under limit
-    run "$WK_BIN" search "SearchUnderLimit" --format json
+    run "$WK_BIN" search "SearchUnderLimit" --output json
     assert_success
     echo "$output" | jq . >/dev/null
     local more=$(echo "$output" | jq '.more')
@@ -200,14 +200,14 @@ load '../../helpers/common'
     [ "$count" -eq 2 ]
 
     # JSON includes filters_applied
-    run "$WK_BIN" search "SearchCombo" --filter "age < 1d" --format json
+    run "$WK_BIN" search "SearchCombo" --filter "age < 1d" --output json
     assert_success
     echo "$output" | jq . >/dev/null
     local filters=$(echo "$output" | jq '.filters_applied')
     [ "$filters" != "null" ]
 
     # JSON includes limit when specified
-    run "$WK_BIN" search "SearchCombo" --limit 5 --format json
+    run "$WK_BIN" search "SearchCombo" --limit 5 --output json
     assert_success
     echo "$output" | jq . >/dev/null
     local limit=$(echo "$output" | jq '.limit')

@@ -6,7 +6,7 @@ load '../../helpers/common'
 # - --type / -t consistency across list, edit, import
 # - --status / -s consistency across list, import
 # - --label / -l consistency across new, list, import
-# - --format / -f consistency across show, import
+# - --output / -o consistency for show, --format / -f for import input
 # --type / -t consistency
 # All commands with --type should also accept -t
 
@@ -82,14 +82,16 @@ load '../../helpers/common'
     assert_success
 }
 
-# --format / -f consistency
+# --output / -o consistency (output format)
 
-@test "show accepts -f as short form for --format" {
+@test "show accepts -o as short form for --output" {
     id=$(create_issue task "Test")
-    run "$WK_BIN" show "$id" -f json
+    run "$WK_BIN" show "$id" -o json
     assert_success
     assert_output --partial "{"
 }
+
+# --format / -f consistency (import input format)
 
 @test "import accepts -f as short form for --format" {
     create_issue task "Test"

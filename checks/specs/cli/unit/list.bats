@@ -120,11 +120,11 @@ load '../../helpers/common'
     refute_output --partial "Combined Task"
 }
 
-@test "list --format json outputs valid data" {
+@test "list --output json outputs valid data" {
     id=$(create_issue task "JSONList Task")
     "$WK_BIN" label "$id" "priority:high"
 
-    run "$WK_BIN" list --format json
+    run "$WK_BIN" list --output json
     assert_success
     echo "$output" | jq . >/dev/null
     echo "$output" | jq -e '.issues[0].id' >/dev/null
@@ -138,7 +138,7 @@ load '../../helpers/common'
     [ "$label" = "priority:high" ]
 
     # Short flag -f works
-    run "$WK_BIN" list -f json
+    run "$WK_BIN" list -o json
     assert_success
     echo "$output" | jq . >/dev/null
 
@@ -150,13 +150,13 @@ load '../../helpers/common'
     "$WK_BIN" dep "$a" blocks "$b"
 
     # Type filter
-    run "$WK_BIN" list --type bug --format json
+    run "$WK_BIN" list --type bug --output json
     assert_success
     all_bugs=$(echo "$output" | jq '[.issues[].issue_type] | all(. == "bug")')
     [ "$all_bugs" = "true" ]
 
     # No blocked_count
-    run "$WK_BIN" list --format json
+    run "$WK_BIN" list --output json
     result=$(echo "$output" | jq '.blocked_count')
     [ "$result" = "null" ]
 }
@@ -276,12 +276,12 @@ load '../../helpers/common'
     # JSON includes metadata when filters/limit used
     create_issue task "JSONMeta Issue"
 
-    run "$WK_BIN" list --filter "age < 1d" --format json
+    run "$WK_BIN" list --filter "age < 1d" --output json
     assert_success
     local filters=$(echo "$output" | jq '.filters_applied')
     [ "$filters" != "null" ]
 
-    run "$WK_BIN" list --limit 10 --format json
+    run "$WK_BIN" list --limit 10 --output json
     assert_success
     local limit=$(echo "$output" | jq '.limit')
     [ "$limit" = "10" ]
@@ -455,10 +455,10 @@ load '../../helpers/common'
     [ "$count" -eq 20 ]
 }
 
-@test "list --format ids outputs space-separated IDs" {
+@test "list --output ids outputs space-separated IDs" {
     id1=$(create_issue task "IDFormat Issue 1")
     id2=$(create_issue task "IDFormat Issue 2")
-    run "$WK_BIN" list --format ids
+    run "$WK_BIN" list --output ids
     assert_success
     assert_output --partial "$id1"
     assert_output --partial "$id2"
@@ -471,37 +471,37 @@ load '../../helpers/common'
     [ "$line_count" -eq 1 ]
 }
 
-@test "list --format ids works with filters" {
+@test "list --output ids works with filters" {
     id=$(create_issue task "FilterID Task")
     create_issue bug "FilterID Bug"
-    run "$WK_BIN" list --type task --format ids
+    run "$WK_BIN" list --type task --output ids
     assert_success
     assert_output --partial "$id"
     [[ ! "$output" =~ "FilterID Bug" ]]
 }
 
-@test "list --format ids respects limit" {
+@test "list --output ids respects limit" {
     for i in {1..15}; do
         create_issue task "LimitID Issue $i" --label "test:limit-ids"
     done
-    run "$WK_BIN" list --label "test:limit-ids" --format ids --limit 10
+    run "$WK_BIN" list --label "test:limit-ids" --output ids --limit 10
     assert_success
     # Count space-separated words (IDs)
     local count=$(echo "$output" | wc -w | tr -d ' ')
     [ "$count" -eq 10 ]
 }
 
-@test "list -f ids works as short flag" {
+@test "list -o ids works as short flag" {
     id=$(create_issue task "ShortFlagID Issue")
-    run "$WK_BIN" list -f ids
+    run "$WK_BIN" list -o ids
     assert_success
     assert_output --partial "$id"
 }
 
-@test "list --format ids can be piped to other commands" {
+@test "list --output ids can be piped to other commands" {
     id=$(create_issue task "Pipe Test Issue")
     # Verify output is clean for command substitution
-    run "$WK_BIN" list --format ids
+    run "$WK_BIN" list --output ids
     assert_success
     # Output should be space-separated IDs (alphanumeric with hyphens)
     for word in $output; do
@@ -509,14 +509,14 @@ load '../../helpers/common'
     done
 }
 
-@test "list --format ids composes with batch commands" {
+@test "list --output ids composes with batch commands" {
     # Create issues with a unique label for isolation
     id1=$(create_issue task "BatchClose Issue 1" --label "test:batch-close")
     id2=$(create_issue task "BatchClose Issue 2" --label "test:batch-close")
 
     # Verify we can use command substitution to close multiple issues
     # shellcheck disable=SC2046
-    run "$WK_BIN" close $("$WK_BIN" list --label "test:batch-close" --format ids) --reason "batch closed"
+    run "$WK_BIN" close $("$WK_BIN" list --label "test:batch-close" --output ids) --reason "batch closed"
     assert_success
     assert_output --partial "Closed $id1"
     assert_output --partial "Closed $id2"

@@ -93,7 +93,7 @@ Performs full-text search across issue titles, descriptions, notes, labels, and 
 - `--status <status>` / `-s <status>` - Filter by status (comma-separated for OR, repeat for AND)
 - `--type <type>` / `-t <type>` - Filter by issue type (comma-separated for OR, repeat for AND)
 - `--label <label>` / `-l <label>` - Filter by label (comma-separated for OR, repeat for AND)
-- `--format <format>` / `-f <format>` - Output format: `text` (default) or `json`
+- `--output <format>` / `-o <format>` - Output format: `text` (default) or `json`
 
 ### Output Format
 
@@ -156,7 +156,7 @@ wk search "task" --label backend --label urgent
 wk search "task" --label "backend,frontend"
 
 # Search with output in JSON format
-wk search "oauth" --format json
+wk search "oauth" --output json
 
 # Search with no matches (returns empty)
 wk search "nonexistent"

@@ -183,7 +183,7 @@ fn test_command_list_construction() {
         limit: None,
         blocked: false,
         all: false,
-        format: OutputFormat::Text,
+        output: OutputFormat::Text,
     };
     if let Command::List {
         status,
@@ -206,9 +206,9 @@ fn test_command_list_construction() {
 fn test_command_show_construction() {
     let cmd = Command::Show {
         id: "test-1".to_string(),
-        format: "json".to_string(),
+        output: "json".to_string(),
     };
-    assert!(matches!(cmd, Command::Show { id, format } if id == "test-1" && format == "json"));
+    assert!(matches!(cmd, Command::Show { id, output } if id == "test-1" && output == "json"));
 }
 
 #[test]
@@ -301,10 +301,10 @@ fn test_command_ready_construction() {
         assignee: vec![],
         unassigned: false,
         all_assignees: false,
-        format: OutputFormat::Text,
+        output: OutputFormat::Text,
     };
-    assert!(matches!(cmd, Command::Ready { r#type, label, format, .. }
-        if r#type == vec!["bug".to_string()] && label == vec!["backend".to_string()] && matches!(format, OutputFormat::Text)
+    assert!(matches!(cmd, Command::Ready { r#type, label, output, .. }
+        if r#type == vec!["bug".to_string()] && label == vec!["backend".to_string()] && matches!(output, OutputFormat::Text)
     ));
 }
 

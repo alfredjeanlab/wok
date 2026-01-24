@@ -121,7 +121,7 @@ teardown() {
     "$WK_BIN" label "$id1" "priority:3"
     id2=$(create_issue task "High priority json")
     "$WK_BIN" label "$id2" "priority:1"
-    run "$WK_BIN" ready --format json
+    run "$WK_BIN" ready --output json
     assert_success
     # High priority should appear before low priority in JSON array
     pos_high=$(echo "$output" | jq -r '.issues | to_entries | .[] | select(.value.id == "'"$id2"'") | .key')
@@ -134,7 +134,7 @@ teardown() {
     "$WK_BIN" label "$id1" "priority:3"
     id2=$(create_issue task "High priority list json")
     "$WK_BIN" label "$id2" "priority:1"
-    run "$WK_BIN" list --format json
+    run "$WK_BIN" list --output json
     assert_success
     # High priority should appear before low priority in JSON array
     pos_high=$(echo "$output" | jq -r '.issues | to_entries | .[] | select(.value.id == "'"$id2"'") | .key')

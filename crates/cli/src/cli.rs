@@ -209,8 +209,8 @@ pub enum Command {
         wk list -q \"age < 3d\"          List issues created in last 3 days\n  \
         wk list -q \"updated > 1w\"      List issues not updated in 7+ days\n  \
         wk list --limit 10             Show only first 10 results\n  \
-        wk list -f json                Output in JSON format\n  \
-        wk list -f ids                 Output only IDs (for piping to other commands)\n\n\
+        wk list -o json                Output in JSON format\n  \
+        wk list -o ids                 Output only IDs (for piping to other commands)\n\n\
       Filter Expressions (-q/--filter):\n  \
         Syntax: FIELD [OPERATOR VALUE]\n  \
         Fields: age, activity, completed, skipped, closed\n  \
@@ -256,8 +256,8 @@ pub enum Command {
         all: bool,
 
         /// Output format (text, json, ids)
-        #[arg(long, short, value_enum, default_value = "text")]
-        format: OutputFormat,
+        #[arg(long = "output", short = 'o', value_enum, default_value = "text")]
+        output: OutputFormat,
     },
 
     /// Show ready issues (unblocked todo items)
@@ -290,8 +290,8 @@ pub enum Command {
         all_assignees: bool,
 
         /// Output format (text, json)
-        #[arg(long, short, value_enum, default_value = "text")]
-        format: OutputFormat,
+        #[arg(long = "output", short = 'o', value_enum, default_value = "text")]
+        output: OutputFormat,
     },
 
     /// Search issues by text
@@ -345,8 +345,8 @@ pub enum Command {
         limit: Option<usize>,
 
         /// Output format (text, json)
-        #[arg(long, short, value_enum, default_value = "text")]
-        format: OutputFormat,
+        #[arg(long = "output", short = 'o', value_enum, default_value = "text")]
+        output: OutputFormat,
     },
 
     /// Show full details of an issue
@@ -356,8 +356,8 @@ pub enum Command {
         id: String,
 
         /// Output format (text, json)
-        #[arg(long, short, default_value = "text")]
-        format: String,
+        #[arg(long = "output", short = 'o', default_value = "text")]
+        output: String,
     },
 
     /// Show dependency tree rooted at an issue
@@ -528,7 +528,7 @@ pub enum Command {
         input: Option<String>,
 
         /// Input format: wk (default) or bd (beads)
-        #[arg(long, short, default_value = "wk")]
+        #[arg(long = "format", short = 'f', default_value = "wk")]
         format: String,
 
         /// Preview changes without applying
@@ -587,8 +587,8 @@ pub enum Command {
     #[command(
         subcommand,
         after_help = "Examples:\n  \
-            wk schema list    Output schema for 'wk list -f json'\n  \
-            wk schema show    Output schema for 'wk show <id> -f json'\n\n\
+            wk schema list    Output schema for 'wk list -o json'\n  \
+            wk schema show    Output schema for 'wk show <id> -o json'\n\n\
           Available schemas: list, show, ready, search"
     )]
     Schema(SchemaCommand),
