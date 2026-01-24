@@ -54,10 +54,19 @@ See `checks/specs/CLAUDE.md` for spec philosophy and guidelines.
 
 ## Landing the Plane
 
-Complete the Landing the Plane checklist for any crates modified:
+Before committing changes:
 
-- [ ] Checklist: crates/cli/CLAUDE.md
-- [ ] Checklist: crates/remote/CLAUDE.md
-- [ ] Checklist: crates/core/CLAUDE.md
+- [ ] Run `make check` which will
+  - `cargo fmt --check`
+  - `cargo clippy -- -D warnings`
+  - `cargo check`
+  - `quench check`
+  - `cargo audit`
+  - `cargo build --workspace`
+  - `cargo test`
+- [ ] Complete per-crate checklists for any crates modified:
+  - crates/cli/CLAUDE.md
+  - crates/remote/CLAUDE.md
+  - crates/core/CLAUDE.md
 - [ ] Remove `todo:implement` tag from implemented specs
 

@@ -93,20 +93,24 @@ struct WkIssue {
     deps: Vec<WkDependency>,
     #[serde(default)]
     links: Vec<Link>,
-    #[allow(dead_code)] // Events are imported but not used for now
+    // Deserialized from JSON but not currently used
+    #[allow(dead_code)]
     events: Vec<Event>,
 }
 
 // Note format in wk export (uses Status enum)
 #[derive(Deserialize)]
 struct WkNote {
-    #[allow(dead_code)] // Deserialized from JSON but not used after parsing
+    // Deserialized from JSON but not used after parsing
+    #[allow(dead_code)]
     id: i64,
-    #[allow(dead_code)] // Deserialized from JSON but not used after parsing
+    // Deserialized from JSON but not used after parsing
+    #[allow(dead_code)]
     issue_id: String,
     status: Status,
     content: String,
-    #[allow(dead_code)] // Deserialized from JSON but not used after parsing
+    // Deserialized from JSON but not used after parsing
+    #[allow(dead_code)]
     created_at: chrono::DateTime<chrono::Utc>,
 }
 
@@ -116,7 +120,8 @@ struct WkDependency {
     from_id: String,
     to_id: String,
     relation: Relation,
-    #[allow(dead_code)] // Deserialized from JSON but not used after parsing
+    // Deserialized from JSON but not used after parsing
+    #[allow(dead_code)]
     created_at: chrono::DateTime<chrono::Utc>,
 }
 
@@ -156,6 +161,7 @@ struct BeadsDependency {
 struct BeadsComment {
     #[serde(alias = "content")] // Accept both "text" and "content" for backwards compat
     text: String,
+    // Deserialized from JSON but not used after parsing
     #[allow(dead_code)]
     created_at: String,
 }
@@ -361,6 +367,7 @@ fn convert_wk_issue(wk: WkIssue) -> ImportedIssue {
     (wk.issue, wk.labels, notes, deps, None, links) // wk format has no close_data
 }
 
+// CLI entry point requires all filter options as separate parameters
 #[allow(clippy::too_many_arguments)]
 pub fn run(
     file: Option<String>,
@@ -386,6 +393,7 @@ pub fn run(
     )
 }
 
+// Testable implementation with injected database
 #[allow(clippy::too_many_arguments)]
 pub(crate) fn run_impl(
     db: &Database,

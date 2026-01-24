@@ -7,10 +7,12 @@
 //! and handles bidirectional sync. CLI commands communicate with the daemon
 //! via a Unix socket.
 
+mod cache;
 mod connection;
 mod ipc;
 mod lifecycle;
 mod runner;
+mod sync;
 
 pub use lifecycle::{
     detect_daemon, ensure_compatible_daemon, get_daemon_status, notify_daemon_sync, request_sync,

@@ -21,6 +21,7 @@ use super::open_db;
 /// Prevents large result sets from overwhelming terminal output.
 const DEFAULT_LIMIT: usize = 100;
 
+// CLI entry point requires all filter options as separate parameters
 #[allow(clippy::too_many_arguments)]
 pub fn run(
     status: Vec<String>,

@@ -208,6 +208,7 @@ impl From<SyncError> for Error {
     }
 }
 
+// TODO(refactor): Remove once deprecated wk_core::Error variants are removed
 #[allow(deprecated)]
 impl From<wk_core::Error> for Error {
     fn from(e: wk_core::Error) -> Self {

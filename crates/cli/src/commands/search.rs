@@ -18,6 +18,7 @@ use super::open_db;
 /// Default limit for search results in text output.
 const DEFAULT_LIMIT: usize = 25;
 
+// CLI entry point requires all filter options as separate parameters
 #[allow(clippy::too_many_arguments)]
 pub fn run(
     query: &str,
