@@ -2,7 +2,7 @@
 
 ## Binaries (`bin/`)
 
-```
+```text
 bin/
 ├── cli/        # wk - main CLI tool (Rust)
 │   ├── src/

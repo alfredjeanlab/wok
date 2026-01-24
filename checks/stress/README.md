@@ -103,7 +103,7 @@ WK_BIN=./wk ./checks/stress/run.sh all
 
 ## Directory Structure
 
-```
+```text
 checks/stress/
 ├── README.md
 ├── docker-run.sh          # Primary entry point (Docker)

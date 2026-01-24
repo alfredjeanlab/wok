@@ -97,7 +97,7 @@ Hooks are installed automatically during `wk init --remote .`. They ensure your 
 
 When using `git:.` remote, the oplog is stored in a git worktree at:
 
-```
+```text
 project/
 ├── .git/
 │   └── wk/

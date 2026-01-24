@@ -25,7 +25,7 @@ These issues are not critical for small projects (<1,000 issues) but become sign
 
 ### Current Architecture
 
-```
+```text
 wok/
 ├── crates/
 │   ├── core/     (1,500+ LOC) - CRDT, HLC, operations, merge logic

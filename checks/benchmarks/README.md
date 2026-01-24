@@ -243,7 +243,7 @@ Flag any >20% regression for investigation.
 
 ## Directory Structure
 
-```
+```text
 checks/benchmarks/
 ├── README.md                 # This file
 ├── run.sh                    # Main benchmark runner
