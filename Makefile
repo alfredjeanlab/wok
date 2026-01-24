@@ -36,7 +36,7 @@ check:
 	cargo fmt --check
 	cargo clippy -- -D warnings
 	cargo check
-	quench check
+	quench check --fix
 	cargo audit
 	cargo build --workspace
 	cargo test
