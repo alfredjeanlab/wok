@@ -6,6 +6,7 @@
 #![allow(clippy::unwrap_used)]
 #![allow(clippy::expect_used)]
 
+use crate::cli::OutputFormat;
 use crate::commands::new::run_impl;
 use crate::commands::testing::TestContext;
 use crate::models::{IssueType, Relation};
@@ -34,6 +35,7 @@ fn test_run_impl_with_blocks() {
         vec![],
         vec![],
         vec![],
+        OutputFormat::Text,
     );
 
     assert!(result.is_ok());
@@ -73,6 +75,7 @@ fn test_run_impl_with_blocked_by() {
         vec!["test-blocker".to_string()],
         vec![],
         vec![],
+        OutputFormat::Text,
     );
 
     assert!(result.is_ok());
@@ -110,6 +113,7 @@ fn test_run_impl_with_tracks() {
         vec![],
         vec!["test-subtask".to_string()],
         vec![],
+        OutputFormat::Text,
     );
 
     assert!(result.is_ok());
@@ -154,6 +158,7 @@ fn test_run_impl_with_tracked_by() {
         vec![],
         vec![],
         vec!["test-feature".to_string()],
+        OutputFormat::Text,
     );
 
     assert!(result.is_ok());
@@ -199,6 +204,7 @@ fn test_run_impl_with_comma_separated_blocks() {
         vec![],
         vec![],
         vec![],
+        OutputFormat::Text,
     );
 
     assert!(result.is_ok());
@@ -238,6 +244,7 @@ fn test_run_impl_with_invalid_target_fails() {
         vec![],
         vec![],
         vec![],
+        OutputFormat::Text,
     );
 
     // Should fail because target doesn't exist

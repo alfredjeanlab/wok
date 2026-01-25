@@ -19,7 +19,8 @@ pub enum OutputFormat {
     #[default]
     Text,
     Json,
-    Ids,
+    #[value(alias = "ids")] // Accept "ids" for backwards compatibility
+    Id,
 }
 
 // Custom help template that groups commands into sections
@@ -101,7 +102,8 @@ pub enum Command {
         wok new task \"Multi\" -l a,b,c         Create task with multiple labels\n  \
         wok new \"Task\" -a alice               Create task assigned to alice\n  \
         wok new bug \"Fix bug\" --blocks prj-1  Create bug that blocks prj-1\n  \
-        wok new \"Task\" --tracked-by prj-feat  Create task tracked by a feature")]
+        wok new \"Task\" --tracked-by prj-feat  Create task tracked by a feature\n  \
+        wok new task \"My task\" -o id          Create task, output only ID")]
     New {
         /// Issue type (feature, task, bug, chore, idea) or title if type is omitted
         #[arg(value_parser = non_empty_string)]
@@ -150,6 +152,10 @@ pub enum Command {
         /// Issues that track this new issue (comma-separated or repeated)
         #[arg(long, value_name = "IDS")]
         tracked_by: Vec<String>,
+
+        /// Output format (text, json, id)
+        #[arg(long = "output", short = 'o', value_enum, default_value = "text")]
+        output: OutputFormat,
     },
 
     /// Start work on issue(s) (todo -> in_progress)
@@ -239,7 +245,7 @@ pub enum Command {
         wok list -q \"updated > 1w\"      List issues not updated in 7+ days\n  \
         wok list --limit 10             Show only first 10 results\n  \
         wok list -o json                Output in JSON format\n  \
-        wok list -o ids                 Output only IDs (for piping to other commands)\n\n\
+        wok list -o id                  Output only IDs (for piping to other commands)\n\n\
       Filter Expressions (-q/--filter):\n  \
         Syntax: FIELD [OPERATOR VALUE]\n  \
         Fields: age, activity, completed, skipped, closed\n  \
@@ -284,7 +290,7 @@ pub enum Command {
         #[arg(long)]
         all: bool,
 
-        /// Output format (text, json, ids)
+        /// Output format (text, json, id)
         #[arg(long = "output", short = 'o', value_enum, default_value = "text")]
         output: OutputFormat,
     },

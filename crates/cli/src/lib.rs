@@ -102,6 +102,7 @@ pub fn run(command: Command) -> Result<()> {
             blocked_by,
             tracks,
             tracked_by,
+            output,
         } => commands::new::run(
             type_or_title,
             title,
@@ -115,6 +116,7 @@ pub fn run(command: Command) -> Result<()> {
             blocked_by,
             tracks,
             tracked_by,
+            output,
         ),
         Command::Start { ids } => commands::lifecycle::start(&ids),
         Command::Done { ids, reason } => commands::lifecycle::done(&ids, reason.as_deref()),
