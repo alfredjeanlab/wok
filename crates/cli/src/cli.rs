@@ -4,6 +4,15 @@
 use clap::{Parser, Subcommand, ValueEnum};
 use clap_complete::Shell;
 
+/// Parse a string that must not be empty or whitespace-only.
+fn non_empty_string(s: &str) -> Result<String, String> {
+    if s.trim().is_empty() {
+        Err("cannot be empty".to_string())
+    } else {
+        Ok(s.to_string())
+    }
+}
+
 /// Output format for commands supporting structured output.
 #[derive(Clone, Copy, Debug, Default, ValueEnum)]
 pub enum OutputFormat {
@@ -93,9 +102,11 @@ pub enum Command {
         wok new \"Task\" -a alice               Create task assigned to alice")]
     New {
         /// Issue type (feature, task, bug, chore, idea) or title if type is omitted
+        #[arg(value_parser = non_empty_string)]
         type_or_title: String,
 
         /// Title (if type was provided as first arg)
+        #[arg(value_parser = non_empty_string)]
         title: Option<String>,
 
         /// Add label(s) to the issue (comma-separated or repeated)
