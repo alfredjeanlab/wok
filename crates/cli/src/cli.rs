@@ -21,7 +21,8 @@ pub enum OutputFormat {
     #[default]
     Text,
     Json,
-    Ids,
+    #[value(alias = "ids")] // Accept "ids" for backwards compatibility
+    Id,
 }
 
 #[derive(Parser)]
@@ -58,7 +59,8 @@ Examples:
   wok new task \"Multi\" -l a,b,c         Create task with multiple labels
   wok new \"Task\" -a alice               Create task assigned to alice
   wok new bug \"Fix bug\" --blocks prj-1  Create bug that blocks prj-1
-  wok new \"Task\" --tracked-by prj-feat  Create task tracked by a feature"))]
+  wok new \"Task\" --tracked-by prj-feat  Create task tracked by a feature
+  wok new task \"My task\" -o id          Create task, output only ID"))]
     New {
         /// Issue type (feature, task, bug, chore, idea) or title if type is omitted
         #[arg(value_parser = non_empty_string)]
@@ -107,6 +109,10 @@ Examples:
         /// Issues that track this new issue (comma-separated or repeated)
         #[arg(long, value_name = "IDS")]
         tracked_by: Vec<String>,
+
+        /// Output format (text, json, id)
+        #[arg(long = "output", short = 'o', value_enum, default_value = "text")]
+        output: OutputFormat,
     },
 
     /// Start work on issue(s) (todo -> in_progress)
@@ -199,7 +205,7 @@ Examples:
   wok list -q \"updated > 1w\"      List issues not updated in 7+ days
   wok list --limit 10             Show only first 10 results
   wok list -o json                Output in JSON format
-  wok list -o ids                 Output only IDs (for piping to other commands)
+  wok list -o id                  Output only IDs (for piping to other commands)
 
 Filter Expressions (-q/--filter):
   Syntax: FIELD [OPERATOR VALUE]
@@ -245,7 +251,7 @@ Filter Expressions (-q/--filter):
         #[arg(long)]
         all: bool,
 
-        /// Output format (text, json, ids)
+        /// Output format (text, json, id)
         #[arg(long = "output", short = 'o', value_enum, default_value = "text")]
         output: OutputFormat,
     },

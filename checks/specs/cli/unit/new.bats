@@ -163,3 +163,63 @@ load '../../helpers/common'
     assert_success
     assert_output --partial "Labels: x, y"
 }
+
+@test "new -o id outputs only the issue ID" {
+    # Default text output includes full message
+    run "$WK_BIN" new task "NewOutput Text task"
+    assert_success
+    assert_output --partial "Created [task]"
+
+    # -o id outputs only the ID
+    run "$WK_BIN" new task "NewOutput ID task" -o id
+    assert_success
+    # Output should be just the ID (prefix-xxxx format)
+    [[ "$output" =~ ^[a-z]+-[a-f0-9]+$ ]]
+    # Should NOT contain the verbose message
+    refute_output --partial "Created"
+    refute_output --partial "[task]"
+
+    # The ID should be valid (can be shown)
+    run "$WK_BIN" show "$output"
+    assert_success
+    assert_output --partial "NewOutput ID task"
+}
+
+@test "new -o ids alias works for backward compatibility" {
+    # -o ids should work the same as -o id
+    run "$WK_BIN" new task "NewOutput IDs alias" -o ids
+    assert_success
+    # Output should be just the ID
+    [[ "$output" =~ ^[a-z]+-[a-f0-9]+$ ]]
+    refute_output --partial "Created"
+}
+
+@test "new -o json outputs valid JSON with expected fields" {
+    run "$WK_BIN" new task "NewOutput JSON task" --label "test:json" -o json
+    assert_success
+
+    # Should be valid JSON
+    echo "$output" | jq -e . >/dev/null
+
+    # Check required fields
+    echo "$output" | jq -e '.id' >/dev/null
+    echo "$output" | jq -e '.type == "task"' >/dev/null
+    echo "$output" | jq -e '.title == "NewOutput JSON task"' >/dev/null
+    echo "$output" | jq -e '.status == "todo"' >/dev/null
+    echo "$output" | jq -e '.labels | index("test:json")' >/dev/null
+}
+
+@test "new -o id enables scripting workflows" {
+    # Capture ID and use in subsequent commands
+    id=$("$WK_BIN" new task "NewOutput Scripted task" -o id)
+    [[ -n "$id" ]]
+
+    # Add label using captured ID
+    run "$WK_BIN" label "$id" "scripted"
+    assert_success
+
+    # Verify label was added
+    run "$WK_BIN" show "$id"
+    assert_success
+    assert_output --partial "scripted"
+}

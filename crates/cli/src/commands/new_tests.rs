@@ -4,6 +4,7 @@
 #![allow(clippy::unwrap_used)]
 #![allow(clippy::expect_used)]
 
+use crate::cli::OutputFormat;
 use crate::commands::new::run_impl;
 use crate::commands::testing::TestContext;
 use crate::models::{Action, IssueType, Status};
@@ -262,6 +263,7 @@ fn test_run_impl_creates_task() {
         vec![],
         vec![],
         vec![],
+        OutputFormat::Text,
     );
 
     assert!(result.is_ok());
@@ -293,6 +295,7 @@ fn test_run_impl_creates_bug() {
         vec![],
         vec![],
         vec![],
+        OutputFormat::Text,
     );
 
     assert!(result.is_ok());
@@ -321,6 +324,7 @@ fn test_run_impl_creates_feature() {
         vec![],
         vec![],
         vec![],
+        OutputFormat::Text,
     );
 
     assert!(result.is_ok());
@@ -349,6 +353,7 @@ fn test_run_impl_creates_chore() {
         vec![],
         vec![],
         vec![],
+        OutputFormat::Text,
     );
 
     assert!(result.is_ok());
@@ -378,6 +383,7 @@ fn test_run_impl_title_only_defaults_to_task() {
         vec![],
         vec![],
         vec![],
+        OutputFormat::Text,
     );
 
     assert!(result.is_ok());
@@ -407,6 +413,7 @@ fn test_run_impl_with_labels() {
         vec![],
         vec![],
         vec![],
+        OutputFormat::Text,
     );
 
     assert!(result.is_ok());
@@ -438,6 +445,7 @@ fn test_run_impl_with_note() {
         vec![],
         vec![],
         vec![],
+        OutputFormat::Text,
     );
 
     assert!(result.is_ok());
@@ -468,6 +476,7 @@ fn test_run_impl_empty_title_rejected() {
         vec![],
         vec![],
         vec![],
+        OutputFormat::Text,
     );
 
     assert!(result.is_err());
@@ -493,6 +502,7 @@ fn test_run_impl_whitespace_title_rejected() {
         vec![],
         vec![],
         vec![],
+        OutputFormat::Text,
     );
 
     assert!(result.is_err());
@@ -518,6 +528,7 @@ fn test_run_impl_invalid_type_rejected() {
         vec![],
         vec![],
         vec![],
+        OutputFormat::Text,
     );
 
     assert!(result.is_err());
@@ -543,6 +554,7 @@ fn test_run_impl_logs_events() {
         vec![],
         vec![],
         vec![],
+        OutputFormat::Text,
     )
     .unwrap();
 
@@ -577,6 +589,7 @@ fn test_run_impl_with_priority_0() {
         vec![],
         vec![],
         vec![],
+        OutputFormat::Text,
     );
 
     assert!(result.is_ok());
@@ -606,6 +619,7 @@ fn test_run_impl_with_priority_4() {
         vec![],
         vec![],
         vec![],
+        OutputFormat::Text,
     );
 
     assert!(result.is_ok());
@@ -635,6 +649,7 @@ fn test_run_impl_priority_with_existing_labels() {
         vec![],
         vec![],
         vec![],
+        OutputFormat::Text,
     );
 
     assert!(result.is_ok());
@@ -665,6 +680,7 @@ fn test_run_impl_without_priority() {
         vec![],
         vec![],
         vec![],
+        OutputFormat::Text,
     );
 
     assert!(result.is_ok());
@@ -697,6 +713,7 @@ fn test_run_impl_with_description() {
         vec![],
         vec![],
         vec![],
+        OutputFormat::Text,
     );
 
     assert!(result.is_ok());
@@ -727,6 +744,7 @@ fn test_run_impl_note_takes_precedence_over_description() {
         vec![],
         vec![],
         vec![],
+        OutputFormat::Text,
     );
 
     assert!(result.is_ok());
@@ -757,6 +775,7 @@ fn test_run_impl_without_description_or_note() {
         vec![],
         vec![],
         vec![],
+        OutputFormat::Text,
     );
 
     assert!(result.is_ok());
@@ -786,6 +805,7 @@ fn test_run_impl_description_with_labels() {
         vec![],
         vec![],
         vec![],
+        OutputFormat::Text,
     );
 
     assert!(result.is_ok());
@@ -821,6 +841,7 @@ fn test_run_impl_comma_separated_labels() {
         vec![],
         vec![],
         vec![],
+        OutputFormat::Text,
     );
 
     assert!(result.is_ok());
@@ -853,6 +874,7 @@ fn test_run_impl_comma_separated_and_multiple_labels() {
         vec![],
         vec![],
         vec![],
+        OutputFormat::Text,
     );
 
     assert!(result.is_ok());
@@ -885,6 +907,7 @@ fn test_run_impl_comma_separated_trims_whitespace() {
         vec![],
         vec![],
         vec![],
+        OutputFormat::Text,
     );
 
     assert!(result.is_ok());
@@ -916,6 +939,7 @@ fn test_run_impl_comma_separated_ignores_empty() {
         vec![],
         vec![],
         vec![],
+        OutputFormat::Text,
     );
 
     assert!(result.is_ok());
@@ -947,6 +971,7 @@ fn test_run_impl_comma_separated_with_priority() {
         vec![],
         vec![],
         vec![],
+        OutputFormat::Text,
     );
 
     assert!(result.is_ok());
@@ -993,6 +1018,7 @@ fn test_run_impl_rejects_empty_prefix() {
         vec![],
         vec![],
         vec![],
+        OutputFormat::Text,
     );
 
     assert!(result.is_err());

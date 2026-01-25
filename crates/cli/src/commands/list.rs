@@ -192,7 +192,7 @@ pub(crate) fn run_impl(
             };
             println!("{}", serde_json::to_string_pretty(&output)?);
         }
-        OutputFormat::Ids => {
+        OutputFormat::Id => {
             let ids: Vec<&str> = issues.iter().map(|i| i.id.as_str()).collect();
             if !ids.is_empty() {
                 println!("{}", ids.join(" "));

@@ -159,7 +159,7 @@ pub(crate) fn run_impl(
             };
             println!("{}", serde_json::to_string_pretty(&output)?);
         }
-        OutputFormat::Ids => {
+        OutputFormat::Id => {
             for issue in issues.iter().take(effective_limit) {
                 println!("{}", issue.id);
             }

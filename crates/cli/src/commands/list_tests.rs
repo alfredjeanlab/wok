@@ -659,7 +659,7 @@ fn test_run_impl_ids_format_outputs_space_separated() {
         None,
         false,
         false,
-        OutputFormat::Ids,
+        OutputFormat::Id,
     );
     assert!(result.is_ok());
 }
@@ -681,7 +681,7 @@ fn test_run_impl_ids_format_with_filters() {
         None,
         false,
         false,
-        OutputFormat::Ids,
+        OutputFormat::Id,
     );
     assert!(result.is_ok());
 }
@@ -702,7 +702,7 @@ fn test_run_impl_ids_format_empty_list() {
         None,
         false,
         false,
-        OutputFormat::Ids,
+        OutputFormat::Id,
     );
     assert!(result.is_ok());
 }

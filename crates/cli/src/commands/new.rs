@@ -21,6 +21,8 @@ use super::apply_mutation;
 use super::dep;
 use super::link::add_link_impl;
 
+use crate::cli::OutputFormat;
+
 // TODO(refactor): Consider using an options struct to bundle parameters
 #[allow(clippy::too_many_arguments)]
 pub fn run(
@@ -36,6 +38,7 @@ pub fn run(
     blocked_by: Vec<String>,
     tracks: Vec<String>,
     tracked_by: Vec<String>,
+    output: OutputFormat,
 ) -> Result<()> {
     let (db, config, work_dir) = open_db()?;
     run_impl(
@@ -54,6 +57,7 @@ pub fn run(
         blocked_by,
         tracks,
         tracked_by,
+        output,
     )
 }
 
@@ -157,6 +161,7 @@ pub(crate) fn run_impl(
     blocked_by: Vec<String>,
     tracks: Vec<String>,
     tracked_by: Vec<String>,
+    output: OutputFormat,
 ) -> Result<()> {
     // Expand comma-separated labels into individual labels
     let mut labels = expand_labels(&labels);
@@ -284,10 +289,29 @@ pub(crate) fn run_impl(
         dep::add_impl(db, config, work_dir, &id, "tracked-by", &[target_id])?;
     }
 
-    println!(
-        "Created [{}] ({}) {}: {}",
-        issue_type, issue.status, id, normalized.title
-    );
+    match output {
+        OutputFormat::Text => {
+            println!(
+                "Created [{}] ({}) {}: {}",
+                issue_type, issue.status, id, normalized.title
+            );
+        }
+        OutputFormat::Id => {
+            println!("{}", id);
+        }
+        OutputFormat::Json => {
+            let labels_vec = db.get_labels(&id)?;
+            let json_output = serde_json::json!({
+                "id": id,
+                "type": issue_type.as_str(),
+                "title": normalized.title,
+                "status": issue.status.as_str(),
+                "labels": labels_vec,
+                "assignee": issue.assignee,
+            });
+            println!("{}", serde_json::to_string_pretty(&json_output)?);
+        }
+    }
 
     Ok(())
 }

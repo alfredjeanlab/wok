@@ -87,6 +87,7 @@ fn test_command_new_construction() {
         blocked_by: vec![],
         tracks: vec![],
         tracked_by: vec![],
+        output: OutputFormat::Text,
     };
     if let Command::New {
         type_or_title,
@@ -101,6 +102,7 @@ fn test_command_new_construction() {
         blocked_by,
         tracks,
         tracked_by,
+        ..
     } = cmd
     {
         assert_eq!(type_or_title, "task");
@@ -138,6 +140,7 @@ fn test_command_new_with_dependencies_construction() {
         blocked_by: vec!["task-2".to_string()],
         tracks: vec![],
         tracked_by: vec!["feature-1".to_string()],
+        output: OutputFormat::Text,
     };
     if let Command::New {
         blocks,
