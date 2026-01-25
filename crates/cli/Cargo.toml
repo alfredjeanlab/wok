@@ -16,24 +16,24 @@ wk-core = { path = "../core" }
 clap = { version = "4", features = ["derive", "color"] }
 anstyle = "1"
 clap_complete = "4"
-rusqlite = { version = "0.31", features = ["bundled"] }
+rusqlite = { version = "0.38", features = ["bundled"] }
 chrono = { version = "0.4", features = ["serde"] }
-toml = "0.8"
+toml = "0.9"
 serde = { version = "1", features = ["derive"] }
 sha2 = "0.10"
 hex = "0.4"
 serde_json = "1"
 schemars = { version = "0.8", features = ["chrono"] }
-thiserror = "1"
+thiserror = "2"
 tokio = { version = "1", features = ["full"] }
 tokio-util = "0.7"
-tokio-tungstenite = "0.21"
+tokio-tungstenite = "0.28"
 futures-util = "0.3"
 tracing = "0.1"
 fs2 = "0.4"
-crossterm = "0.27"
+crossterm = "0.29"
 regex = "1"
-dirs = "5"
+dirs = "6"
 
 [lints.rust]
 unsafe_code = "forbid"
@@ -48,7 +48,7 @@ tempfile = "3"
 assert_cmd = "2"
 predicates = "3"
 yare = "3"
-criterion = { version = "0.5", features = ["html_reports"] }
+criterion = { version = "0.8", features = ["html_reports"] }
 
 [[bench]]
 name = "filter"
