@@ -119,7 +119,7 @@ fn test_remote_mode() {
         workspace: None,
         remote: Some(RemoteConfig {
             url: "ws://remote:7890".to_string(),
-            branch: "wk/oplog".to_string(),
+            branch: "wok/oplog".to_string(),
             worktree: None,
             reconnect_max_retries: 10,
             reconnect_max_delay_secs: 30,
@@ -178,7 +178,7 @@ fn test_save_and_load_remote_config() {
     let mut config = Config::load(&work_dir).unwrap();
     config.remote = Some(RemoteConfig {
         url: "ws://test:7890".to_string(),
-        branch: "wk/oplog".to_string(),
+        branch: "wok/oplog".to_string(),
         worktree: None,
         reconnect_max_retries: 15,
         reconnect_max_delay_secs: 45,
@@ -406,7 +406,7 @@ fn test_write_gitignore_local_mode() {
 fn test_remote_config_validate_url_websocket() {
     let config = RemoteConfig {
         url: "ws://localhost:7890".to_string(),
-        branch: "wk/oplog".to_string(),
+        branch: "wok/oplog".to_string(),
         worktree: None,
         reconnect_max_retries: 10,
         reconnect_max_delay_secs: 30,
@@ -418,7 +418,7 @@ fn test_remote_config_validate_url_websocket() {
 
     let config = RemoteConfig {
         url: "wss://secure.example.com:443".to_string(),
-        branch: "wk/oplog".to_string(),
+        branch: "wok/oplog".to_string(),
         worktree: None,
         reconnect_max_retries: 10,
         reconnect_max_delay_secs: 30,
@@ -433,7 +433,7 @@ fn test_remote_config_validate_url_websocket() {
 fn test_remote_config_validate_url_git_same_repo() {
     let config = RemoteConfig {
         url: "git:.".to_string(),
-        branch: "wk/oplog".to_string(),
+        branch: "wok/oplog".to_string(),
         worktree: None,
         reconnect_max_retries: 10,
         reconnect_max_delay_secs: 30,
@@ -445,7 +445,7 @@ fn test_remote_config_validate_url_git_same_repo() {
 
     let config = RemoteConfig {
         url: ".".to_string(),
-        branch: "wk/oplog".to_string(),
+        branch: "wok/oplog".to_string(),
         worktree: None,
         reconnect_max_retries: 10,
         reconnect_max_delay_secs: 30,
@@ -461,7 +461,7 @@ fn test_remote_config_validate_url_git_separate_repo() {
     // Git prefix with path
     let config = RemoteConfig {
         url: "git:~/repos/tracker".to_string(),
-        branch: "wk/oplog".to_string(),
+        branch: "wok/oplog".to_string(),
         worktree: None,
         reconnect_max_retries: 10,
         reconnect_max_delay_secs: 30,
@@ -474,7 +474,7 @@ fn test_remote_config_validate_url_git_separate_repo() {
     // Git prefix with SSH URL
     let config = RemoteConfig {
         url: "git:git@github.com:org/repo.git".to_string(),
-        branch: "wk/oplog".to_string(),
+        branch: "wok/oplog".to_string(),
         worktree: None,
         reconnect_max_retries: 10,
         reconnect_max_delay_secs: 30,
@@ -489,7 +489,7 @@ fn test_remote_config_validate_url_git_separate_repo() {
 fn test_remote_config_validate_url_bare_ssh() {
     let config = RemoteConfig {
         url: "git@github.com:org/repo.git".to_string(),
-        branch: "wk/oplog".to_string(),
+        branch: "wok/oplog".to_string(),
         worktree: None,
         reconnect_max_retries: 10,
         reconnect_max_delay_secs: 30,
@@ -501,7 +501,7 @@ fn test_remote_config_validate_url_bare_ssh() {
 
     let config = RemoteConfig {
         url: "ssh://git@github.com/org/repo.git".to_string(),
-        branch: "wk/oplog".to_string(),
+        branch: "wok/oplog".to_string(),
         worktree: None,
         reconnect_max_retries: 10,
         reconnect_max_delay_secs: 30,
@@ -517,7 +517,7 @@ fn test_remote_config_validate_url_invalid() {
     // Not a recognized URL format
     let config = RemoteConfig {
         url: "not-a-valid-url".to_string(),
-        branch: "wk/oplog".to_string(),
+        branch: "wok/oplog".to_string(),
         worktree: None,
         reconnect_max_retries: 10,
         reconnect_max_delay_secs: 30,
@@ -532,7 +532,7 @@ fn test_remote_config_validate_url_invalid() {
     // HTTP is not supported
     let config = RemoteConfig {
         url: "http://example.com".to_string(),
-        branch: "wk/oplog".to_string(),
+        branch: "wok/oplog".to_string(),
         worktree: None,
         reconnect_max_retries: 10,
         reconnect_max_delay_secs: 30,
@@ -545,7 +545,7 @@ fn test_remote_config_validate_url_invalid() {
     // Empty git: URL
     let config = RemoteConfig {
         url: "git:".to_string(),
-        branch: "wk/oplog".to_string(),
+        branch: "wok/oplog".to_string(),
         worktree: None,
         reconnect_max_retries: 10,
         reconnect_max_delay_secs: 30,

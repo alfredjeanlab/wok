@@ -31,7 +31,7 @@ fn setup_test_repo() -> (TempDir, GitBacking) {
         .unwrap();
     Command::new("git")
         .current_dir(temp.path())
-        .args(["checkout", "--orphan", "wk/oplog"])
+        .args(["checkout", "--orphan", "wok/oplog"])
         .output()
         .unwrap();
 
@@ -40,7 +40,7 @@ fn setup_test_repo() -> (TempDir, GitBacking) {
 
     let config = GitBackingConfig {
         repo_path: temp.path().to_path_buf(),
-        branch: "wk/oplog".to_string(),
+        branch: "wok/oplog".to_string(),
         commit_interval: Duration::from_secs(60),
         remote: None,
     };
@@ -83,7 +83,7 @@ async fn test_mark_dirty_and_commit() {
 #[test]
 fn test_default_config() {
     let config = GitBackingConfig::default();
-    assert_eq!(config.branch, "wk/oplog");
+    assert_eq!(config.branch, "wok/oplog");
     assert_eq!(config.commit_interval, Duration::from_secs(90));
     assert!(config.remote.is_none());
 }

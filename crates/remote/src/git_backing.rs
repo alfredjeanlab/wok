@@ -32,7 +32,7 @@ impl Default for GitBackingConfig {
     fn default() -> Self {
         GitBackingConfig {
             repo_path: PathBuf::from("."),
-            branch: "wk/oplog".to_string(),
+            branch: "wok/oplog".to_string(),
             commit_interval: Duration::from_secs(90), // 90 seconds
             remote: None,
         }

@@ -31,7 +31,7 @@ pub struct OplogWorktree {
     pub path: PathBuf,
     /// Path to the oplog.jsonl file.
     pub oplog_path: PathBuf,
-    /// The branch name (e.g., "wk/oplog").
+    /// The branch name (e.g., "wok/oplog").
     pub branch: String,
 }
 

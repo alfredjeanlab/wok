@@ -44,7 +44,7 @@ struct Args {
     git: bool,
 
     /// Git branch for oplog commits
-    #[arg(long, default_value = "wk/oplog")]
+    #[arg(long, default_value = "wok/oplog")]
     git_branch: String,
 
     /// Git commit interval in seconds

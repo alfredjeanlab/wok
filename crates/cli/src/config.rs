@@ -46,7 +46,7 @@ pub struct RemoteConfig {
     /// - `git:<ssh-url>` - SSH URL to git repo (e.g., `git:git@github.com:org/repo.git`)
     /// - `ws://...` or `wss://...` - WebSocket server
     pub url: String,
-    /// Branch name for git remotes (default: "wk/oplog").
+    /// Branch name for git remotes (default: "wok/oplog").
     #[serde(default = "default_branch")]
     pub branch: String,
     /// If true, store oplog worktree in `.wok/oplog/` instead of XDG data dir.
@@ -76,7 +76,7 @@ pub struct RemoteConfig {
 }
 
 fn default_branch() -> String {
-    "wk/oplog".to_string()
+    "wok/oplog".to_string()
 }
 
 /// The type of remote backend.

@@ -103,7 +103,7 @@ fn setup_remote(work_dir: &Path, repo_path: &Path, remote_url: &str) -> Result<(
     // Create remote config
     let remote_config = RemoteConfig {
         url: url.clone(),
-        branch: "wk/oplog".to_string(),
+        branch: "wok/oplog".to_string(),
         worktree: None,
         reconnect_max_retries: 10,
         reconnect_max_delay_secs: 30,

@@ -25,7 +25,7 @@ fn test_resolve_oplog_path_same_repo() {
 
     let remote = RemoteConfig {
         url: "git:.".to_string(),
-        branch: "wk/oplog".to_string(),
+        branch: "wok/oplog".to_string(),
         worktree: None,
         reconnect_max_retries: 10,
         reconnect_max_delay_secs: 30,
@@ -47,7 +47,7 @@ fn test_resolve_oplog_path_separate_repo_local_worktree() {
 
     let remote = RemoteConfig {
         url: "git:~/tracker".to_string(),
-        branch: "wk/oplog".to_string(),
+        branch: "wok/oplog".to_string(),
         worktree: Some(true), // Force local worktree for separate repos
         reconnect_max_retries: 10,
         reconnect_max_delay_secs: 30,
@@ -68,7 +68,7 @@ fn test_resolve_oplog_path_websocket_error() {
 
     let remote = RemoteConfig {
         url: "ws://localhost:8080".to_string(),
-        branch: "wk/oplog".to_string(),
+        branch: "wok/oplog".to_string(),
         worktree: None,
         reconnect_max_retries: 10,
         reconnect_max_delay_secs: 30,
@@ -98,7 +98,7 @@ fn test_compute_repo_hash_deterministic() {
 fn test_remote_config_is_same_repo() {
     let remote_dot = RemoteConfig {
         url: "git:.".to_string(),
-        branch: "wk/oplog".to_string(),
+        branch: "wok/oplog".to_string(),
         worktree: None,
         reconnect_max_retries: 10,
         reconnect_max_delay_secs: 30,
@@ -110,7 +110,7 @@ fn test_remote_config_is_same_repo() {
 
     let remote_bare_dot = RemoteConfig {
         url: ".".to_string(),
-        branch: "wk/oplog".to_string(),
+        branch: "wok/oplog".to_string(),
         worktree: None,
         reconnect_max_retries: 10,
         reconnect_max_delay_secs: 30,
@@ -122,7 +122,7 @@ fn test_remote_config_is_same_repo() {
 
     let remote_path = RemoteConfig {
         url: "git:~/tracker".to_string(),
-        branch: "wk/oplog".to_string(),
+        branch: "wok/oplog".to_string(),
         worktree: None,
         reconnect_max_retries: 10,
         reconnect_max_delay_secs: 30,
@@ -137,7 +137,7 @@ fn test_remote_config_is_same_repo() {
 fn test_remote_config_git_url() {
     let remote_same = RemoteConfig {
         url: "git:.".to_string(),
-        branch: "wk/oplog".to_string(),
+        branch: "wok/oplog".to_string(),
         worktree: None,
         reconnect_max_retries: 10,
         reconnect_max_delay_secs: 30,
@@ -149,7 +149,7 @@ fn test_remote_config_git_url() {
 
     let remote_path = RemoteConfig {
         url: "git:~/tracker".to_string(),
-        branch: "wk/oplog".to_string(),
+        branch: "wok/oplog".to_string(),
         worktree: None,
         reconnect_max_retries: 10,
         reconnect_max_delay_secs: 30,
@@ -161,7 +161,7 @@ fn test_remote_config_git_url() {
 
     let remote_ssh = RemoteConfig {
         url: "git@github.com:org/repo.git".to_string(),
-        branch: "wk/oplog".to_string(),
+        branch: "wok/oplog".to_string(),
         worktree: None,
         reconnect_max_retries: 10,
         reconnect_max_delay_secs: 30,
@@ -176,7 +176,7 @@ fn test_remote_config_git_url() {
 fn test_remote_config_remote_type() {
     let git_remote = RemoteConfig {
         url: "git:.".to_string(),
-        branch: "wk/oplog".to_string(),
+        branch: "wok/oplog".to_string(),
         worktree: None,
         reconnect_max_retries: 10,
         reconnect_max_delay_secs: 30,
@@ -188,7 +188,7 @@ fn test_remote_config_remote_type() {
 
     let ws_remote = RemoteConfig {
         url: "ws://localhost:8080".to_string(),
-        branch: "wk/oplog".to_string(),
+        branch: "wok/oplog".to_string(),
         worktree: None,
         reconnect_max_retries: 10,
         reconnect_max_delay_secs: 30,
@@ -200,7 +200,7 @@ fn test_remote_config_remote_type() {
 
     let wss_remote = RemoteConfig {
         url: "wss://example.com/workspace".to_string(),
-        branch: "wk/oplog".to_string(),
+        branch: "wok/oplog".to_string(),
         worktree: None,
         reconnect_max_retries: 10,
         reconnect_max_delay_secs: 30,

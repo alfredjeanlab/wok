@@ -40,7 +40,7 @@ fn create_remote_config(work_dir: &Path) {
         workspace: None,
         remote: Some(RemoteConfig {
             url: "ws://localhost:7890".to_string(),
-            branch: "wk/oplog".to_string(),
+            branch: "wok/oplog".to_string(),
             worktree: None,
             reconnect_max_retries: 10,
             reconnect_max_delay_secs: 30,

@@ -266,11 +266,11 @@ teardown() {
     [ -f ".git/wk/oplog/oplog.jsonl" ]
 
     # Creates orphan branch
-    run timeout 3 git rev-parse --verify refs/heads/wk/oplog
+    run timeout 3 git rev-parse --verify refs/heads/wok/oplog
     assert_success
 
     # Worktree protects branch from deletion
-    run timeout 3 git branch -D wk/oplog
+    run timeout 3 git branch -D wok/oplog
     assert_failure
     assert_output --partial "worktree"
 

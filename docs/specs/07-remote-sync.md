@@ -24,7 +24,7 @@ prefix = "prj"
 
 [remote]
 url = "git:."           # Store oplog in orphan branch of current repo
-branch = "wk/oplog"     # Optional, default: wk/oplog
+branch = "wok/oplog"     # Optional, default: wok/oplog
 ```
 
 ### Git Remote (Separate Repo)
@@ -34,7 +34,7 @@ branch = "wk/oplog"     # Optional, default: wk/oplog
 url = "git:~/work-tracker"              # Local path
 # or
 url = "git:git@github.com:org/tracker"  # SSH URL
-branch = "wk/oplog"
+branch = "wok/oplog"
 ```
 
 ### WebSocket Server
@@ -83,7 +83,7 @@ Hooks are installed automatically during `wk init --remote .`. They ensure your 
            Project                              Remote
   ┌─────────────────────────┐           ┌─────────────────┐
   │  ┌─────┐      ┌──────┐  │           │  Git Repo       │
-  │  │ wk  │─IPC─►│daemon│◄─┼───────────┼──► wk/oplog     │
+  │  │ wk  │─IPC─►│daemon│◄─┼───────────┼──► wok/oplog    │
   │  └──┬──┘      └──┬───┘  │  git      │     branch      │
   │     │            │      │  push/pull│                 │
   │     ▼            ▼      │           └─────────────────┘
@@ -110,7 +110,7 @@ project/
 └── ... (your project files)
 ```
 
-This provides branch protection: git prevents deletion of the `wk/oplog` branch while the worktree exists.
+This provides branch protection: git prevents deletion of the `wok/oplog` branch while the worktree exists.
 
 ### WebSocket Remote Architecture
 
@@ -248,7 +248,7 @@ The server can optionally back its data to a git repository for durability:
 ```bash
 wk-remote --bind 0.0.0.0:7890 --data /var/lib/wk \
   --git \
-  --git-branch wk/oplog \
+  --git-branch wok/oplog \
   --git-commit-interval 300 \
   --git-remote origin \
   --git-push-interval 3600
@@ -256,7 +256,7 @@ wk-remote --bind 0.0.0.0:7890 --data /var/lib/wk \
 
 **Git Options:**
 - `--git` - Enable git backing
-- `--git-branch <name>` - Branch name for commits (default: wk/oplog)
+- `--git-branch <name>` - Branch name for commits (default: wok/oplog)
 - `--git-commit-interval <secs>` - Auto-commit interval (default: 300)
 - `--git-remote <name>` - Remote name for pushing (enables push)
 - `--git-push-interval <secs>` - Auto-push interval (default: 3600)
