@@ -27,7 +27,8 @@ pub(crate) fn run_impl(
     content: &str,
     replace: bool,
 ) -> Result<()> {
-    let issue = db.get_issue(id)?;
+    let resolved_id = db.resolve_id(id)?;
+    let issue = db.get_issue(&resolved_id)?;
 
     // Cannot add notes to closed issues
     if issue.status == Status::Closed {
@@ -46,39 +47,39 @@ pub(crate) fn run_impl(
     let core_status: wk_core::Status = issue.status.into();
 
     if replace {
-        db.replace_note(id, issue.status, &trimmed_content)?;
+        db.replace_note(&resolved_id, issue.status, &trimmed_content)?;
 
         apply_mutation(
             db,
             work_dir,
             config,
-            Event::new(id.to_string(), Action::Noted)
+            Event::new(resolved_id.clone(), Action::Noted)
                 .with_values(None, Some(trimmed_content.clone())),
             Some(OpPayload::add_note(
-                id.to_string(),
+                resolved_id.clone(),
                 trimmed_content,
                 core_status,
             )),
         )?;
 
-        println!("Replaced note on {}", id);
+        println!("Replaced note on {}", resolved_id);
     } else {
-        db.add_note(id, issue.status, &trimmed_content)?;
+        db.add_note(&resolved_id, issue.status, &trimmed_content)?;
 
         apply_mutation(
             db,
             work_dir,
             config,
-            Event::new(id.to_string(), Action::Noted)
+            Event::new(resolved_id.clone(), Action::Noted)
                 .with_values(None, Some(trimmed_content.clone())),
             Some(OpPayload::add_note(
-                id.to_string(),
+                resolved_id.clone(),
                 trimmed_content,
                 core_status,
             )),
         )?;
 
-        println!("Added note to {} ({})", id, issue.status);
+        println!("Added note to {} ({})", resolved_id, issue.status);
     }
 
     Ok(())

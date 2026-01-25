@@ -22,6 +22,8 @@ pub(crate) struct BulkResult {
     pub success_count: usize,
     /// IDs that were not found in the database
     pub unknown_ids: Vec<String>,
+    /// IDs that were ambiguous (prefix matched multiple issues)
+    pub ambiguous_ids: Vec<(String, Vec<String>)>,
     /// IDs that failed due to invalid transitions (with error message)
     pub transition_failures: Vec<(String, String)>,
 }
@@ -29,12 +31,14 @@ pub(crate) struct BulkResult {
 impl BulkResult {
     /// Returns true if all operations succeeded
     pub fn is_success(&self) -> bool {
-        self.unknown_ids.is_empty() && self.transition_failures.is_empty()
+        self.unknown_ids.is_empty()
+            && self.ambiguous_ids.is_empty()
+            && self.transition_failures.is_empty()
     }
 
     /// Returns the total number of failures
     pub fn failure_count(&self) -> usize {
-        self.unknown_ids.len() + self.transition_failures.len()
+        self.unknown_ids.len() + self.ambiguous_ids.len() + self.transition_failures.len()
     }
 }
 
@@ -42,6 +46,11 @@ impl BulkResult {
 enum BulkErrorKind {
     /// ID was not found - add to unknown_ids
     NotFound(String),
+    /// ID was ambiguous - add to ambiguous_ids
+    Ambiguous {
+        prefix: String,
+        matches: Vec<String>,
+    },
     /// Invalid transition - add to transition_failures
     /// Contains (from, to, valid_targets, message)
     TransitionFailure {
@@ -64,6 +73,7 @@ impl BulkErrorKind {
     fn classify(error: Error) -> Self {
         match error {
             Error::IssueNotFound(unknown_id) => BulkErrorKind::NotFound(unknown_id),
+            Error::AmbiguousId { prefix, matches } => BulkErrorKind::Ambiguous { prefix, matches },
             Error::InvalidTransition {
                 from,
                 to,
@@ -88,6 +98,7 @@ impl BulkErrorKind {
     fn into_error(self) -> Error {
         match self {
             BulkErrorKind::NotFound(id) => Error::IssueNotFound(id),
+            BulkErrorKind::Ambiguous { prefix, matches } => Error::AmbiguousId { prefix, matches },
             BulkErrorKind::TransitionFailure {
                 from,
                 to,
@@ -135,6 +146,11 @@ fn print_bulk_summary(result: &BulkResult, action_verb: &str) {
         println!("Unknown IDs: {}", result.unknown_ids.join(", "));
     }
 
+    // List ambiguous IDs
+    for (prefix, matches) in &result.ambiguous_ids {
+        println!("Ambiguous ID: {} (matches: {})", prefix, matches.join(", "));
+    }
+
     // List transition failures
     for (id, reason) in &result.transition_failures {
         eprintln!("  {}: {}", id, reason);
@@ -160,6 +176,10 @@ where
                 BulkErrorKind::NotFound(unknown_id) => {
                     result.unknown_ids.push(unknown_id.clone());
                     last_error = Some(BulkErrorKind::NotFound(unknown_id));
+                }
+                BulkErrorKind::Ambiguous { prefix, matches } => {
+                    result.ambiguous_ids.push((prefix.clone(), matches.clone()));
+                    last_error = Some(BulkErrorKind::Ambiguous { prefix, matches });
                 }
                 BulkErrorKind::TransitionFailure {
                     from,
@@ -229,7 +249,8 @@ pub(crate) fn start_impl(
 }
 
 fn start_single(db: &Database, config: &Config, work_dir: &Path, id: &str) -> Result<()> {
-    let issue = db.get_issue(id)?;
+    let resolved_id = db.resolve_id(id)?;
+    let issue = db.get_issue(&resolved_id)?;
 
     // Start only works from todo status; use reopen for other states
     if issue.status != Status::Todo {
@@ -240,24 +261,24 @@ fn start_single(db: &Database, config: &Config, work_dir: &Path, id: &str) -> Re
         });
     }
 
-    db.update_issue_status(id, Status::InProgress)?;
+    db.update_issue_status(&resolved_id, Status::InProgress)?;
 
     apply_mutation(
         db,
         work_dir,
         config,
-        Event::new(id.to_string(), Action::Started).with_values(
+        Event::new(resolved_id.clone(), Action::Started).with_values(
             Some(issue.status.to_string()),
             Some("in_progress".to_string()),
         ),
         Some(OpPayload::set_status(
-            id.to_string(),
+            resolved_id.clone(),
             wk_core::Status::InProgress,
             None,
         )),
     )?;
 
-    println!("Started {}", id);
+    println!("Started {}", resolved_id);
 
     Ok(())
 }
@@ -294,13 +315,21 @@ fn done_single(
     id: &str,
     reason: Option<&str>,
 ) -> Result<()> {
-    let issue = db.get_issue(id)?;
+    let resolved_id = db.resolve_id(id)?;
+    let issue = db.get_issue(&resolved_id)?;
 
     // Require reason when transitioning from todo (skipping in_progress)
     if issue.status == Status::Todo && reason.is_none() {
         // Try to resolve a reason (auto-generate for humans, error for agents)
         let effective_reason = resolve_reason(None, "complete")?;
-        return done_single_with_reason(db, config, work_dir, id, &issue, &effective_reason);
+        return done_single_with_reason(
+            db,
+            config,
+            work_dir,
+            &resolved_id,
+            &issue,
+            &effective_reason,
+        );
     }
 
     if !issue.status.can_transition_to(Status::Done) {
@@ -311,9 +340,9 @@ fn done_single(
         });
     }
 
-    db.update_issue_status(id, Status::Done)?;
+    db.update_issue_status(&resolved_id, Status::Done)?;
 
-    let mut event = Event::new(id.to_string(), Action::Done)
+    let mut event = Event::new(resolved_id.clone(), Action::Done)
         .with_values(Some(issue.status.to_string()), Some("done".to_string()));
 
     if let Some(r) = reason {
@@ -322,11 +351,11 @@ fn done_single(
 
     // Add reason as note if provided (will appear in "Summary" section)
     if let Some(r) = reason {
-        db.add_note(id, Status::Done, r)?;
+        db.add_note(&resolved_id, Status::Done, r)?;
     }
 
     // Log unblocked events for issues that are now unblocked
-    log_unblocked_events(db, work_dir, config, id)?;
+    log_unblocked_events(db, work_dir, config, &resolved_id)?;
 
     apply_mutation(
         db,
@@ -334,16 +363,16 @@ fn done_single(
         config,
         event,
         Some(OpPayload::set_status(
-            id.to_string(),
+            resolved_id.clone(),
             wk_core::Status::Done,
             reason.map(String::from),
         )),
     )?;
 
     if let Some(r) = reason {
-        println!("Completed {} ({})", id, r);
+        println!("Completed {} ({})", resolved_id, r);
     } else {
-        println!("Completed {}", id);
+        println!("Completed {}", resolved_id);
     }
 
     Ok(())
@@ -419,7 +448,8 @@ fn close_single(
     id: &str,
     reason: &str,
 ) -> Result<()> {
-    let issue = db.get_issue(id)?;
+    let resolved_id = db.resolve_id(id)?;
+    let issue = db.get_issue(&resolved_id)?;
 
     if !issue.status.can_transition_to(Status::Closed) {
         return Err(Error::InvalidTransition {
@@ -429,29 +459,29 @@ fn close_single(
         });
     }
 
-    db.update_issue_status(id, Status::Closed)?;
+    db.update_issue_status(&resolved_id, Status::Closed)?;
 
     // Add reason as note (will appear in "Close Reason" section)
-    db.add_note(id, Status::Closed, reason)?;
+    db.add_note(&resolved_id, Status::Closed, reason)?;
 
     // Log unblocked events for issues that are now unblocked
-    log_unblocked_events(db, work_dir, config, id)?;
+    log_unblocked_events(db, work_dir, config, &resolved_id)?;
 
     apply_mutation(
         db,
         work_dir,
         config,
-        Event::new(id.to_string(), Action::Closed)
+        Event::new(resolved_id.clone(), Action::Closed)
             .with_values(Some(issue.status.to_string()), Some("closed".to_string()))
             .with_reason(Some(reason.to_string())),
         Some(OpPayload::set_status(
-            id.to_string(),
+            resolved_id.clone(),
             wk_core::Status::Closed,
             Some(reason.to_string()),
         )),
     )?;
 
-    println!("Closed {} ({})", id, reason);
+    println!("Closed {} ({})", resolved_id, reason);
 
     Ok(())
 }
@@ -488,14 +518,22 @@ fn reopen_single(
     id: &str,
     reason: Option<&str>,
 ) -> Result<()> {
-    let issue = db.get_issue(id)?;
+    let resolved_id = db.resolve_id(id)?;
+    let issue = db.get_issue(&resolved_id)?;
 
     // Reason is required when reopening from done/closed, but not from in_progress
     let requires_reason = issue.status == Status::Done || issue.status == Status::Closed;
     if requires_reason && reason.is_none() {
         // Try to resolve a reason (auto-generate for humans, error for agents)
         let effective_reason = resolve_reason(None, "reopened")?;
-        return reopen_single_with_reason(db, config, work_dir, id, &issue, &effective_reason);
+        return reopen_single_with_reason(
+            db,
+            config,
+            work_dir,
+            &resolved_id,
+            &issue,
+            &effective_reason,
+        );
     }
 
     if !issue.status.can_transition_to(Status::Todo) {
@@ -506,18 +544,18 @@ fn reopen_single(
         });
     }
 
-    db.update_issue_status(id, Status::Todo)?;
+    db.update_issue_status(&resolved_id, Status::Todo)?;
 
-    let mut event = Event::new(id.to_string(), Action::Reopened)
+    let mut event = Event::new(resolved_id.clone(), Action::Reopened)
         .with_values(Some(issue.status.to_string()), Some("todo".to_string()));
 
     if let Some(r) = reason {
         event = event.with_reason(Some(r.to_string()));
         // Add reason as note (will appear in "Description" section)
-        db.add_note(id, Status::Todo, r)?;
-        println!("Reopened {} ({})", id, r);
+        db.add_note(&resolved_id, Status::Todo, r)?;
+        println!("Reopened {} ({})", resolved_id, r);
     } else {
-        println!("Reopened {}", id);
+        println!("Reopened {}", resolved_id);
     }
 
     apply_mutation(
@@ -526,7 +564,7 @@ fn reopen_single(
         config,
         event,
         Some(OpPayload::set_status(
-            id.to_string(),
+            resolved_id.clone(),
             wk_core::Status::Todo,
             reason.map(String::from),
         )),

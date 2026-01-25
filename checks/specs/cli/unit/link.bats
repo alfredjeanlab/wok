@@ -162,3 +162,57 @@ load '../../helpers/common'
     run "$WK_BIN" log "$id"
     assert_output --partial "linked"
 }
+
+@test "unlink removes a link from an issue" {
+    id=$(create_issue task "Unlink Test")
+    "$WK_BIN" link "$id" "https://github.com/org/repo/issues/123"
+
+    run "$WK_BIN" show "$id"
+    assert_output --partial "Links:"
+
+    run "$WK_BIN" unlink "$id" "https://github.com/org/repo/issues/123"
+    assert_success
+    assert_output --partial "Removed link"
+
+    run "$WK_BIN" show "$id"
+    refute_output --partial "Links:"
+}
+
+@test "unlink with nonexistent URL succeeds with message" {
+    id=$(create_issue task "Unlink Nonexistent Test")
+
+    run "$WK_BIN" unlink "$id" "https://example.com/not-linked"
+    assert_success
+    assert_output --partial "not found"
+}
+
+@test "unlink with nonexistent issue fails" {
+    run "$WK_BIN" unlink "test-nonexistent" "https://github.com/org/repo/issues/123"
+    assert_failure
+}
+
+@test "unlink removes only the specified link" {
+    id=$(create_issue task "Unlink Multiple Test")
+    "$WK_BIN" link "$id" "https://github.com/org/repo/issues/1"
+    "$WK_BIN" link "$id" "https://github.com/org/repo/issues/2"
+
+    run "$WK_BIN" unlink "$id" "https://github.com/org/repo/issues/1"
+    assert_success
+
+    # Check that only issues/2 appears in Links section (issues/1 may still appear in log)
+    run "$WK_BIN" show "$id" --output json
+    assert_success
+    # The links array should only have issues/2
+    [[ "$(echo "$output" | grep -o '"url": "https://github.com/org/repo/issues/[0-9]"' | wc -l)" -eq 1 ]]
+    assert_output --partial '"url": "https://github.com/org/repo/issues/2"'
+    refute_output --partial '"url": "https://github.com/org/repo/issues/1"'
+}
+
+@test "log shows unlinked event" {
+    id=$(create_issue task "Unlink Log Test")
+    "$WK_BIN" link "$id" "https://github.com/org/repo/issues/123"
+    "$WK_BIN" unlink "$id" "https://github.com/org/repo/issues/123"
+
+    run "$WK_BIN" log "$id"
+    assert_output --partial "unlinked"
+}

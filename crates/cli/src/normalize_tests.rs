@@ -352,3 +352,55 @@ fn test_find_split_point_multiple() {
     assert_eq!(title, "Fix the bug");
     assert_eq!(desc, "part one\n\npart two");
 }
+
+#[test]
+fn test_truncate_at_word_boundary_short() {
+    // Text shorter than limit should not be truncated
+    let text = "Short text";
+    assert_eq!(truncate_at_word_boundary(text, 120), "Short text");
+}
+
+#[test]
+fn test_truncate_at_word_boundary_at_space() {
+    // Should truncate at word boundary
+    let text = "This is a test sentence that goes well over the limit";
+    let result = truncate_at_word_boundary(text, 30);
+    assert!(result.ends_with("..."));
+    assert!(result.len() <= 33); // 30 + "..."
+    assert!(!result.contains("  ")); // No trailing space before ...
+}
+
+#[test]
+fn test_truncate_at_word_boundary_no_spaces() {
+    // With no spaces, should hard truncate
+    let text = "x".repeat(200);
+    let result = truncate_at_word_boundary(&text, 120);
+    assert!(result.ends_with("..."));
+    assert_eq!(result.len(), 123); // 120 + "..."
+}
+
+#[test]
+fn test_normalize_title_long_truncates() {
+    // Title over TITLE_TRUNCATE_LENGTH should be truncated
+    let long_title = "word ".repeat(50); // ~250 chars
+    let result = normalize_title(&long_title);
+
+    assert!(result.title.ends_with("..."));
+    assert!(result.title.chars().count() <= TITLE_TRUNCATE_LENGTH + 3);
+    assert!(result.extracted_description.is_some());
+    // Description should contain the original trimmed input
+    assert!(result.extracted_description.unwrap().contains("word"));
+}
+
+#[test]
+fn test_normalize_title_long_with_split_and_truncate() {
+    // Long title that also has a split point
+    let input = format!("{}\n\nsome description", "word ".repeat(50));
+    let result = normalize_title(&input);
+
+    assert!(result.title.ends_with("..."));
+    assert!(result.extracted_description.is_some());
+    let desc = result.extracted_description.unwrap();
+    // Description should contain both the original and the split description
+    assert!(desc.contains("some description"));
+}

@@ -259,3 +259,140 @@ fn test_add_link_impl_basic() {
     assert_eq!(links.len(), 1);
     assert_eq!(links[0].link_type, Some(LinkType::Github));
 }
+
+#[test]
+fn test_remove_link() {
+    let ctx = TestContext::new();
+    ctx.create_issue("test-1", IssueType::Task, "Test");
+
+    // Add a link first
+    add_impl(
+        &ctx.db,
+        &ctx.work_dir,
+        &ctx.config,
+        "test-1",
+        "https://github.com/org/repo/issues/123",
+        None,
+    )
+    .unwrap();
+
+    // Verify link exists
+    let links = ctx.db.get_links("test-1").unwrap();
+    assert_eq!(links.len(), 1);
+
+    // Remove the link
+    let result = remove_impl(
+        &ctx.db,
+        &ctx.work_dir,
+        &ctx.config,
+        "test-1",
+        "https://github.com/org/repo/issues/123",
+    );
+    assert!(result.is_ok());
+
+    // Verify link is gone
+    let links = ctx.db.get_links("test-1").unwrap();
+    assert_eq!(links.len(), 0);
+}
+
+#[test]
+fn test_remove_link_nonexistent_url() {
+    let ctx = TestContext::new();
+    ctx.create_issue("test-1", IssueType::Task, "Test");
+
+    // Try to remove a link that doesn't exist (should succeed with message)
+    let result = remove_impl(
+        &ctx.db,
+        &ctx.work_dir,
+        &ctx.config,
+        "test-1",
+        "https://example.com/not-linked",
+    );
+    assert!(result.is_ok());
+}
+
+#[test]
+fn test_remove_link_nonexistent_issue() {
+    let ctx = TestContext::new();
+
+    let result = remove_impl(
+        &ctx.db,
+        &ctx.work_dir,
+        &ctx.config,
+        "nonexistent",
+        "https://github.com/org/repo/issues/123",
+    );
+    assert!(result.is_err());
+}
+
+#[test]
+fn test_remove_link_logs_event() {
+    let ctx = TestContext::new();
+    ctx.create_issue("test-1", IssueType::Task, "Test");
+
+    add_impl(
+        &ctx.db,
+        &ctx.work_dir,
+        &ctx.config,
+        "test-1",
+        "https://github.com/org/repo/issues/123",
+        None,
+    )
+    .unwrap();
+
+    remove_impl(
+        &ctx.db,
+        &ctx.work_dir,
+        &ctx.config,
+        "test-1",
+        "https://github.com/org/repo/issues/123",
+    )
+    .unwrap();
+
+    let events = ctx.db.get_events("test-1").unwrap();
+    assert!(events.iter().any(|e| e.action == Action::Unlinked));
+}
+
+#[test]
+fn test_remove_link_multiple_links() {
+    let ctx = TestContext::new();
+    ctx.create_issue("test-1", IssueType::Task, "Test");
+
+    // Add multiple links
+    add_impl(
+        &ctx.db,
+        &ctx.work_dir,
+        &ctx.config,
+        "test-1",
+        "https://github.com/org/repo/issues/1",
+        None,
+    )
+    .unwrap();
+    add_impl(
+        &ctx.db,
+        &ctx.work_dir,
+        &ctx.config,
+        "test-1",
+        "https://github.com/org/repo/issues/2",
+        None,
+    )
+    .unwrap();
+
+    // Remove only one
+    remove_impl(
+        &ctx.db,
+        &ctx.work_dir,
+        &ctx.config,
+        "test-1",
+        "https://github.com/org/repo/issues/1",
+    )
+    .unwrap();
+
+    // Verify only one remains
+    let links = ctx.db.get_links("test-1").unwrap();
+    assert_eq!(links.len(), 1);
+    assert_eq!(
+        links[0].url,
+        Some("https://github.com/org/repo/issues/2".to_string())
+    );
+}

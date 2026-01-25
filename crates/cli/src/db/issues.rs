@@ -83,6 +83,49 @@ impl Database {
         Ok(count > 0)
     }
 
+    /// Minimum prefix length for prefix matching
+    const MIN_PREFIX_LENGTH: usize = 3;
+
+    /// Resolve a potentially partial issue ID to a full ID.
+    ///
+    /// Returns the full ID if exactly one match is found.
+    /// Returns an error if no match or multiple matches.
+    ///
+    /// Resolution strategy:
+    /// 1. Exact match - Check if the ID exists exactly (fast path)
+    /// 2. Prefix match - If no exact match and length >= 3, search for prefix matches
+    /// 3. Ambiguity check - If multiple prefix matches, return error with all matches
+    pub fn resolve_id(&self, partial_id: &str) -> Result<String> {
+        // First try exact match (fast path)
+        if self.issue_exists(partial_id)? {
+            return Ok(partial_id.to_string());
+        }
+
+        // Check minimum length for prefix matching
+        if partial_id.len() < Self::MIN_PREFIX_LENGTH {
+            return Err(Error::IssueNotFound(partial_id.to_string()));
+        }
+
+        // Find all IDs that start with the prefix
+        let pattern = format!("{}%", partial_id);
+        let mut stmt = self
+            .conn
+            .prepare("SELECT id FROM issues WHERE id LIKE ?1")?;
+
+        let matches: Vec<String> = stmt
+            .query_map([&pattern], |row| row.get(0))?
+            .collect::<std::result::Result<Vec<_>, _>>()?;
+
+        match matches.as_slice() {
+            [] => Err(Error::IssueNotFound(partial_id.to_string())),
+            [single] => Ok(single.clone()),
+            _ => Err(Error::AmbiguousId {
+                prefix: partial_id.to_string(),
+                matches,
+            }),
+        }
+    }
+
     /// Update issue status
     pub fn update_issue_status(&self, id: &str, status: Status) -> Result<()> {
         let affected = self.conn.execute(

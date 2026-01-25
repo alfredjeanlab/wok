@@ -170,17 +170,20 @@ fn test_title_at_max_length_is_valid() {
 }
 
 #[test]
-fn test_title_over_max_length_is_rejected() {
+fn test_title_over_max_length_is_truncated() {
     use crate::validate::validate_and_normalize_title;
 
     let long_title = "x".repeat(MAX_TITLE_LENGTH + 1);
 
-    // Validation should fail for overly long title
-    let result = validate_and_normalize_title(&long_title);
+    // Long titles are now truncated instead of rejected
+    let result = validate_and_normalize_title(&long_title).unwrap();
     assert!(
-        result.is_err(),
-        "Title over {} chars should be rejected",
-        MAX_TITLE_LENGTH
+        result.title.ends_with("..."),
+        "Long title should be truncated with ..."
+    );
+    assert!(
+        result.extracted_description.is_some(),
+        "Full content should be moved to description"
     );
 }
 

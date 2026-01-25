@@ -13,7 +13,7 @@ fn test_generate_id() {
     let created_at = Utc.with_ymd_and_hms(2024, 1, 10, 12, 0, 0).unwrap();
     let id = generate_id("prj", "Test issue", &created_at);
     assert!(id.starts_with("prj-"));
-    assert_eq!(id.len(), 8); // prj- + 4 hex chars
+    assert_eq!(id.len(), 12); // prj- + 8 hex chars
 }
 
 #[test]

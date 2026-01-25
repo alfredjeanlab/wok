@@ -28,8 +28,11 @@ pub(crate) fn add_impl(
     url: &str,
     reason: Option<String>,
 ) -> Result<()> {
+    // Resolve potentially partial ID
+    let resolved_id = db.resolve_id(id)?;
+
     // Verify issue exists
-    db.get_issue(id)?;
+    db.get_issue(&resolved_id)?;
 
     // Parse URL to detect link type and external ID
     let (link_type, external_id) = parse_link_url(url);
@@ -54,7 +57,7 @@ pub(crate) fn add_impl(
     }
 
     // Create link
-    let mut link = new_link(id);
+    let mut link = new_link(&resolved_id);
     link.link_type = link_type;
     link.url = Some(url.to_string());
     link.external_id = external_id;
@@ -67,12 +70,60 @@ pub(crate) fn add_impl(
         db,
         work_dir,
         config,
-        Event::new(id.to_string(), Action::Linked).with_values(None, Some(url.to_string())),
+        Event::new(resolved_id.clone(), Action::Linked).with_values(None, Some(url.to_string())),
         None,
     )?;
 
-    println!("Added link to {}", id);
+    println!("Added link to {}", resolved_id);
     Ok(())
+}
+
+/// Remove an external link from an issue.
+pub fn remove(id: &str, url: &str) -> Result<()> {
+    let (db, config, work_dir) = open_db()?;
+    remove_impl(&db, &work_dir, &config, id, url)
+}
+
+/// Internal implementation that accepts db for testing.
+pub(crate) fn remove_impl(
+    db: &Database,
+    work_dir: &Path,
+    config: &Config,
+    id: &str,
+    url: &str,
+) -> Result<()> {
+    // Resolve potentially partial ID
+    let resolved_id = db.resolve_id(id)?;
+
+    // Verify issue exists
+    db.get_issue(&resolved_id)?;
+
+    // Find the link by URL
+    let links = db.get_links(&resolved_id)?;
+    let link = links.iter().find(|l| l.url.as_deref() == Some(url));
+
+    match link {
+        Some(link) => {
+            db.remove_link(link.id)?;
+
+            // Log event (links don't sync currently)
+            apply_mutation(
+                db,
+                work_dir,
+                config,
+                Event::new(resolved_id.clone(), Action::Unlinked)
+                    .with_values(Some(url.to_string()), None),
+                None,
+            )?;
+
+            println!("Removed link from {}", resolved_id);
+            Ok(())
+        }
+        None => {
+            println!("Link {} not found on {}", url, resolved_id);
+            Ok(())
+        }
+    }
 }
 
 /// Add a link to an issue (for use by new command).

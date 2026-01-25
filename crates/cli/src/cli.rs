@@ -59,16 +59,16 @@ pub enum Command {
     /// Create a new issue
     #[command(after_help = colors::examples("\
 Examples:
-  wok new \"Fix login bug\"              Create task with title only
-  wok new bug \"Fix crash\"              Create bug with explicit type
-  wok new chore \"Update deps\"          Create chore for maintenance
-  wok new feature \"User auth\" -l auth   Create feature with label
-  wok new idea \"Better caching\"         Create idea for future consideration
-  wok new task \"Multi\" -l a,b,c         Create task with multiple labels
-  wok new \"Task\" -a alice               Create task assigned to alice
-  wok new bug \"Fix bug\" --blocks prj-1  Create bug that blocks prj-1
-  wok new \"Task\" --tracked-by prj-feat  Create task tracked by a feature
-  wok new task \"My task\" -o id          Create task, output only ID"))]
+  wok new \"Fix login bug\"                Create task with title only
+  wok new bug \"Fix crash\"                Create bug with explicit type
+  wok new chore \"Update deps\"            Create chore for maintenance
+  wok new feature \"User auth\" -l auth    Create feature with label
+  wok new idea \"Better caching\"          Create idea for future consideration
+  wok new task \"Multi\" -l a,b,c          Create task with multiple labels
+  wok new \"Task\" -a alice                Create task assigned to alice
+  wok new bug \"Fix bug\" --blocks prj-1   Create bug that blocks prj-1
+  wok new \"Task\" --tracked-by prj-feat   Create task tracked by a feature
+  wok new task \"My task\" -o id           Create task, output only ID"))]
     New {
         /// Issue type (feature, task, bug, chore, idea) or title if type is omitted
         #[arg(value_parser = non_empty_string)]
@@ -393,6 +393,21 @@ Examples:
         /// Relationship reason (import, blocks, tracks, tracked-by)
         #[arg(long, short)]
         reason: Option<String>,
+    },
+
+    /// Remove an external link from an issue
+    #[command(
+        arg_required_else_help = true,
+        after_help = colors::examples("\
+Examples:
+  wok unlink prj-a3f2 https://github.com/org/repo/issues/123
+  wok unlink prj-a3f2 jira://PE-5555")
+    )]
+    Unlink {
+        /// Issue ID
+        id: String,
+        /// External URL to remove (must match exactly)
+        url: String,
     },
 
     /// Add dependency between issues

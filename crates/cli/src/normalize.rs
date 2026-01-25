@@ -6,6 +6,10 @@
 //! Handles whitespace trimming, title splitting, and quote-aware
 //! newline handling per REQUIREMENTS.md specification.
 
+/// Maximum length for a title before auto-truncation.
+/// Titles longer than this are truncated and full content moves to description.
+const TITLE_TRUNCATE_LENGTH: usize = 120;
+
 /// Result of normalizing a title that may need splitting.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct NormalizedTitle {
@@ -24,16 +28,32 @@ pub fn trim_field(text: &str) -> String {
 pub fn normalize_title(text: &str) -> NormalizedTitle {
     let trimmed = text.trim();
 
-    // Check for split point
-    if let Some((title_part, desc_part)) = find_split_point(trimmed) {
+    // Check for split point (double-newline after threshold)
+    let (title_text, desc_text) = if let Some((title_part, desc_part)) = find_split_point(trimmed) {
+        (
+            normalize_title_text(title_part.trim()),
+            Some(desc_part.trim().to_string()),
+        )
+    } else {
+        (normalize_title_text(trimmed), None)
+    };
+
+    // If title is too long, truncate and move full original content to description
+    if title_text.chars().count() > TITLE_TRUNCATE_LENGTH {
+        let truncated = truncate_at_word_boundary(&title_text, TITLE_TRUNCATE_LENGTH);
+        // Preserve full original input (trimmed) in description
+        let full_description = match desc_text {
+            Some(desc) => format!("{}\n\n{}", trimmed, desc),
+            None => trimmed.to_string(),
+        };
         NormalizedTitle {
-            title: normalize_title_text(title_part.trim()),
-            extracted_description: Some(desc_part.trim().to_string()),
+            title: truncated,
+            extracted_description: Some(full_description),
         }
     } else {
         NormalizedTitle {
-            title: normalize_title_text(trimmed),
-            extracted_description: None,
+            title: title_text,
+            extracted_description: desc_text,
         }
     }
 }
@@ -57,6 +77,34 @@ fn is_past_threshold(text: &str) -> bool {
     let word_count = text.split_whitespace().count();
 
     char_count >= 20 || word_count >= 3
+}
+
+/// Truncate text at a word boundary near the given character limit.
+/// Tries to break at a space before the limit, falling back to hard truncation.
+fn truncate_at_word_boundary(text: &str, max_chars: usize) -> String {
+    let chars: Vec<char> = text.chars().collect();
+    if chars.len() <= max_chars {
+        return text.to_string();
+    }
+
+    // Look for last space within the limit
+    let search_end = max_chars.min(chars.len());
+    let mut last_space = None;
+    for i in (0..search_end).rev() {
+        if chars[i] == ' ' {
+            last_space = Some(i);
+            break;
+        }
+    }
+
+    // Use word boundary if found reasonably close, otherwise hard truncate
+    let truncate_at = match last_space {
+        Some(pos) if pos > max_chars / 2 => pos,
+        _ => max_chars,
+    };
+
+    let truncated: String = chars[..truncate_at].iter().collect();
+    format!("{}...", truncated.trim_end())
 }
 
 /// Normalize title text with quote-aware newline handling.

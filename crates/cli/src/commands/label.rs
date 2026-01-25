@@ -42,24 +42,27 @@ fn add_single(
     id: &str,
     label: &str,
 ) -> Result<()> {
+    // Resolve potentially partial ID
+    let resolved_id = db.resolve_id(id)?;
+
     // Verify issue exists
-    db.get_issue(id)?;
+    db.get_issue(&resolved_id)?;
 
     // Validate label count
-    let current_labels = db.get_labels(id)?;
+    let current_labels = db.get_labels(&resolved_id)?;
     validate_label_count(current_labels.len())?;
 
-    db.add_label(id, label)?;
+    db.add_label(&resolved_id, label)?;
 
     apply_mutation(
         db,
         work_dir,
         config,
-        Event::new(id.to_string(), Action::Labeled).with_values(None, Some(label.to_string())),
-        Some(OpPayload::add_label(id.to_string(), label.to_string())),
+        Event::new(resolved_id.clone(), Action::Labeled).with_values(None, Some(label.to_string())),
+        Some(OpPayload::add_label(resolved_id.clone(), label.to_string())),
     )?;
 
-    println!("Labeled {} with {}", id, label);
+    println!("Labeled {} with {}", resolved_id, label);
 
     Ok(())
 }
@@ -90,24 +93,30 @@ fn remove_single(
     id: &str,
     label: &str,
 ) -> Result<()> {
-    // Verify issue exists
-    db.get_issue(id)?;
+    // Resolve potentially partial ID
+    let resolved_id = db.resolve_id(id)?;
 
-    let removed = db.remove_label(id, label)?;
+    // Verify issue exists
+    db.get_issue(&resolved_id)?;
+
+    let removed = db.remove_label(&resolved_id, label)?;
 
     if removed {
         apply_mutation(
             db,
             work_dir,
             config,
-            Event::new(id.to_string(), Action::Unlabeled)
+            Event::new(resolved_id.clone(), Action::Unlabeled)
                 .with_values(None, Some(label.to_string())),
-            Some(OpPayload::remove_label(id.to_string(), label.to_string())),
+            Some(OpPayload::remove_label(
+                resolved_id.clone(),
+                label.to_string(),
+            )),
         )?;
 
-        println!("Removed label {} from {}", label, id);
+        println!("Removed label {} from {}", label, resolved_id);
     } else {
-        println!("Label {} not found on {}", label, id);
+        println!("Label {} not found on {}", label, resolved_id);
     }
 
     Ok(())

@@ -180,6 +180,13 @@ wk link prj-a3f2 https://company.atlassian.net/browse/PE-5555 --reason import
 # - Jira: https://*.atlassian.net/browse/{ID} or jira://{ID}
 # - GitLab: https://gitlab.com/{path}/issues/{id}
 # - Confluence: https://*.atlassian.net/wiki/... (has /wiki in path)
+
+# Remove external link from an issue
+wk unlink <id> <url>
+
+# Examples:
+wk unlink prj-a3f2 https://github.com/org/repo/issues/123
+wk unlink prj-a3f2 jira://PE-5555
 ```
 
 **Import validation**: When using `--reason import`, the URL must be a known provider (github, jira, gitlab) with a detectable issue ID.

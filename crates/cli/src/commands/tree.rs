@@ -14,10 +14,11 @@ pub fn run(id: &str) -> Result<()> {
 
 /// Internal implementation that accepts db for testing.
 pub(crate) fn run_impl(db: &Database, id: &str) -> Result<()> {
-    let issue = db.get_issue(id)?;
+    let resolved_id = db.resolve_id(id)?;
+    let issue = db.get_issue(&resolved_id)?;
 
     // Get blockers for root issue
-    let blockers = db.get_transitive_blockers(id)?;
+    let blockers = db.get_transitive_blockers(&resolved_id)?;
     let blocked_by = if blockers.is_empty() {
         None
     } else {
@@ -28,7 +29,7 @@ pub(crate) fn run_impl(db: &Database, id: &str) -> Result<()> {
     println!("{}", format_tree_root(&issue, blocked_by));
 
     // Get and print children
-    let children = db.get_tracked(id)?;
+    let children = db.get_tracked(&resolved_id)?;
     print_children(db, &children, "")?;
 
     Ok(())

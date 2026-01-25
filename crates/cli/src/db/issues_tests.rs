@@ -257,3 +257,107 @@ fn search_with_special_characters() {
     assert_eq!(results2.len(), 1);
     assert_eq!(results2[0].id, "test-1");
 }
+
+// resolve_id tests
+
+#[test]
+fn resolve_id_exact_match() {
+    let db = Database::open_in_memory().unwrap();
+    let issue = Issue::new(
+        "test-abc12345".to_string(),
+        IssueType::Task,
+        "Test issue".to_string(),
+    );
+
+    db.create_issue(&issue).unwrap();
+
+    // Exact match should work
+    let resolved = db.resolve_id("test-abc12345").unwrap();
+    assert_eq!(resolved, "test-abc12345");
+}
+
+#[test]
+fn resolve_id_prefix_match() {
+    let db = Database::open_in_memory().unwrap();
+    let issue = Issue::new(
+        "test-abc12345".to_string(),
+        IssueType::Task,
+        "Test issue".to_string(),
+    );
+
+    db.create_issue(&issue).unwrap();
+
+    // Prefix match with 8 characters should work
+    let resolved = db.resolve_id("test-abc").unwrap();
+    assert_eq!(resolved, "test-abc12345");
+}
+
+#[test]
+fn resolve_id_ambiguous() {
+    let db = Database::open_in_memory().unwrap();
+    let issue1 = Issue::new(
+        "test-abc12345".to_string(),
+        IssueType::Task,
+        "First issue".to_string(),
+    );
+    let issue2 = Issue::new(
+        "test-abc67890".to_string(),
+        IssueType::Task,
+        "Second issue".to_string(),
+    );
+
+    db.create_issue(&issue1).unwrap();
+    db.create_issue(&issue2).unwrap();
+
+    // Prefix that matches multiple issues should return error
+    let result = db.resolve_id("test-abc");
+    assert!(matches!(result, Err(Error::AmbiguousId { .. })));
+
+    if let Err(Error::AmbiguousId { prefix, matches }) = result {
+        assert_eq!(prefix, "test-abc");
+        assert_eq!(matches.len(), 2);
+        assert!(matches.contains(&"test-abc12345".to_string()));
+        assert!(matches.contains(&"test-abc67890".to_string()));
+    }
+}
+
+#[test]
+fn resolve_id_not_found() {
+    let db = Database::open_in_memory().unwrap();
+
+    // Non-existent ID should return error
+    let result = db.resolve_id("test-nonexistent");
+    assert!(matches!(result, Err(Error::IssueNotFound(_))));
+}
+
+#[test]
+fn resolve_id_too_short() {
+    let db = Database::open_in_memory().unwrap();
+    let issue = Issue::new(
+        "test-abc12345".to_string(),
+        IssueType::Task,
+        "Test issue".to_string(),
+    );
+
+    db.create_issue(&issue).unwrap();
+
+    // Prefix shorter than 3 characters should fail with not found
+    let result = db.resolve_id("te");
+    assert!(matches!(result, Err(Error::IssueNotFound(_))));
+}
+
+#[test]
+fn resolve_id_unique_prefix_at_minimum_length() {
+    let db = Database::open_in_memory().unwrap();
+    let issue = Issue::new(
+        "abc-12345678".to_string(),
+        IssueType::Task,
+        "Test issue".to_string(),
+    );
+
+    db.create_issue(&issue).unwrap();
+
+    // Prefix at exactly 3 characters should work if unambiguous
+    let resolved = db.resolve_id("abc").unwrap();
+    assert_eq!(resolved, "abc-12345678");
+}

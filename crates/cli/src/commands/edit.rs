@@ -30,7 +30,8 @@ pub(crate) fn run_impl(
     attr: &str,
     value: &str,
 ) -> Result<()> {
-    let issue = db.get_issue(id)?;
+    let resolved_id = db.resolve_id(id)?;
+    let issue = db.get_issue(&resolved_id)?;
 
     match attr.to_lowercase().as_str() {
         "title" => {
@@ -41,58 +42,58 @@ pub(crate) fn run_impl(
             }
 
             let old_title = issue.title.clone();
-            db.update_issue_title(id, &normalized.title)?;
+            db.update_issue_title(&resolved_id, &normalized.title)?;
 
             apply_mutation(
                 db,
                 work_dir,
                 config,
-                Event::new(id.to_string(), Action::Edited)
+                Event::new(resolved_id.clone(), Action::Edited)
                     .with_values(Some(old_title), Some(normalized.title.clone())),
                 Some(OpPayload::set_title(
-                    id.to_string(),
+                    resolved_id.clone(),
                     normalized.title.clone(),
                 )),
             )?;
 
-            println!("Updated title of {} to: {}", id, normalized.title);
+            println!("Updated title of {} to: {}", resolved_id, normalized.title);
         }
         "type" => {
             let new_type = IssueType::from_str(value)?;
             let old_type = issue.issue_type;
 
             if new_type != old_type {
-                db.update_issue_type(id, new_type)?;
+                db.update_issue_type(&resolved_id, new_type)?;
 
                 apply_mutation(
                     db,
                     work_dir,
                     config,
-                    Event::new(id.to_string(), Action::Edited).with_values(
+                    Event::new(resolved_id.clone(), Action::Edited).with_values(
                         Some(old_type.as_str().to_string()),
                         Some(new_type.as_str().to_string()),
                     ),
-                    Some(OpPayload::set_type(id.to_string(), new_type)),
+                    Some(OpPayload::set_type(resolved_id.clone(), new_type)),
                 )?;
 
-                println!("Updated type of {} to: {}", id, new_type.as_str());
+                println!("Updated type of {} to: {}", resolved_id, new_type.as_str());
             }
         }
         "description" => {
             let trimmed_desc = validate_and_trim_description(value)?;
             let old_desc = issue.description.clone();
-            db.update_issue_description(id, &trimmed_desc)?;
+            db.update_issue_description(&resolved_id, &trimmed_desc)?;
 
             apply_mutation(
                 db,
                 work_dir,
                 config,
-                Event::new(id.to_string(), Action::Edited)
+                Event::new(resolved_id.clone(), Action::Edited)
                     .with_values(old_desc, Some(trimmed_desc.clone())),
                 None, // No sync for description edits
             )?;
 
-            println!("Updated description of {}", id);
+            println!("Updated description of {}", resolved_id);
         }
         "assignee" => {
             let old_assignee = issue.assignee.clone();
@@ -101,35 +102,35 @@ pub(crate) fn run_impl(
             // Clear assignee if value is empty or "none"
             if trimmed.is_empty() || trimmed.eq_ignore_ascii_case("none") {
                 if old_assignee.is_none() {
-                    println!("{} is not assigned", id);
+                    println!("{} is not assigned", resolved_id);
                 } else {
-                    db.clear_assignee(id)?;
+                    db.clear_assignee(&resolved_id)?;
 
                     apply_mutation(
                         db,
                         work_dir,
                         config,
-                        Event::new(id.to_string(), Action::Unassigned)
+                        Event::new(resolved_id.clone(), Action::Unassigned)
                             .with_values(old_assignee, None),
                         None, // No sync for assignee changes
                     )?;
 
-                    println!("Unassigned {}", id);
+                    println!("Unassigned {}", resolved_id);
                 }
             } else {
                 validate_assignee(trimmed)?;
-                db.set_assignee(id, trimmed)?;
+                db.set_assignee(&resolved_id, trimmed)?;
 
                 apply_mutation(
                     db,
                     work_dir,
                     config,
-                    Event::new(id.to_string(), Action::Assigned)
+                    Event::new(resolved_id.clone(), Action::Assigned)
                         .with_values(old_assignee, Some(trimmed.to_string())),
                     None, // No sync for assignee changes
                 )?;
 
-                println!("Assigned {} to {}", id, trimmed);
+                println!("Assigned {} to {}", resolved_id, trimmed);
             }
         }
         _ => {

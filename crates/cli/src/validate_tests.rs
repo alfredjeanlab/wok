@@ -13,9 +13,16 @@ fn test_validate_and_normalize_title_ok() {
 }
 
 #[test]
-fn test_validate_and_normalize_title_long() {
+fn test_validate_and_normalize_title_long_truncates() {
+    // Long titles are now truncated instead of rejected
     let long_title = "x".repeat(MAX_TITLE_LENGTH + 1);
-    assert!(validate_and_normalize_title(&long_title).is_err());
+    let result = validate_and_normalize_title(&long_title).unwrap();
+    // Title should be truncated with "..."
+    assert!(result.title.ends_with("..."));
+    assert!(result.title.len() <= 123); // 120 + "..."
+                                        // Full text should be in description
+    assert!(result.extracted_description.is_some());
+    assert_eq!(result.extracted_description.unwrap(), long_title);
 }
 
 #[test]
@@ -128,9 +135,12 @@ fn test_validate_and_normalize_title_empty_rejected() {
 }
 
 #[test]
-fn test_validate_and_normalize_title_too_long() {
-    let long_title = "a".repeat(MAX_TITLE_LENGTH + 1);
-    assert!(validate_and_normalize_title(&long_title).is_err());
+fn test_validate_and_normalize_title_very_long_truncates() {
+    // Very long titles are truncated and full content moves to description
+    let long_title = "a".repeat(MAX_TITLE_LENGTH + 100);
+    let result = validate_and_normalize_title(&long_title).unwrap();
+    assert!(result.title.ends_with("..."));
+    assert!(result.extracted_description.is_some());
 }
 
 #[test]

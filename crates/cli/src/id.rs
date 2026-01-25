@@ -5,11 +5,11 @@ use chrono::{DateTime, Utc};
 use sha2::{Digest, Sha256};
 
 /// Generate an issue ID from prefix, title, and timestamp.
-/// Format: {prefix}-{hash} where hash is first 4 hex chars of SHA256(title + timestamp)
+/// Format: {prefix}-{hash} where hash is first 8 hex chars of SHA256(title + timestamp)
 pub fn generate_id(prefix: &str, title: &str, created_at: &DateTime<Utc>) -> String {
     let input = format!("{}{}", title, created_at.to_rfc3339());
     let hash = Sha256::digest(input.as_bytes());
-    let short_hash = hex::encode(&hash[..2]); // First 4 hex chars (2 bytes)
+    let short_hash = hex::encode(&hash[..4]); // First 8 hex chars (4 bytes)
     format!("{}-{}", prefix, short_hash)
 }
 
