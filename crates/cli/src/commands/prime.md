@@ -19,6 +19,7 @@
   - Types: task (default), bug, feature
   - Priority: `--label priority:0` through `--label priority:4` (0=critical, 2=medium, 4=backlog)
   - Multiple labels: `--label a,b,c` or `--label a --label b`
+  - Dependencies: `--blocks`, `--blocked-by`, `--tracks`, `--tracked-by`
 - `wok start <id>` - Claim work (todo → in_progress)
 - `wok done <id>` - Complete work (in_progress → done)
 - `wok close <id> --reason="explanation"` - Close without completing (requires reason)
@@ -60,4 +61,14 @@ wok new feature "User authentication"
 wok new "Design auth schema"
 wok new "Implement login endpoint"
 wok dep <feature-id> contains <schema-id> <login-id>
+```
+
+**Creating a bug that blocks another issue:**
+```bash
+wok new bug "Fix auth token expiry" --blocks prj-42
+```
+
+**Creating a task tracked by a feature:**
+```bash
+wok new "Implement login endpoint" --tracked-by prj-feat-1
 ```

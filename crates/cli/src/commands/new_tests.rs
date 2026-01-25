@@ -258,6 +258,10 @@ fn test_run_impl_creates_task() {
         None,
         None,
         None,
+        vec![],
+        vec![],
+        vec![],
+        vec![],
     );
 
     assert!(result.is_ok());
@@ -285,6 +289,10 @@ fn test_run_impl_creates_bug() {
         None,
         None,
         None,
+        vec![],
+        vec![],
+        vec![],
+        vec![],
     );
 
     assert!(result.is_ok());
@@ -309,6 +317,10 @@ fn test_run_impl_creates_feature() {
         None,
         None,
         None,
+        vec![],
+        vec![],
+        vec![],
+        vec![],
     );
 
     assert!(result.is_ok());
@@ -333,6 +345,10 @@ fn test_run_impl_creates_chore() {
         None,
         None,
         None,
+        vec![],
+        vec![],
+        vec![],
+        vec![],
     );
 
     assert!(result.is_ok());
@@ -358,6 +374,10 @@ fn test_run_impl_title_only_defaults_to_task() {
         None,
         None,
         None,
+        vec![],
+        vec![],
+        vec![],
+        vec![],
     );
 
     assert!(result.is_ok());
@@ -383,6 +403,10 @@ fn test_run_impl_with_labels() {
         None,
         None,
         None,
+        vec![],
+        vec![],
+        vec![],
+        vec![],
     );
 
     assert!(result.is_ok());
@@ -410,6 +434,10 @@ fn test_run_impl_with_note() {
         None,
         None,
         None,
+        vec![],
+        vec![],
+        vec![],
+        vec![],
     );
 
     assert!(result.is_ok());
@@ -436,6 +464,10 @@ fn test_run_impl_empty_title_rejected() {
         None,
         None,
         None,
+        vec![],
+        vec![],
+        vec![],
+        vec![],
     );
 
     assert!(result.is_err());
@@ -457,6 +489,10 @@ fn test_run_impl_whitespace_title_rejected() {
         None,
         None,
         None,
+        vec![],
+        vec![],
+        vec![],
+        vec![],
     );
 
     assert!(result.is_err());
@@ -478,6 +514,10 @@ fn test_run_impl_invalid_type_rejected() {
         None,
         None,
         None,
+        vec![],
+        vec![],
+        vec![],
+        vec![],
     );
 
     assert!(result.is_err());
@@ -499,6 +539,10 @@ fn test_run_impl_logs_events() {
         None,
         None,
         None,
+        vec![],
+        vec![],
+        vec![],
+        vec![],
     )
     .unwrap();
 
@@ -529,6 +573,10 @@ fn test_run_impl_with_priority_0() {
         None,
         Some(0),
         None,
+        vec![],
+        vec![],
+        vec![],
+        vec![],
     );
 
     assert!(result.is_ok());
@@ -554,6 +602,10 @@ fn test_run_impl_with_priority_4() {
         None,
         Some(4),
         None,
+        vec![],
+        vec![],
+        vec![],
+        vec![],
     );
 
     assert!(result.is_ok());
@@ -579,6 +631,10 @@ fn test_run_impl_priority_with_existing_labels() {
         None,
         Some(2),
         None,
+        vec![],
+        vec![],
+        vec![],
+        vec![],
     );
 
     assert!(result.is_ok());
@@ -605,6 +661,10 @@ fn test_run_impl_without_priority() {
         None,
         None,
         None,
+        vec![],
+        vec![],
+        vec![],
+        vec![],
     );
 
     assert!(result.is_ok());
@@ -633,6 +693,10 @@ fn test_run_impl_with_description() {
         None,
         None,
         Some("Initial description".to_string()),
+        vec![],
+        vec![],
+        vec![],
+        vec![],
     );
 
     assert!(result.is_ok());
@@ -659,6 +723,10 @@ fn test_run_impl_note_takes_precedence_over_description() {
         None,
         None,
         Some("Description content".to_string()),
+        vec![],
+        vec![],
+        vec![],
+        vec![],
     );
 
     assert!(result.is_ok());
@@ -685,6 +753,10 @@ fn test_run_impl_without_description_or_note() {
         None,
         None,
         None,
+        vec![],
+        vec![],
+        vec![],
+        vec![],
     );
 
     assert!(result.is_ok());
@@ -710,6 +782,10 @@ fn test_run_impl_description_with_labels() {
         None,
         None,
         Some("Description with labels".to_string()),
+        vec![],
+        vec![],
+        vec![],
+        vec![],
     );
 
     assert!(result.is_ok());
@@ -741,6 +817,10 @@ fn test_run_impl_comma_separated_labels() {
         None,
         None,
         None,
+        vec![],
+        vec![],
+        vec![],
+        vec![],
     );
 
     assert!(result.is_ok());
@@ -769,6 +849,10 @@ fn test_run_impl_comma_separated_and_multiple_labels() {
         None,
         None,
         None,
+        vec![],
+        vec![],
+        vec![],
+        vec![],
     );
 
     assert!(result.is_ok());
@@ -797,6 +881,10 @@ fn test_run_impl_comma_separated_trims_whitespace() {
         None,
         None,
         None,
+        vec![],
+        vec![],
+        vec![],
+        vec![],
     );
 
     assert!(result.is_ok());
@@ -824,6 +912,10 @@ fn test_run_impl_comma_separated_ignores_empty() {
         None,
         None,
         None,
+        vec![],
+        vec![],
+        vec![],
+        vec![],
     );
 
     assert!(result.is_ok());
@@ -851,6 +943,10 @@ fn test_run_impl_comma_separated_with_priority() {
         None,
         Some(1),
         None,
+        vec![],
+        vec![],
+        vec![],
+        vec![],
     );
 
     assert!(result.is_ok());
@@ -893,6 +989,10 @@ fn test_run_impl_rejects_empty_prefix() {
         None,
         None,
         None,
+        vec![],
+        vec![],
+        vec![],
+        vec![],
     );
 
     assert!(result.is_err());

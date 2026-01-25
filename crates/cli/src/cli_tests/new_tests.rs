@@ -25,6 +25,10 @@ fn test_new_with_title_only() {
             assignee,
             priority,
             description,
+            blocks,
+            blocked_by,
+            tracks,
+            tracked_by,
         } => {
             assert_eq!(type_or_title, "My issue title");
             assert!(title.is_none());
@@ -34,6 +38,10 @@ fn test_new_with_title_only() {
             assert!(assignee.is_none());
             assert!(priority.is_none());
             assert!(description.is_none());
+            assert!(blocks.is_empty());
+            assert!(blocked_by.is_empty());
+            assert!(tracks.is_empty());
+            assert!(tracked_by.is_empty());
         }
         _ => panic!("Expected New command"),
     }
@@ -292,5 +300,105 @@ fn test_new_type_and_whitespace_only_title_rejected() {
             );
         }
         Ok(_) => panic!("Expected error for whitespace-only title with type"),
+    }
+}
+
+// Dependency flag tests
+#[test]
+fn test_new_with_blocks() {
+    let cli = parse(&["wk", "new", "bug", "Fix crash", "--blocks", "task-1"]).unwrap();
+    match cli.command {
+        Command::New { blocks, .. } => {
+            assert_eq!(blocks, vec!["task-1"]);
+        }
+        _ => panic!("Expected New command"),
+    }
+}
+
+#[test]
+fn test_new_with_multiple_blocks() {
+    let cli = parse(&[
+        "wk",
+        "new",
+        "bug",
+        "Fix crash",
+        "--blocks",
+        "task-1",
+        "--blocks",
+        "task-2",
+    ])
+    .unwrap();
+    match cli.command {
+        Command::New { blocks, .. } => {
+            assert_eq!(blocks, vec!["task-1", "task-2"]);
+        }
+        _ => panic!("Expected New command"),
+    }
+}
+
+#[test]
+fn test_new_with_blocked_by() {
+    let cli = parse(&["wk", "new", "task", "Test", "--blocked-by", "blocker-1"]).unwrap();
+    match cli.command {
+        Command::New { blocked_by, .. } => {
+            assert_eq!(blocked_by, vec!["blocker-1"]);
+        }
+        _ => panic!("Expected New command"),
+    }
+}
+
+#[test]
+fn test_new_with_tracks() {
+    let cli = parse(&["wk", "new", "feature", "Epic", "--tracks", "subtask-1"]).unwrap();
+    match cli.command {
+        Command::New { tracks, .. } => {
+            assert_eq!(tracks, vec!["subtask-1"]);
+        }
+        _ => panic!("Expected New command"),
+    }
+}
+
+#[test]
+fn test_new_with_tracked_by() {
+    let cli = parse(&["wk", "new", "task", "Subtask", "--tracked-by", "feature-1"]).unwrap();
+    match cli.command {
+        Command::New { tracked_by, .. } => {
+            assert_eq!(tracked_by, vec!["feature-1"]);
+        }
+        _ => panic!("Expected New command"),
+    }
+}
+
+#[test]
+fn test_new_with_all_dependency_flags() {
+    let cli = parse(&[
+        "wk",
+        "new",
+        "task",
+        "Complex task",
+        "--blocks",
+        "a",
+        "--blocked-by",
+        "b",
+        "--tracks",
+        "c",
+        "--tracked-by",
+        "d",
+    ])
+    .unwrap();
+    match cli.command {
+        Command::New {
+            blocks,
+            blocked_by,
+            tracks,
+            tracked_by,
+            ..
+        } => {
+            assert_eq!(blocks, vec!["a"]);
+            assert_eq!(blocked_by, vec!["b"]);
+            assert_eq!(tracks, vec!["c"]);
+            assert_eq!(tracked_by, vec!["d"]);
+        }
+        _ => panic!("Expected New command"),
     }
 }

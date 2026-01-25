@@ -83,6 +83,10 @@ fn test_command_new_construction() {
         assignee: Some("alice".to_string()),
         priority: Some(2),
         description: None,
+        blocks: vec![],
+        blocked_by: vec![],
+        tracks: vec![],
+        tracked_by: vec![],
     };
     if let Command::New {
         type_or_title,
@@ -93,6 +97,10 @@ fn test_command_new_construction() {
         assignee,
         priority,
         description,
+        blocks,
+        blocked_by,
+        tracks,
+        tracked_by,
     } = cmd
     {
         assert_eq!(type_or_title, "task");
@@ -106,6 +114,43 @@ fn test_command_new_construction() {
         assert_eq!(assignee, Some("alice".to_string()));
         assert_eq!(priority, Some(2));
         assert!(description.is_none());
+        assert!(blocks.is_empty());
+        assert!(blocked_by.is_empty());
+        assert!(tracks.is_empty());
+        assert!(tracked_by.is_empty());
+    } else {
+        panic!("Expected New command");
+    }
+}
+
+#[test]
+fn test_command_new_with_dependencies_construction() {
+    let cmd = Command::New {
+        type_or_title: "bug".to_string(),
+        title: Some("Fix crash".to_string()),
+        label: vec![],
+        note: None,
+        link: vec![],
+        assignee: None,
+        priority: None,
+        description: None,
+        blocks: vec!["task-1".to_string()],
+        blocked_by: vec!["task-2".to_string()],
+        tracks: vec![],
+        tracked_by: vec!["feature-1".to_string()],
+    };
+    if let Command::New {
+        blocks,
+        blocked_by,
+        tracks,
+        tracked_by,
+        ..
+    } = cmd
+    {
+        assert_eq!(blocks, vec!["task-1".to_string()]);
+        assert_eq!(blocked_by, vec!["task-2".to_string()]);
+        assert!(tracks.is_empty());
+        assert_eq!(tracked_by, vec!["feature-1".to_string()]);
     } else {
         panic!("Expected New command");
     }

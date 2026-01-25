@@ -99,7 +99,9 @@ pub enum Command {
         wok new feature \"User auth\" -l auth   Create feature with label\n  \
         wok new idea \"Better caching\"         Create idea for future consideration\n  \
         wok new task \"Multi\" -l a,b,c         Create task with multiple labels\n  \
-        wok new \"Task\" -a alice               Create task assigned to alice")]
+        wok new \"Task\" -a alice               Create task assigned to alice\n  \
+        wok new bug \"Fix bug\" --blocks prj-1  Create bug that blocks prj-1\n  \
+        wok new \"Task\" --tracked-by prj-feat  Create task tracked by a feature")]
     New {
         /// Issue type (feature, task, bug, chore, idea) or title if type is omitted
         #[arg(value_parser = non_empty_string)]
@@ -132,6 +134,22 @@ pub enum Command {
         /// Add initial description note (hidden, use --note instead)
         #[arg(long, hide = true)]
         description: Option<String>,
+
+        /// Issues this new issue blocks (comma-separated or repeated)
+        #[arg(long, value_name = "IDS")]
+        blocks: Vec<String>,
+
+        /// Issues that block this new issue (comma-separated or repeated)
+        #[arg(long, value_name = "IDS")]
+        blocked_by: Vec<String>,
+
+        /// Issues this new issue tracks/contains (comma-separated or repeated)
+        #[arg(long, value_name = "IDS")]
+        tracks: Vec<String>,
+
+        /// Issues that track this new issue (comma-separated or repeated)
+        #[arg(long, value_name = "IDS")]
+        tracked_by: Vec<String>,
     },
 
     /// Start work on issue(s) (todo -> in_progress)
