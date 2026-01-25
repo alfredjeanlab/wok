@@ -73,9 +73,7 @@ pub fn commands() -> String {
   {import}      Import issues from JSONL
   {schema}      Output JSON Schema for commands
   {completion}  Generate shell completions
-  {prime}       Generate onboarding template
-
-",
+  {prime}       Generate onboarding template",
         header_tracking = colors::header("Issue Tracking:"),
         header_setup = colors::header("Setup & Configuration:"),
         new = colors::literal("new"),
