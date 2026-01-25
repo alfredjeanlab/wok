@@ -229,3 +229,68 @@ fn test_new_priority_bounds() {
 fn test_new_priority_non_numeric() {
     assert!(parse(&["wk", "new", "task", "Test", "--priority", "high"]).is_err());
 }
+
+// Empty title validation tests (at clap level)
+#[test]
+fn test_new_empty_title_rejected() {
+    let result = parse(&["wk", "new", ""]);
+    match result {
+        Err(e) => {
+            let err = e.to_string();
+            assert!(
+                err.contains("cannot be empty"),
+                "Expected 'cannot be empty' error, got: {}",
+                err
+            );
+        }
+        Ok(_) => panic!("Expected error for empty title"),
+    }
+}
+
+#[test]
+fn test_new_whitespace_only_title_rejected() {
+    let result = parse(&["wk", "new", "   "]);
+    match result {
+        Err(e) => {
+            let err = e.to_string();
+            assert!(
+                err.contains("cannot be empty"),
+                "Expected 'cannot be empty' error, got: {}",
+                err
+            );
+        }
+        Ok(_) => panic!("Expected error for whitespace-only title"),
+    }
+}
+
+#[test]
+fn test_new_type_and_empty_title_rejected() {
+    let result = parse(&["wk", "new", "task", ""]);
+    match result {
+        Err(e) => {
+            let err = e.to_string();
+            assert!(
+                err.contains("cannot be empty"),
+                "Expected 'cannot be empty' error, got: {}",
+                err
+            );
+        }
+        Ok(_) => panic!("Expected error for empty title with type"),
+    }
+}
+
+#[test]
+fn test_new_type_and_whitespace_only_title_rejected() {
+    let result = parse(&["wk", "new", "task", "   "]);
+    match result {
+        Err(e) => {
+            let err = e.to_string();
+            assert!(
+                err.contains("cannot be empty"),
+                "Expected 'cannot be empty' error, got: {}",
+                err
+            );
+        }
+        Ok(_) => panic!("Expected error for whitespace-only title with type"),
+    }
+}
