@@ -72,7 +72,6 @@ setup() {
 }
 
 @test "version subcommand does not exist" {
-    # This test exists in no_aliases.bats but we reinforce it here
     run "$WK_BIN" version
     assert_failure
 }
