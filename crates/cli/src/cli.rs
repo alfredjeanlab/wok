@@ -199,7 +199,7 @@ Examples:
   wok list -q \"updated > 1w\"      List issues not updated in 7+ days
   wok list --limit 10             Show only first 10 results
   wok list -o json                Output in JSON format
-  wok list -o ids                 Output only IDs (for piping to other commands)
+  wok list -o ids                 Output only IDs (space-separated)
 
 Filter Expressions (-q/--filter):
   Syntax: FIELD [OPERATOR VALUE]
