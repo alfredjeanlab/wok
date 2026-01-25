@@ -143,7 +143,7 @@ pub fn examples(text: &str) -> String {
     result
 }
 
-/// Colorize a command string, highlighting quoted content and flag values as context.
+/// Colorize a command string, highlighting quoted content, placeholders, and flag values as context.
 fn colorize_command(cmd: &str) -> String {
     let mut result = String::with_capacity(cmd.len() + 128);
     let mut chars = cmd.char_indices().peekable();
@@ -175,6 +175,30 @@ fn colorize_command(cmd: &str) -> String {
                 }
                 result.push_str(&context(&cmd[quote_start..quote_end]));
                 current_word_start = quote_end;
+            }
+            '<' => {
+                // Flush any pending literal content before the angle bracket
+                if i > current_word_start {
+                    let before = &cmd[current_word_start..i];
+                    if in_flag_value {
+                        result.push_str(&context(before));
+                        in_flag_value = false;
+                    } else {
+                        result.push_str(&literal(before));
+                    }
+                }
+
+                // Find closing angle bracket for placeholder like <id>
+                let bracket_start = i;
+                let mut bracket_end = cmd.len();
+                for (j, ch) in chars.by_ref() {
+                    if ch == '>' {
+                        bracket_end = j + 1;
+                        break;
+                    }
+                }
+                result.push_str(&context(&cmd[bracket_start..bracket_end]));
+                current_word_start = bracket_end;
             }
             ' ' => {
                 // Flush current segment
