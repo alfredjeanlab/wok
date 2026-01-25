@@ -4,14 +4,11 @@
 .wok/
 .v0/
 
-# Generated reports and results
+# Build artifacts
+target/
 .cache/
 coverage.out
 coverage/
 *.profraw
-reports/quality
-checks/benchmarks/results/
 
-# Build artifacts
-target/
 
