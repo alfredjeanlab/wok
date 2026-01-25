@@ -34,7 +34,7 @@ jobs:
         run: |
           cd target/${{ matrix.target }}/release
           tar czf ../../../${{ matrix.name }}.tar.gz wk wk-remote
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v6
         with:
           name: ${{ matrix.name }}
           path: ${{ matrix.name }}.tar.gz
@@ -60,7 +60,7 @@ jobs:
           git archive --format=tar.gz --prefix=wok-${VERSION}/ -o "dist/wok-${VERSION}.tar.gz" HEAD
           echo "Created dist/wok-${VERSION}.tar.gz"
 
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v7
         with:
           path: dist
 
