@@ -4,31 +4,31 @@ Product specifications defining wok's design, behavior, and interfaces.
 
 ## Table of Contents
 
-1. **[Overview & Design Philosophy](specs/01-overview.md)**
+1. **[Overview & Design Philosophy](01-overview.md)**
    - Overview of the issue tracker
    - Unix philosophy and AI-first design principles
    - Hidden flags and priority tag system
    - Semantic flag policy
 
-2. **[Core Concepts](specs/02-core-concepts.md)**
+2. **[Core Concepts](02-core-concepts.md)**
    - Issue types (feature, task, bug, chore)
    - Status state machine
    - Dependencies (hierarchical)
    - Notes by status
    - External links
 
-3. **[Data Model](specs/03-data-model.md)**
+3. **[Data Model](03-data-model.md)**
    - SQLite schema and tables
    - Relationships and semantics
    - ID generation
 
-4. **[CLI Interface](specs/04-cli-interface.md)**
+4. **[CLI Interface](04-cli-interface.md)**
    - Command structure
    - All commands (help, setup, lifecycle, viewing, dependencies, links, labels, notes, log, export, import, shell completion, remote, hooks)
    - Output format
    - Claude Code integration
 
-5. **[Business Rules](specs/05-business-rules.md)**
+5. **[Business Rules](05-business-rules.md)**
    - Dependency constraints
    - External link constraints
    - Relationship semantics
@@ -36,12 +36,12 @@ Product specifications defining wok's design, behavior, and interfaces.
    - Notes behavior
    - Input limits and validation
 
-6. **[Storage & Configuration](specs/06-storage-config.md)**
+6. **[Storage & Configuration](06-storage-config.md)**
    - Data directory structure
    - Database location
    - Git integration options
 
-7. **[Remote Sync](specs/07-remote-sync.md)**
+7. **[Remote Sync](07-remote-sync.md)**
    - Configuration
    - Architecture (client, daemon, server)
    - Daemon lifecycle
@@ -50,7 +50,7 @@ Product specifications defining wok's design, behavior, and interfaces.
    - Conflict resolution
    - Error handling
 
-8. **[Project Structure](specs/08-project-structure.md)**
+8. **[Project Structure](08-project-structure.md)**
    - Project layout (bin/, tests/)
    - Test suites
    - Running tests
