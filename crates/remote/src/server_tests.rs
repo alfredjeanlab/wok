@@ -139,7 +139,7 @@ mod tests {
 
         // Send ping
         let ping = ClientMessage::ping(42);
-        sink.send(Message::Text(ping.to_json().unwrap()))
+        sink.send(Message::Text(ping.to_json().unwrap().into()))
             .await
             .unwrap();
 
@@ -180,7 +180,7 @@ mod tests {
         );
         let msg = ClientMessage::op(op.clone());
         sink1
-            .send(Message::Text(msg.to_json().unwrap()))
+            .send(Message::Text(msg.to_json().unwrap().into()))
             .await
             .unwrap();
 
@@ -227,17 +227,21 @@ mod tests {
             Hlc::new(1000, 0, 1),
             OpPayload::create_issue("test-1".into(), IssueType::Task, "Test".into()),
         );
-        sink.send(Message::Text(ClientMessage::op(op).to_json().unwrap()))
-            .await
-            .unwrap();
+        sink.send(Message::Text(
+            ClientMessage::op(op).to_json().unwrap().into(),
+        ))
+        .await
+        .unwrap();
 
         // Consume the broadcast (with timeout)
         let _ = timeout(Duration::from_secs(5), stream.next()).await;
 
         // Request snapshot
-        sink.send(Message::Text(ClientMessage::snapshot().to_json().unwrap()))
-            .await
-            .unwrap();
+        sink.send(Message::Text(
+            ClientMessage::snapshot().to_json().unwrap().into(),
+        ))
+        .await
+        .unwrap();
 
         // Receive snapshot response (with timeout)
         let result = timeout(Duration::from_secs(5), stream.next()).await;
@@ -277,19 +281,23 @@ mod tests {
             OpPayload::create_issue("test-2".into(), IssueType::Task, "Test 2".into()),
         );
 
-        sink.send(Message::Text(ClientMessage::op(op1).to_json().unwrap()))
-            .await
-            .unwrap();
+        sink.send(Message::Text(
+            ClientMessage::op(op1).to_json().unwrap().into(),
+        ))
+        .await
+        .unwrap();
         let _ = timeout(Duration::from_secs(5), stream.next()).await; // Consume broadcast
 
-        sink.send(Message::Text(ClientMessage::op(op2).to_json().unwrap()))
-            .await
-            .unwrap();
+        sink.send(Message::Text(
+            ClientMessage::op(op2).to_json().unwrap().into(),
+        ))
+        .await
+        .unwrap();
         let _ = timeout(Duration::from_secs(5), stream.next()).await; // Consume broadcast
 
         // Request sync since before op2
         let sync_msg = ClientMessage::sync(Hlc::new(1500, 0, 0));
-        sink.send(Message::Text(sync_msg.to_json().unwrap()))
+        sink.send(Message::Text(sync_msg.to_json().unwrap().into()))
             .await
             .unwrap();
 
@@ -350,7 +358,9 @@ mod tests {
         let (mut sink, mut stream) = ws_stream.split();
 
         // Send raw WebSocket Ping frame (not ClientMessage::Ping)
-        sink.send(Message::Ping(vec![1, 2, 3])).await.unwrap();
+        sink.send(Message::Ping(vec![1, 2, 3].into()))
+            .await
+            .unwrap();
 
         // Should receive a Pong frame
         let result = timeout(Duration::from_secs(5), stream.next()).await;
@@ -415,7 +425,7 @@ mod tests {
         let msg = ClientMessage::op(op.clone());
 
         // First send
-        sink.send(Message::Text(msg.to_json().unwrap()))
+        sink.send(Message::Text(msg.to_json().unwrap().into()))
             .await
             .unwrap();
 
@@ -423,14 +433,14 @@ mod tests {
         let _ = timeout(Duration::from_secs(5), stream.next()).await;
 
         // Second send (duplicate)
-        sink.send(Message::Text(msg.to_json().unwrap()))
+        sink.send(Message::Text(msg.to_json().unwrap().into()))
             .await
             .unwrap();
 
         // The duplicate should be silently skipped - no broadcast
         // Send a ping to verify connection is still alive and no extra messages
         let ping = ClientMessage::ping(999);
-        sink.send(Message::Text(ping.to_json().unwrap()))
+        sink.send(Message::Text(ping.to_json().unwrap().into()))
             .await
             .unwrap();
 
@@ -524,7 +534,7 @@ mod tests {
 
                 // Send ping
                 let ping = ClientMessage::ping(777);
-                sink.send(Message::Text(ping.to_json().unwrap()))
+                sink.send(Message::Text(ping.to_json().unwrap().into()))
                     .await
                     .unwrap();
 
@@ -577,7 +587,7 @@ mod tests {
                     OpPayload::create_issue("direct-test".into(), IssueType::Task, "Direct Test".into()),
                 );
                 let msg = ClientMessage::op(op.clone());
-                sink.send(Message::Text(msg.to_json().unwrap()))
+                sink.send(Message::Text(msg.to_json().unwrap().into()))
                     .await
                     .unwrap();
 

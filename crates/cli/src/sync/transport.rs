@@ -151,7 +151,7 @@ impl Transport for WebSocketTransport {
                 .to_json()
                 .map_err(|e| TransportError::SerializationError(e.to_string()))?;
 
-            if let Err(e) = ws.sink.send(Message::Text(json)).await {
+            if let Err(e) = ws.sink.send(Message::Text(json.into())).await {
                 // Connection is broken, clear it
                 self.ws = None;
                 return Err(TransportError::SendFailed(e.to_string()));

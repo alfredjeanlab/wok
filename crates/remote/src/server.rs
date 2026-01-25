@@ -65,13 +65,13 @@ pub(crate) async fn handle_connection(
                         match handle_client_message(&text, &state).await {
                             Ok(Some(response)) => {
                                 let json = response.to_json()?;
-                                ws_sink.send(Message::Text(json)).await?;
+                                ws_sink.send(Message::Text(json.into())).await?;
                             }
                             Ok(None) => {}
                             Err(e) => {
                                 let error_msg = ServerMessage::error(e.to_string());
                                 let json = error_msg.to_json()?;
-                                ws_sink.send(Message::Text(json)).await?;
+                                ws_sink.send(Message::Text(json.into())).await?;
                             }
                         }
                     }
@@ -101,7 +101,7 @@ pub(crate) async fn handle_connection(
                 match broadcast {
                     Ok(msg) => {
                         let json = msg.to_json()?;
-                        if let Err(e) = ws_sink.send(Message::Text(json)).await {
+                        if let Err(e) = ws_sink.send(Message::Text(json.into())).await {
                             warn!("Failed to send broadcast to {}: {}", peer_addr, e);
                             break;
                         }

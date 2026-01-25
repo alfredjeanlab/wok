@@ -79,7 +79,7 @@ async fn test_server_lifecycle() {
 
     // Send a ping (format: {"type": "ping", "id": 12345})
     let ping_msg = serde_json::json!({"type": "ping", "id": 12345});
-    sink.send(Message::Text(ping_msg.to_string()))
+    sink.send(Message::Text(ping_msg.to_string().into()))
         .await
         .expect("send ping");
 
