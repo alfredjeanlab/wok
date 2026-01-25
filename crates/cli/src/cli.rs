@@ -54,14 +54,14 @@ Setup & Configuration:
 
 const QUICKSTART_HELP: &str = "\
 Get started:
-  wk init                 Initialize tracker
-  wk new task \"My task\"   Create a new task
-  wk list                 List all issues
-  wk start <id>           Start working on an issue
-  wk done <id>            Mark issue as complete";
+  wok init                 Initialize tracker
+  wok new task \"My task\"   Create a new task
+  wok list                 List all issues
+  wok start <id>           Start working on an issue
+  wok done <id>            Mark issue as complete";
 
 #[derive(Parser)]
-#[command(name = "wk")]
+#[command(name = "wok")]
 #[command(
     about = "A collaborative, offline-first, AI-friendly issue tracker with dependency tracking"
 )]
@@ -84,13 +84,13 @@ pub enum Command {
     // ─────────────────────────────────────────────────────────────────────────
     /// Create a new issue
     #[command(after_help = "Examples:\n  \
-        wk new \"Fix login bug\"              Create task with title only\n  \
-        wk new bug \"Fix crash\"              Create bug with explicit type\n  \
-        wk new chore \"Update deps\"          Create chore for maintenance\n  \
-        wk new feature \"User auth\" -l auth   Create feature with label\n  \
-        wk new idea \"Better caching\"         Create idea for future consideration\n  \
-        wk new task \"Multi\" -l a,b,c         Create task with multiple labels\n  \
-        wk new \"Task\" -a alice               Create task assigned to alice")]
+        wok new \"Fix login bug\"              Create task with title only\n  \
+        wok new bug \"Fix crash\"              Create bug with explicit type\n  \
+        wok new chore \"Update deps\"          Create chore for maintenance\n  \
+        wok new feature \"User auth\" -l auth   Create feature with label\n  \
+        wok new idea \"Better caching\"         Create idea for future consideration\n  \
+        wok new task \"Multi\" -l a,b,c         Create task with multiple labels\n  \
+        wok new \"Task\" -a alice               Create task assigned to alice")]
     New {
         /// Issue type (feature, task, bug, chore, idea) or title if type is omitted
         type_or_title: String,
@@ -135,9 +135,9 @@ pub enum Command {
     #[command(
         arg_required_else_help = true,
         after_help = "Examples:\n  \
-        wk done prj-1                     Complete in-progress issue\n  \
-        wk done prj-1 prj-2               Complete multiple issues\n  \
-        wk done prj-1 -r \"Already done\"   Skip to done from todo"
+        wok done prj-1                     Complete in-progress issue\n  \
+        wok done prj-1 prj-2               Complete multiple issues\n  \
+        wok done prj-1 -r \"Already done\"   Skip to done from todo"
     )]
     Done {
         /// Issue ID(s)
@@ -177,11 +177,11 @@ pub enum Command {
     #[command(
         arg_required_else_help = true,
         after_help = "Examples:\n  \
-            wk edit prj-1 description \"Updated description\"    Update description\n  \
-            wk edit prj-1 title \"New title\"                    Update title\n  \
-            wk edit prj-1 type bug                               Change type to bug\n  \
-            wk edit prj-1 assignee alice                         Assign to alice\n  \
-            wk edit prj-1 assignee none                          Clear assignment"
+            wok edit prj-1 description \"Updated description\"    Update description\n  \
+            wok edit prj-1 title \"New title\"                    Update title\n  \
+            wok edit prj-1 type bug                               Change type to bug\n  \
+            wok edit prj-1 assignee alice                         Assign to alice\n  \
+            wok edit prj-1 assignee none                          Clear assignment"
     )]
     Edit {
         /// Issue ID
@@ -196,21 +196,21 @@ pub enum Command {
 
     /// List issues
     #[command(after_help = "Examples:\n  \
-        wk list                        List open issues (todo + in_progress)\n  \
-        wk list --all                  List all issues (any status)\n  \
-        wk list -s done                List completed issues\n  \
-        wk list -s todo --blocked      List blocked todo issues\n  \
-        wk list -t bug                 List bugs only\n  \
-        wk list -l urgent              List issues with 'urgent' label\n  \
-        wk list -l a -l b              List issues with label 'a' AND label 'b'\n  \
-        wk list -l a,b -l c            List issues with (label 'a' OR 'b') AND label 'c'\n  \
-        wk list -a alice               List issues assigned to alice\n  \
-        wk list --unassigned           List unassigned issues\n  \
-        wk list -q \"age < 3d\"          List issues created in last 3 days\n  \
-        wk list -q \"updated > 1w\"      List issues not updated in 7+ days\n  \
-        wk list --limit 10             Show only first 10 results\n  \
-        wk list -o json                Output in JSON format\n  \
-        wk list -o ids                 Output only IDs (for piping to other commands)\n\n\
+        wok list                        List open issues (todo + in_progress)\n  \
+        wok list --all                  List all issues (any status)\n  \
+        wok list -s done                List completed issues\n  \
+        wok list -s todo --blocked      List blocked todo issues\n  \
+        wok list -t bug                 List bugs only\n  \
+        wok list -l urgent              List issues with 'urgent' label\n  \
+        wok list -l a -l b              List issues with label 'a' AND label 'b'\n  \
+        wok list -l a,b -l c            List issues with (label 'a' OR 'b') AND label 'c'\n  \
+        wok list -a alice               List issues assigned to alice\n  \
+        wok list --unassigned           List unassigned issues\n  \
+        wok list -q \"age < 3d\"          List issues created in last 3 days\n  \
+        wok list -q \"updated > 1w\"      List issues not updated in 7+ days\n  \
+        wok list --limit 10             Show only first 10 results\n  \
+        wok list -o json                Output in JSON format\n  \
+        wok list -o ids                 Output only IDs (for piping to other commands)\n\n\
       Filter Expressions (-q/--filter):\n  \
         Syntax: FIELD [OPERATOR VALUE]\n  \
         Fields: age, activity, completed, skipped, closed\n  \
@@ -262,12 +262,12 @@ pub enum Command {
 
     /// Show ready issues (unblocked todo items)
     #[command(after_help = "Examples:\n  \
-        wk ready                       Show unblocked todo issues (unassigned only by default)\n  \
-        wk ready -t bug                Show ready bugs\n  \
-        wk ready -l urgent             Show ready urgent issues\n  \
-        wk ready -a alice              Show ready issues assigned to alice\n  \
-        wk ready --unassigned          Show only unassigned ready issues\n  \
-        wk ready --all-assignees       Show all ready issues regardless of assignment")]
+        wok ready                       Show unblocked todo issues (unassigned only by default)\n  \
+        wok ready -t bug                Show ready bugs\n  \
+        wok ready -l urgent             Show ready urgent issues\n  \
+        wok ready -a alice              Show ready issues assigned to alice\n  \
+        wok ready --unassigned          Show only unassigned ready issues\n  \
+        wok ready --all-assignees       Show all ready issues regardless of assignment")]
     Ready {
         /// Filter by type (comma-separated for OR, repeat for AND)
         #[arg(long, short = 't')]
@@ -298,12 +298,12 @@ pub enum Command {
     #[command(
         arg_required_else_help = true,
         after_help = "Examples:\n  \
-            wk search \"login\"              Search for 'login' in all fields\n  \
-            wk search \"auth\" -s todo       Search todo issues only\n  \
-            wk search \"bug\" -t bug         Search bugs only\n  \
-            wk search \"task\" -a alice      Search issues assigned to alice\n  \
-            wk search \"auth\" -q \"age < 30d\" Search with time filter\n  \
-            wk search \"auth\" -n 5          Limit to 5 results\n\n\
+            wok search \"login\"              Search for 'login' in all fields\n  \
+            wok search \"auth\" -s todo       Search todo issues only\n  \
+            wok search \"bug\" -t bug         Search bugs only\n  \
+            wok search \"task\" -a alice      Search issues assigned to alice\n  \
+            wok search \"auth\" -q \"age < 30d\" Search with time filter\n  \
+            wok search \"auth\" -n 5          Limit to 5 results\n\n\
           Filter Expressions (-q/--filter):\n  \
             Syntax: FIELD [OPERATOR VALUE]\n  \
             Fields: age, activity, completed, skipped, closed\n  \
@@ -371,11 +371,11 @@ pub enum Command {
     #[command(
         arg_required_else_help = true,
         after_help = "Examples:\n  \
-            wk link prj-a3f2 https://github.com/org/repo/issues/123\n  \
-            wk link prj-a3f2 https://gitlab.com/org/project/issues/456\n  \
-            wk link prj-a3f2 jira://PE-5555\n  \
-            wk link prj-a3f2 https://company.atlassian.net/browse/PE-5555 --reason import\n  \
-            wk link prj-a3f2 https://company.atlassian.net/wiki/spaces/DOC/pages/123"
+            wok link prj-a3f2 https://github.com/org/repo/issues/123\n  \
+            wok link prj-a3f2 https://gitlab.com/org/project/issues/456\n  \
+            wok link prj-a3f2 jira://PE-5555\n  \
+            wok link prj-a3f2 https://company.atlassian.net/browse/PE-5555 --reason import\n  \
+            wok link prj-a3f2 https://company.atlassian.net/wiki/spaces/DOC/pages/123"
     )]
     Link {
         /// Issue ID
@@ -391,10 +391,10 @@ pub enum Command {
     #[command(
         arg_required_else_help = true,
         after_help = "Examples:\n  \
-        wk dep prj-1 blocks prj-2              prj-1 blocks prj-2\n  \
-        wk dep prj-1 blocked-by prj-2 prj-3    prj-1 is blocked by prj-2 and prj-3\n  \
-        wk dep prj-feat tracks prj-task        Feature tracks a task\n  \
-        wk dep prj-task tracked-by prj-feat    Task is tracked by feature"
+        wok dep prj-1 blocks prj-2              prj-1 blocks prj-2\n  \
+        wok dep prj-1 blocked-by prj-2 prj-3    prj-1 is blocked by prj-2 and prj-3\n  \
+        wok dep prj-feat tracks prj-task        Feature tracks a task\n  \
+        wok dep prj-task tracked-by prj-feat    Task is tracked by feature"
     )]
     Dep {
         /// Source issue ID
@@ -426,8 +426,8 @@ pub enum Command {
     #[command(
         arg_required_else_help = true,
         after_help = "Examples:\n  \
-        wk label prj-1 urgent             Add label to one issue\n  \
-        wk label prj-1 prj-2 prj-3 urgent Add label to multiple issues"
+        wok label prj-1 urgent             Add label to one issue\n  \
+        wok label prj-1 prj-2 prj-3 urgent Add label to multiple issues"
     )]
     Label {
         /// Issue ID(s) followed by the label to add
@@ -439,8 +439,8 @@ pub enum Command {
     #[command(
         arg_required_else_help = true,
         after_help = "Examples:\n  \
-        wk unlabel prj-1 urgent             Remove label from one issue\n  \
-        wk unlabel prj-1 prj-2 prj-3 urgent Remove label from multiple issues"
+        wok unlabel prj-1 urgent             Remove label from one issue\n  \
+        wok unlabel prj-1 prj-2 prj-3 urgent Remove label from multiple issues"
     )]
     Unlabel {
         /// Issue ID(s) followed by the label to remove
@@ -477,11 +477,11 @@ pub enum Command {
     // ─────────────────────────────────────────────────────────────────────────
     /// Initialize issue tracker in current directory (or specified path)
     #[command(after_help = "Examples:\n  \
-        wk init                         Initialize with auto-detected prefix\n  \
-        wk init --prefix myproj         Initialize with custom prefix\n  \
-        wk init --remote .              Enable git sync (same repo orphan branch)\n  \
-        wk init --remote ~/tracker      Enable git sync (separate repo)\n  \
-        wk init --remote ws://host:7890 Enable WebSocket sync")]
+        wok init                         Initialize with auto-detected prefix\n  \
+        wok init --prefix myproj         Initialize with custom prefix\n  \
+        wok init --remote .              Enable git sync (same repo orphan branch)\n  \
+        wok init --remote ~/tracker      Enable git sync (separate repo)\n  \
+        wok init --remote ws://host:7890 Enable WebSocket sync")]
     Init {
         /// ID prefix for issues (2+ lowercase alphanumeric, defaults to directory name)
         #[arg(long)]
@@ -514,10 +514,10 @@ pub enum Command {
 
     /// Import issues from JSONL file
     #[command(after_help = "Examples:\n  \
-        wk import issues.jsonl           Import from file\n  \
-        wk import -                      Import from stdin\n  \
-        wk import --format bd beads.jsonl  Import beads format\n  \
-        wk import --dry-run issues.jsonl   Preview without applying")]
+        wok import issues.jsonl           Import from file\n  \
+        wok import -                      Import from stdin\n  \
+        wok import --format bd beads.jsonl  Import beads format\n  \
+        wok import --dry-run issues.jsonl   Preview without applying")]
     Import {
         /// Input file (use '-' for stdin)
         #[arg(value_name = "FILE")]
@@ -556,9 +556,9 @@ pub enum Command {
     #[command(
         arg_required_else_help = true,
         after_help = "Examples:\n  \
-        wk completion bash > ~/.local/share/bash-completion/completions/wk\n  \
-        wk completion zsh > ~/.zfunc/_wk\n  \
-        wk completion fish > ~/.config/fish/completions/wk.fish"
+        wok completion bash > ~/.local/share/bash-completion/completions/wk\n  \
+        wok completion zsh > ~/.zfunc/_wk\n  \
+        wok completion fish > ~/.config/fish/completions/wk.fish"
     )]
     Completion {
         /// Shell to generate completions for
@@ -587,8 +587,8 @@ pub enum Command {
     #[command(
         subcommand,
         after_help = "Examples:\n  \
-            wk schema list    Output schema for 'wk list -o json'\n  \
-            wk schema show    Output schema for 'wk show <id> -o json'\n\n\
+            wok schema list    Output schema for 'wok list -o json'\n  \
+            wok schema show    Output schema for 'wok show <id> -o json'\n\n\
           Available schemas: list, show, ready, search"
     )]
     Schema(SchemaCommand),
@@ -601,7 +601,7 @@ pub enum ConfigCommand {
     #[command(
         arg_required_else_help = true,
         after_help = "Examples:\n  \
-        wk config rename old new    Rename prefix from 'old' to 'new'"
+        wok config rename old new    Rename prefix from 'old' to 'new'"
     )]
     Rename {
         /// The old prefix to rename from (2+ lowercase alphanumeric with at least one letter)
@@ -614,9 +614,9 @@ pub enum ConfigCommand {
     #[command(
         arg_required_else_help = true,
         after_help = "Examples:\n  \
-        wk config remote .              Use git orphan branch in current repo\n  \
-        wk config remote git:.          Same as above (explicit)\n  \
-        wk config remote ws://host:7890 Use WebSocket server"
+        wok config remote .              Use git orphan branch in current repo\n  \
+        wok config remote git:.          Same as above (explicit)\n  \
+        wok config remote ws://host:7890 Use WebSocket server"
     )]
     Remote {
         /// Remote URL: "." or "git:." for current repo, "git:<path>" for separate repo, or "ws://..." for WebSocket
@@ -657,13 +657,13 @@ pub enum RemoteCommand {
 /// Schema output commands.
 #[derive(Subcommand)]
 pub enum SchemaCommand {
-    /// Output JSON Schema for 'wk list' JSON output
+    /// Output JSON Schema for 'wok list' JSON output
     List,
-    /// Output JSON Schema for 'wk show' JSON output
+    /// Output JSON Schema for 'wok show' JSON output
     Show,
-    /// Output JSON Schema for 'wk ready' JSON output
+    /// Output JSON Schema for 'wok ready' JSON output
     Ready,
-    /// Output JSON Schema for 'wk search' JSON output
+    /// Output JSON Schema for 'wok search' JSON output
     Search,
 }
 
@@ -672,10 +672,10 @@ pub enum SchemaCommand {
 pub enum HooksCommand {
     /// Install Claude Code hooks
     #[command(after_help = "Examples:\n  \
-        wk hooks install              Install to local scope (default)\n  \
-        wk hooks install -y           Non-interactive, local scope\n  \
-        wk hooks install project      Install to project scope\n  \
-        wk hooks install -i           Interactive picker")]
+        wok hooks install              Install to local scope (default)\n  \
+        wok hooks install -y           Non-interactive, local scope\n  \
+        wok hooks install project      Install to project scope\n  \
+        wok hooks install -i           Interactive picker")]
     Install {
         /// Target scope (local, project, user)
         scope: Option<String>,

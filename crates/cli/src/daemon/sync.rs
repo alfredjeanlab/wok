@@ -433,7 +433,7 @@ pub fn sync_git(worktree: &OplogWorktree, wal: &Wal, db_path: &Path) -> Result<u
 
             let _ = Command::new("git")
                 .current_dir(worktree_path)
-                .args(["commit", "-m", "wk sync"])
+                .args(["commit", "-m", "wok sync"])
                 .output();
 
             let _ = Command::new("git")

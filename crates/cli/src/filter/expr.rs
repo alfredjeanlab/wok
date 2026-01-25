@@ -33,10 +33,10 @@ pub enum FilterField {
     /// Represents `now - updated_at`.
     Updated,
     /// Successfully completed issues only (Status::Done).
-    /// Time since closed via `wk done` (`completed` or `done` synonyms).
+    /// Time since closed via `wok done` (`completed` or `done` synonyms).
     Completed,
     /// Cancelled/skipped issues only (Status::Closed).
-    /// Time since closed via `wk close --reason` (`skipped` or `cancelled` synonyms).
+    /// Time since closed via `wok close --reason` (`skipped` or `cancelled` synonyms).
     Skipped,
     /// Any terminal state (Status::Done or Status::Closed).
     /// Time since closed (`closed` synonym). Matches any issue with a closed_at timestamp.

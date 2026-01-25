@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Alfred Jean LLC
 
-//! Schema types for `wk list` JSON output.
+//! Schema types for `wok list` JSON output.
 
 use schemars::JsonSchema;
 use serde::Serialize;

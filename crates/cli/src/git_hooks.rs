@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Alfred Jean LLC
 
-//! Git hooks management for wk remote sync.
+//! Git hooks management for wok remote sync.
 //!
-//! Installs post-push and post-merge hooks that trigger wk remote sync
+//! Installs post-push and post-merge hooks that trigger wok remote sync
 //! when working with git remotes.
 
 use std::fs;
@@ -19,15 +19,15 @@ const WK_HOOK_MARKER: &str = "# wk-remote-sync";
 /// The post-push hook script.
 const POST_PUSH_HOOK: &str = r#"#!/bin/sh
 # wk-remote-sync
-# Trigger wk remote sync after pushing to remote
-wk remote sync --quiet 2>/dev/null || true
+# Trigger wok remote sync after pushing to remote
+wok remote sync --quiet 2>/dev/null || true
 "#;
 
 /// The post-merge hook script.
 const POST_MERGE_HOOK: &str = r#"#!/bin/sh
 # wk-remote-sync
-# Trigger wk remote sync after merging from remote
-wk remote sync --quiet 2>/dev/null || true
+# Trigger wok remote sync after merging from remote
+wok remote sync --quiet 2>/dev/null || true
 "#;
 
 /// Find the .git directory for a repository.
@@ -52,10 +52,10 @@ pub fn find_git_dir(from: &Path) -> Result<PathBuf> {
     Err(Error::Config("not a git repository".to_string()))
 }
 
-/// Install wk git hooks in a repository.
+/// Install wok git hooks in a repository.
 ///
-/// This installs post-push and post-merge hooks that trigger wk remote sync.
-/// Existing hooks are preserved by appending the wk hook code.
+/// This installs post-push and post-merge hooks that trigger wok remote sync.
+/// Existing hooks are preserved by appending the wok hook code.
 pub fn install_hooks(repo_path: &Path) -> Result<()> {
     let git_dir = find_git_dir(repo_path)?;
     let hooks_dir = git_dir.join("hooks");

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Alfred Jean LLC
 
-//! Schema types for `wk show` JSON output.
+//! Schema types for `wok show` JSON output.
 
 use chrono::{DateTime, Utc};
 use schemars::JsonSchema;
