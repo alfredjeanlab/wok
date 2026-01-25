@@ -10,7 +10,7 @@ use super::*;
 fn test_error_not_initialized_display() {
     let err = Error::NotInitialized;
     assert!(err.to_string().contains("not initialized"));
-    assert!(err.to_string().contains("wk init"));
+    assert!(err.to_string().contains("wok init"));
 }
 
 #[test]
@@ -265,7 +265,7 @@ fn test_error_title_contains_description_display() {
     let err = Error::TitleContainsDescription;
     let msg = err.to_string();
     assert!(msg.contains("double-newline"));
-    assert!(msg.contains("wk note"));
+    assert!(msg.contains("wok note"));
 }
 
 // Phase 4: Note and Lookup Error tests

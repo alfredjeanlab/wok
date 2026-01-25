@@ -9,7 +9,7 @@ use thiserror::Error;
 /// Errors provide user-friendly messages with hints for common issues.
 #[derive(Debug, Error)]
 pub enum Error {
-    #[error("not initialized: run 'wk init' first")]
+    #[error("not initialized: run 'wok init' first")]
     NotInitialized,
 
     #[error("already initialized at {0}")]
@@ -121,7 +121,7 @@ pub enum Error {
     #[error("unknown attribute '{attr}'")]
     UnknownAttribute { attr: String },
 
-    #[error("title contains double-newline; use 'wk note' for description")]
+    #[error("title contains double-newline; use 'wok note' for description")]
     TitleContainsDescription,
 
     // Phase 4: Note and Lookup Errors

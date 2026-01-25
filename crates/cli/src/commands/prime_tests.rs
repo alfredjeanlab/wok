@@ -18,10 +18,10 @@ fn template_contains_expected_sections() {
 
 #[test]
 fn template_contains_common_commands() {
-    assert!(TEMPLATE.contains("wk list"));
-    assert!(TEMPLATE.contains("wk new"));
-    assert!(TEMPLATE.contains("wk start"));
-    assert!(TEMPLATE.contains("wk done"));
+    assert!(TEMPLATE.contains("wok list"));
+    assert!(TEMPLATE.contains("wok new"));
+    assert!(TEMPLATE.contains("wok start"));
+    assert!(TEMPLATE.contains("wok done"));
 }
 
 #[test]
@@ -46,7 +46,7 @@ fn template_contains_priority_documentation() {
 #[test]
 fn template_contains_dependency_examples() {
     // Verify dep command examples
-    assert!(TEMPLATE.contains("wk dep"));
+    assert!(TEMPLATE.contains("wok dep"));
     assert!(TEMPLATE.contains("blocks"));
 }
 

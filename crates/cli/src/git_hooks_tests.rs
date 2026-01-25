@@ -61,11 +61,11 @@ fn test_install_hooks() {
 
     let post_push_content = fs::read_to_string(&post_push).unwrap();
     assert!(post_push_content.contains(WK_HOOK_MARKER));
-    assert!(post_push_content.contains("wk remote sync"));
+    assert!(post_push_content.contains("wok remote sync"));
 
     let post_merge_content = fs::read_to_string(&post_merge).unwrap();
     assert!(post_merge_content.contains(WK_HOOK_MARKER));
-    assert!(post_merge_content.contains("wk remote sync"));
+    assert!(post_merge_content.contains("wok remote sync"));
 
     // Check executable permission
     let perms = fs::metadata(&post_push).unwrap().permissions();

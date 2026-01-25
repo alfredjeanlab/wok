@@ -66,7 +66,7 @@ pub fn status() -> Result<()> {
                     println!("Status: daemon not running");
                     println!("Remote: {}", remote.url);
                     println!();
-                    println!("Run 'wk remote sync' to start syncing.");
+                    println!("Run 'wok remote sync' to start syncing.");
                 }
                 Err(e) => {
                     println!("Status: error checking daemon");
