@@ -14,9 +14,9 @@ fn test_flag_consistency() {
     use clap::CommandFactory;
 
     // Allowed short -> long mappings
-    // Note: -h/--help is handled automatically by clap and isn't in get_arguments()
     let allowed: std::collections::HashMap<char, &str> = [
         ('v', "version"), // -v, --version (top-level only)
+        ('h', "help"),    // -h, --help (top-level only)
         ('r', "reason"),
         ('t', "type"),
         ('l', "label"),
