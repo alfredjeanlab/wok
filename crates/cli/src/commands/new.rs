@@ -18,6 +18,7 @@ use crate::validate::{
 };
 
 use super::apply_mutation;
+use super::dep;
 use super::link::add_link_impl;
 
 // TODO(refactor): Consider using an options struct to bundle parameters
@@ -31,6 +32,10 @@ pub fn run(
     assignee: Option<String>,
     priority: Option<u8>,
     description: Option<String>,
+    blocks: Vec<String>,
+    blocked_by: Vec<String>,
+    tracks: Vec<String>,
+    tracked_by: Vec<String>,
 ) -> Result<()> {
     let (db, config, work_dir) = open_db()?;
     run_impl(
@@ -45,6 +50,10 @@ pub fn run(
         assignee,
         priority,
         description,
+        blocks,
+        blocked_by,
+        tracks,
+        tracked_by,
     )
 }
 
@@ -60,6 +69,16 @@ fn expand_labels(labels: &[String]) -> Vec<String> {
                 .filter(|s| !s.is_empty())
                 .map(String::from)
         })
+        .collect()
+}
+
+/// Expand comma-separated IDs into individual IDs.
+/// For example, ["a,b", "c"] becomes ["a", "b", "c"].
+fn expand_ids(ids: &[String]) -> Vec<String> {
+    ids.iter()
+        .flat_map(|id| id.split(','))
+        .map(|s| s.trim().to_string())
+        .filter(|s| !s.is_empty())
         .collect()
 }
 
@@ -134,6 +153,10 @@ pub(crate) fn run_impl(
     assignee: Option<String>,
     priority: Option<u8>,
     description: Option<String>,
+    blocks: Vec<String>,
+    blocked_by: Vec<String>,
+    tracks: Vec<String>,
+    tracked_by: Vec<String>,
 ) -> Result<()> {
     // Expand comma-separated labels into individual labels
     let mut labels = expand_labels(&labels);
@@ -244,6 +267,23 @@ pub(crate) fn run_impl(
         add_link_impl(db, work_dir, config, &id, link_url)?;
     }
 
+    // Add dependencies if provided
+    for target_id in expand_ids(&blocks) {
+        dep::add_impl(db, config, work_dir, &id, "blocks", &[target_id])?;
+    }
+
+    for target_id in expand_ids(&blocked_by) {
+        dep::add_impl(db, config, work_dir, &id, "blocked-by", &[target_id])?;
+    }
+
+    for target_id in expand_ids(&tracks) {
+        dep::add_impl(db, config, work_dir, &id, "tracks", &[target_id])?;
+    }
+
+    for target_id in expand_ids(&tracked_by) {
+        dep::add_impl(db, config, work_dir, &id, "tracked-by", &[target_id])?;
+    }
+
     println!(
         "Created [{}] ({}) {}: {}",
         issue_type, issue.status, id, normalized.title
@@ -255,3 +295,7 @@ pub(crate) fn run_impl(
 #[cfg(test)]
 #[path = "new_tests.rs"]
 mod tests;
+
+#[cfg(test)]
+#[path = "new_deps_tests.rs"]
+mod deps_tests;
