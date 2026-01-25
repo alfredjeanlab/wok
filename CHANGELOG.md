@@ -6,6 +6,18 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 
+- **Partial ID resolution**: Use abbreviated issue IDs (minimum 3 characters) across all commands. When a prefix uniquely identifies an issue, it resolves to the full ID; ambiguous prefixes return an error listing matches.
+
+- **`wok unlink` command**: Remove external links from issues.
+
+- **`-v/--version` flags**: Display version information with `wok -v` or `wok --version`.
+
+- **`-o/--output id` flag for `wok new`**: Output just the created issue ID for scripting workflows:
+  ```bash
+  ID=$(wok new task "My task" -o id)
+  wok dep $ID blocked-by prj-1234
+  ```
+
 - **Colorized help output**: Help text now uses 256-color ANSI codes with TTY detection and `COLOR`/`NO_COLOR` environment variable support. Section headers, commands, and placeholders are color-coded for readability.
 
 - **Dependency flags for `wok new`**: Create issues with dependencies in a single command using `--blocks`, `--blocked-by`, `--tracks`, and `--tracked-by` flags. Supports comma-separated IDs like `--blocks a,b,c`.
@@ -19,6 +31,10 @@ All notable changes to this project will be documented in this file.
 - **Bare status fields in filter expressions**: Status fields (`closed`, `skipped`, `completed`, `done`, `cancelled`) can be used without operators as shorthand for "has this status".
 
 ### Changed
+
+- **Issue IDs now use 8 hex characters**: Increased from 4 characters to support partial ID resolution with better prefix matching.
+
+- **Long titles auto-truncated**: Issue titles longer than 120 characters are automatically truncated instead of being rejected.
 
 - **Binary renamed to `wok`**: The primary binary is now `wok` instead of `wk`. The short name `wk` is installed as a symlink for convenience. This affects all installation methods (make install, curlpipe, and Homebrew).
 
