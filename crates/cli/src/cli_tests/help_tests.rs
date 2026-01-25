@@ -13,6 +13,7 @@ use clap::CommandFactory;
 /// (like `[un]dep` for `dep`/`undep`) are accounted for.
 #[test]
 fn all_subcommands_in_help() {
+    std::env::set_var("NO_COLOR", "1");
     let cmd = crate::Cli::command();
     let help_text = help::commands();
 
@@ -64,6 +65,7 @@ fn all_subcommands_in_help() {
 /// Verifies the [un] prefixed commands are displayed correctly.
 #[test]
 fn un_prefixed_format() {
+    std::env::set_var("NO_COLOR", "1");
     let help_text = help::commands();
 
     // These should appear as [un]X format

@@ -8,7 +8,6 @@
 //! - `COLOR=1`: Forces colors even without TTY
 
 use std::io::IsTerminal;
-use std::sync::OnceLock;
 
 /// ANSI 256-color codes matching v0 help conventions
 pub mod codes {
@@ -22,21 +21,18 @@ pub mod codes {
 
 /// Check if colors should be enabled based on TTY and environment variables.
 pub fn should_colorize() -> bool {
-    static SHOULD_COLORIZE: OnceLock<bool> = OnceLock::new();
-    *SHOULD_COLORIZE.get_or_init(|| {
-        // NO_COLOR=1 disables colors
-        if std::env::var("NO_COLOR").is_ok_and(|v| v == "1") {
-            return false;
-        }
+    // NO_COLOR=1 disables colors
+    if std::env::var("NO_COLOR").is_ok_and(|v| v == "1") {
+        return false;
+    }
 
-        // COLOR=1 forces colors even without TTY
-        if std::env::var("COLOR").is_ok_and(|v| v == "1") {
-            return true;
-        }
+    // COLOR=1 forces colors even without TTY
+    if std::env::var("COLOR").is_ok_and(|v| v == "1") {
+        return true;
+    }
 
-        // Default: enable colors only if stdout is a TTY
-        std::io::stdout().is_terminal()
-    })
+    // Default: enable colors only if stdout is a TTY
+    std::io::stdout().is_terminal()
 }
 
 /// Format a 256-color ANSI escape sequence for foreground color.
