@@ -9,16 +9,14 @@ A portable test suite that validates the `wk` CLI against REQUIREMENTS.md.
 
 ## Setup
 
-BATS libraries are installed locally on first run:
+BATS is installed automatically on first run to `~/.local/share/wok/bats/`:
 
 ```bash
-# System bats-core (optional, slightly faster)
+# Optional: install system bats-core for slightly faster startup
 brew install bats-core  # macOS
-
-# Libraries (bats-support, bats-assert) are auto-installed to checks/specs/bats/
 ```
 
-The test runner automatically detects system bats and uses it when available, falling back to the local installation.
+The test runner downloads bats-core, bats-support, and bats-assert to the user data directory on first run.
 
 ## Running Tests
 
@@ -32,12 +30,6 @@ make spec
 # Run specific spec groups
 make spec-cli              # All CLI specs
 make spec-remote           # All remote specs
-make spec-cli-unit         # CLI unit tests only
-make spec-cli-integration  # CLI integration tests only
-make spec-cli-edge-cases   # CLI edge cases only
-
-# Check bats configuration
-make bats-check
 
 # Test with specific binary
 WK_BIN=crates/cli/target/release/wk make spec
@@ -47,23 +39,16 @@ WK_BIN=crates/cli/target/release/wk make spec
 
 ```text
 specs/
-├── bats/                     # BATS framework (local installation)
-│   ├── install.sh            # Downloads bats libraries
-│   ├── bats-core/            # Downloaded by install.sh
-│   ├── bats-assert/          # Downloaded by install.sh
-│   └── bats-support/         # Downloaded by install.sh
 ├── helpers/
 │   └── common.bash           # Shared setup/teardown utilities
 ├── cli/                      # CLI tests
 │   ├── unit/                 # Per-command tests
 │   ├── integration/          # Cross-feature tests
-│   ├── edge_cases/           # Edge case and error tests
-│   └── consistency/          # Flag consistency tests
+│   └── edge_cases/           # Edge case and error tests
 └── remote/                   # Remote/sync tests
     ├── unit/                 # Remote command tests
     ├── integration/          # Multi-client tests
-    ├── edge_cases/           # Recovery and conflict tests
-    └── helpers/              # Remote test utilities
+    └── edge_cases/           # Recovery and conflict tests
 ```
 
 ## Environment Variables

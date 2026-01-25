@@ -51,7 +51,7 @@ This document has been split into semantic sections for easier navigation and ma
    - Error handling
 
 8. **[Project Structure](specs/08-project-structure.md)**
-   - Project layout (bin/, checks/)
+   - Project layout (bin/, tests/)
    - Test suites
    - Running tests
    - CLI behavior

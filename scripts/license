@@ -123,13 +123,13 @@ update_readme
 
 # Process Rust files
 echo "Processing Rust files..."
-find crates checks -name "*.rs" -type f 2>/dev/null | while read -r file; do
+find crates tests -name "*.rs" -type f 2>/dev/null | while read -r file; do
     add_rust_header "$file"
 done
 
-# Process bash scripts in checks/
-echo "Processing bash scripts in checks/..."
-find checks -name "*.sh" -type f 2>/dev/null | while read -r file; do
+# Process bash scripts in tests/
+echo "Processing bash scripts in tests/..."
+find tests -name "*.sh" -type f 2>/dev/null | while read -r file; do
     if head -1 "$file" | grep -qE "^#!.*(bash|sh)"; then
         add_bash_header "$file"
     fi

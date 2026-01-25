@@ -93,13 +93,11 @@ Run `make` to see all available targets:
 
 ```bash
 make install   # Build and install the wk binary
-make test      # Run tests
+make check     # Run fmt, clippy, check, audit, test
 make spec      # Run BATS specs
-make bench     # Run benchmarks
-make quality   # Evaluate code quality
 ```
 
-See individual README files in `checks/` for detailed documentation.
+See individual README files in `tests/` for detailed documentation.
 
 ## License
 

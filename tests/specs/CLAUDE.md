@@ -10,7 +10,7 @@ Search for existing issues and recent changes before assuming a bug is new:
 
 1. `bd list --status=open` - check for existing issues
 2. `cmd/status` - review in-progress and recently completed projects
-3. `git log --oneline -10 checks/specs/` - recent spec changes
+3. `git log --oneline -10 tests/specs/` - recent spec changes
 4. `git log --oneline -10 crates/cli/` - recent CLI changes that may have diverged
 
 ## Key Philosophy (REQUIREMENTS.md)

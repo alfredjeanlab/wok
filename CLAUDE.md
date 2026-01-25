@@ -5,9 +5,7 @@ Wok (wk) is a collaborative, offline-first, AI-friendly issue tracker.
 - `crates/cli/` → `--label crate:cli`
 - `crates/core/` → `--label crate:core`
 - `crates/remote/` → `--label crate:remote`
-- `checks/specs/` → `--label test:specs`
-- `checks/stress/` → `--label test:stress`
-- `checks/benchmarks/` → `--label test:benchmarks`
+- `tests/specs/` → `--label test:specs`
 
 ## Common Commands
 
@@ -20,8 +18,7 @@ Wok (wk) is a collaborative, offline-first, AI-friendly issue tracker.
 - `make spec-remote` - Run remote specs
 - `make spec ARGS='--filter "pattern"'` - Filter tests by name
 - `make spec ARGS='--file cli/unit/list.bats'` - Run specific file
-- `make quality` - Run quality evaluation
-- `make validate` - Run all validation checks (slow)
+- `make validate` - Run all validation checks
 
 ## Directory Structure
 
@@ -31,11 +28,8 @@ wok/
 │   ├── cli/          # Command-line interface
 │   ├── core/         # Core library
 │   └── remote/       # Remote functionality
-├── checks/           # Testing & quality
-│   ├── specs/        # Specification tests
-│   ├── quality/      # Code quality checks
-│   ├── stress/       # Stress testing
-│   └── benchmarks/   # Performance benchmarks
+├── tests/            # Testing
+│   └── specs/        # Specification tests (BATS)
 ├── scripts/          # Build and utility scripts
 ├── docs/             # Documentation
 └── plans/            # Planning notes
@@ -46,11 +40,11 @@ wok/
 When adding or modifying features:
 
 - [ ] Keep `docs/specs/` up to date with changes
-- [ ] Update specs in `checks/specs/` before changing behavior
+- [ ] Update specs in `tests/specs/` before changing behavior
   - Unimplemented bats specs are tagged with `# bats test_tags=todo:implement`
 - [ ] Run related specs: `make spec-cli` or `make spec-remote`
 
-See `checks/specs/CLAUDE.md` for spec philosophy and guidelines.
+See `tests/specs/CLAUDE.md` for spec philosophy and guidelines.
 
 ## Landing the Plane
 

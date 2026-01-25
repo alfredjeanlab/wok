@@ -11,5 +11,5 @@ crates/core/ @alfredjean
 .github/ @alfredjean
 
 # Quality and benchmark configurations
-checks/quality/ @alfredjean
-checks/benchmarks/ @alfredjean
+tests/quality/ @alfredjean
+tests/benchmarks/ @alfredjean

@@ -23,21 +23,14 @@ bin/
         └── state.rs        # Server state management
 ```
 
-## Test Suites (`checks/`)
+## Test Suites (`tests/`)
 
 ```
-checks/
-├── specs/          # BATS acceptance tests (validates REQUIREMENTS.md)
-│   ├── bats/               # BATS framework (auto-installed)
-│   ├── helpers/common.bash # Shared test utilities
-│   ├── cli/                # CLI tests (unit, integration, edge_cases)
-│   └── remote/             # Remote tests (unit, integration, edge_cases)
-├── benchmarks/     # Performance benchmarks
-│   ├── run.sh              # Benchmark runner
-│   └── scenarios/          # Individual benchmark scripts
-└── quality/        # Code quality metrics
-    ├── evaluate.sh         # Quality evaluation script
-    └── metrics/            # Individual metric collectors
+tests/
+└── specs/          # BATS acceptance tests (validates REQUIREMENTS.md)
+    ├── helpers/common.bash # Shared test utilities
+    ├── cli/                # CLI tests (unit, integration, edge_cases)
+    └── remote/             # Remote tests (unit, integration, edge_cases)
 ```
 
 ## Running Tests
@@ -51,9 +44,6 @@ cargo test
 
 # Run BATS acceptance tests
 make spec
-
-# Run benchmarks
-make bench
 ```
 
 ## CLI Behavior

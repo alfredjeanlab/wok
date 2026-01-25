@@ -1,19 +1,15 @@
 # Makefile for wk project
 
 SHELL := /bin/bash
-SPECS_DIR := checks/specs
+SPECS_DIR := tests/specs
 
-.PHONY: help install check validate spec spec-cli spec-remote spec-todo quality stress stress-docker bench coverage coverage-spec license
+.PHONY: help install check validate spec spec-cli spec-remote spec-todo coverage coverage-spec license
 
 help:
 	@echo "Targets:"
 	@echo "  make install     - Build and install wok to ~/.local/bin"
 	@echo "  make check       - Run fmt, clippy, check, audit, test"
 	@echo "  make validate    - Run all validation checks"
-	@echo "  make quality     - Run quality evaluation"
-	@echo "  make stress      - Run stress tests (native)"
-	@echo "  make stress-docker - Run stress tests in Docker (recommended)"
-	@echo "  make bench       - Run benchmarks"
 	@echo "  make coverage    - Generate code coverage report (unit tests)"
 	@echo "  make coverage-spec - Generate coverage from unit tests + specs"
 	@echo "  make license     - Add license headers to source files"
@@ -44,9 +40,6 @@ check:
 validate:
 	@scripts/validate
 
-quality:
-	@checks/quality/evaluate.sh
-
 # Run specs via script (pass ARGS for options like --filter, --file)
 # Runs CLI parallel, then remote sequential
 spec:
@@ -61,15 +54,6 @@ spec-remote:
 
 spec-todo:
 	@scripts/spec --filter-tags todo:implement $(ARGS)
-
-stress:
-	@checks/stress/run.sh $(ARGS)
-
-stress-docker:
-	@checks/stress/docker-run.sh $(ARGS)
-
-bench:
-	@checks/benchmarks/run.sh $(if $(ARGS),$(ARGS),all)
 
 FMT := --html
 coverage:

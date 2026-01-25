@@ -12,16 +12,17 @@ env:
 
 jobs:
   fmt:
+    name: Format
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
       - uses: dtolnay/rust-toolchain@stable
         with:
           components: rustfmt
-      - name: cargo fmt --check
-        run: cargo fmt --check
+      - run: cargo fmt --all -- --check
 
   clippy:
+    name: Clippy
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
@@ -29,56 +30,88 @@ jobs:
         with:
           components: clippy
       - uses: Swatinem/rust-cache@v2
-      - name: cargo clippy
-        run: cargo clippy -- -D warnings
+      - run: cargo clippy --all-targets --all-features -- -D warnings
 
   check:
+    name: Check
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
-      - name: cargo check
-        run: cargo check
+      - run: cargo check
 
   quench:
+    name: Quench
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
       - name: Install quench
         run: curl -fsSL https://github.com/alfredjeanlab/quench/releases/latest/download/install.sh | bash
-      - name: quench check --fix
-        run: quench check --fix
+      - run: quench check
 
   audit:
+    name: Security Audit
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
       - uses: taiki-e/install-action@v2
         with:
           tool: cargo-audit
-      - name: cargo audit
-        run: cargo audit
+      - run: cargo audit
 
   build:
+    name: Build
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
-      - name: cargo build --workspace
-        run: cargo build --workspace
-      - name: Upload binary
-        uses: actions/upload-artifact@v6
-        with:
-          name: wk-linux
-          path: target/debug/wk
+      - run: cargo build --workspace
 
   test:
+    name: Test
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
-      - name: cargo test
-        run: cargo test
+      - run: cargo test
+
+  spec:
+    name: Spec (${{ matrix.suite }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    strategy:
+      fail-fast: false
+      matrix:
+        suite: [cli, remote]
+    steps:
+      - uses: actions/checkout@v6
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Build release binary
+        run: cargo build --release
+
+      - name: Install BATS
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y bats make
+
+      - name: Setup BATS libraries
+        run: |
+          git clone --depth 1 https://github.com/bats-core/bats-support tests/specs/test_helper/bats-support
+          git clone --depth 1 https://github.com/bats-core/bats-assert tests/specs/test_helper/bats-assert
+
+      - name: Run specs
+        run: |
+          export PATH="${{ github.workspace }}/target/release:$PATH"
+          make spec-${{ matrix.suite }}
+
+      - name: Cleanup orphan processes
+        if: always()
+        run: |
+          pkill -9 -f wk-remote 2>/dev/null || true
+          pkill -9 -f 'wk.*daemon' 2>/dev/null || true
+          sleep 1

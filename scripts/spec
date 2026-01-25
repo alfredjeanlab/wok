@@ -10,7 +10,7 @@
 #
 # Options:
 #   --filter <regex>   Filter tests by name
-#   --file <path>      Run specific test file (relative to checks/specs/)
+#   --file <path>      Run specific test file (relative to tests/specs/)
 #   --filter-tags <t>  Filter by bats tags (e.g., todo:implement)
 #   --timeout <secs>   Test timeout in seconds (default: 5)
 #   --parallel, -p     Run tests in parallel (80% of CPUs, min 1)
@@ -24,7 +24,7 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 ROOT_DIR="$(dirname "$SCRIPT_DIR")"
-SPECS_DIR="$ROOT_DIR/checks/specs"
+SPECS_DIR="$ROOT_DIR/tests/specs"
 
 # BATS configuration (global installation to user data directory)
 WK_DATA_DIR="${XDG_DATA_HOME:-$HOME/.local/share}/wok"

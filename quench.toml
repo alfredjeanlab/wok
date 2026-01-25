@@ -8,5 +8,5 @@ If not, split large test files into a {module}_tests/ folder.
 exclude = [
     # ONLY for intentionally large fixture/test data
     # NEVER for tests or source files
-    "checks/benchmarks/setup/*.sql",  # large SQL fixtures for benchmarks
+    "tests/benchmarks/setup/*.sql",  # large SQL fixtures for benchmarks
 ]
