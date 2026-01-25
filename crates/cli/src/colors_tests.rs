@@ -214,6 +214,40 @@ fn colorize_command_multiple_quoted_strings() {
     assert_eq!(stripped, r#"wok cmd "first" "second""#);
 }
 
+#[test]
+fn colorize_command_with_placeholder() {
+    let result = colorize_command("wok start <id>");
+    let stripped = strip_ansi(&result);
+    assert_eq!(stripped, "wok start <id>");
+
+    // When colors enabled, placeholder should have context color
+    if should_colorize() {
+        assert!(result.contains(&expected_fg(codes::CONTEXT)));
+    }
+}
+
+#[test]
+fn colorize_command_multiple_placeholders() {
+    let result = colorize_command("wok dep <blocker> blocks <blocked>");
+    let stripped = strip_ansi(&result);
+    assert_eq!(stripped, "wok dep <blocker> blocks <blocked>");
+}
+
+#[test]
+fn colorize_command_placeholder_and_quoted() {
+    let result = colorize_command(r#"wok new <type> "title""#);
+    let stripped = strip_ansi(&result);
+    assert_eq!(stripped, r#"wok new <type> "title""#);
+}
+
+#[test]
+fn colorize_command_unclosed_placeholder() {
+    // Unclosed angle bracket should still work (extends to end)
+    let result = colorize_command("wok start <id");
+    let stripped = strip_ansi(&result);
+    assert_eq!(stripped, "wok start <id");
+}
+
 // =============================================================================
 // Color helper functions
 // =============================================================================

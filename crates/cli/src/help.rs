@@ -108,19 +108,13 @@ pub fn commands() -> String {
 
 /// Quickstart help shown after options in main help.
 pub fn quickstart() -> String {
-    format!(
+    colors::examples(
         "\
-{header}
-  {init}                 Initialize tracker
-  {new}   Create a new task
-  {list}                 List all issues
-  {start}           Start working on an issue
-  {done}            Mark issue as complete",
-        header = colors::header("Get started:"),
-        init = colors::literal("wok init"),
-        new = colors::literal("wok new task \"My task\""),
-        list = colors::literal("wok list"),
-        start = colors::literal("wok start <id>"),
-        done = colors::literal("wok done <id>"),
+Get started:
+  wok init                 Initialize tracker
+  wok new task \"My task\"   Create a new task
+  wok list                 List all issues
+  wok start <id>           Start working on an issue
+  wok done <id>            Mark issue as complete",
     )
 }
