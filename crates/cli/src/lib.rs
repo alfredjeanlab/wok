@@ -31,12 +31,14 @@
 //! ```
 
 mod cli;
+pub mod colors;
 mod commands;
 mod completions;
 mod daemon;
 mod display;
 pub mod filter;
 mod git_hooks;
+mod help;
 mod mode;
 mod normalize;
 mod schema;

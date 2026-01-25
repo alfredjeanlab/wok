@@ -13,7 +13,8 @@ path = "src/main.rs"
 
 [dependencies]
 wk-core = { path = "../core" }
-clap = { version = "4", features = ["derive"] }
+clap = { version = "4", features = ["derive", "color"] }
+anstyle = "1"
 clap_complete = "4"
 rusqlite = { version = "0.31", features = ["bundled"] }
 chrono = { version = "0.4", features = ["serde"] }
