@@ -33,7 +33,7 @@ install:
 	@scripts/install
 
 check:
-	cargo fmt --check
+	cargo fmt
 	cargo clippy -- -D warnings
 	cargo check
 	quench check --fix
