@@ -41,13 +41,16 @@ pub fn template() -> String {
 }
 
 /// Commands list shown before options in main help.
+///
+/// Some command pairs that differ only by an "un" prefix are shown together
+/// using the `[un]` convention (e.g., `[un]dep` covers both `dep` and `undep`).
+/// This keeps the help output concise while still documenting all commands.
 pub fn commands() -> String {
     format!(
         "\
 {header_tracking}
   {new}         Create a new issue
-  {dep}         Add dependency between issues
-  {undep}       Remove dependency between issues
+  {un_dep}     Add/remove dependency between issues
   {show}        Show issue details
   {tree}        Show dependency tree
   {list}        List issues
@@ -59,9 +62,8 @@ pub fn commands() -> String {
   {reopen}      Return issue(s) to todo
   {edit}        Edit an issue's properties
   {note}        Add a note to an issue
-  {label}       Add a label to issue(s)
-  {unlabel}     Remove a label from issue(s)
-  {link}        Add external link to an issue
+  {un_label}   Add/remove a label from issue(s)
+  {un_link}    Add/remove external link from an issue
   {log}         View event log
 
 {header_setup}
@@ -77,8 +79,7 @@ pub fn commands() -> String {
         header_tracking = colors::header("Issue Tracking:"),
         header_setup = colors::header("Setup & Configuration:"),
         new = colors::literal("new"),
-        dep = colors::literal("dep"),
-        undep = colors::literal("undep"),
+        un_dep = un_literal("dep"),
         show = colors::literal("show"),
         tree = colors::literal("tree"),
         list = colors::literal("list"),
@@ -90,9 +91,8 @@ pub fn commands() -> String {
         reopen = colors::literal("reopen"),
         edit = colors::literal("edit"),
         note = colors::literal("note"),
-        label = colors::literal("label"),
-        unlabel = colors::literal("unlabel"),
-        link = colors::literal("link"),
+        un_label = un_literal("label"),
+        un_link = un_literal("link"),
         log = colors::literal("log"),
         init = colors::literal("init"),
         hooks = colors::literal("hooks"),
@@ -104,6 +104,13 @@ pub fn commands() -> String {
         completion = colors::literal("completion"),
         prime = colors::literal("prime"),
     )
+}
+
+/// Format a command with `[un]` prefix, e.g., `[un]dep` for dep/undep pair.
+/// The brackets and "un" are colored as context (dimmer), while the command name
+/// is colored as literal (brighter).
+fn un_literal(name: &str) -> String {
+    format!("{}{}", colors::context("[un]"), colors::literal(name),)
 }
 
 /// Quickstart help shown after options in main help.

@@ -9,6 +9,7 @@ use super::*;
 mod dep_tests;
 mod edit_tests;
 mod flags_tests;
+mod help_tests;
 mod hooks_tests;
 mod init_tests;
 mod io_tests;
