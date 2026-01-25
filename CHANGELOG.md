@@ -4,6 +4,8 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [0.3.0]
+
 ### Added
 
 - **Partial ID resolution**: Use abbreviated issue IDs (minimum 3 characters) across all commands. When a prefix uniquely identifies an issue, it resolves to the full ID; ambiguous prefixes return an error listing matches.
