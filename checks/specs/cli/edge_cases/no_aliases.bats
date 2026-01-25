@@ -71,12 +71,13 @@ load '../../helpers/common'
     refute_output --partial "update"
     refute_output --partial "push"
     refute_output --partial "pull"
-    refute_output --partial "version"
     refute_output --partial "archive"
     # These need regex to avoid matching flags/substrings
     refute_output --regexp "^\s+add\s"
     refute_output --regexp "^\s+status\s"
     refute_output --regexp " rm "
+    # "version" can appear in --version flag but not as a subcommand
+    refute_output --regexp "^\s+version\s"
 }
 
 @test "help <unsupported> fails" {

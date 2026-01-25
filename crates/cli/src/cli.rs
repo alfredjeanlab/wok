@@ -27,6 +27,8 @@ pub enum OutputFormat {
 
 #[derive(Parser)]
 #[command(name = "wok")]
+#[command(version = env!("CARGO_PKG_VERSION"))]
+#[command(disable_version_flag = true)]
 #[command(
     about = "A collaborative, offline-first, AI-friendly issue tracker with dependency tracking"
 )]
@@ -38,7 +40,13 @@ pub enum OutputFormat {
 #[command(before_help = help::commands())]
 #[command(after_help = help::quickstart())]
 #[command(styles = help::styles())]
+// Allow the unit type field pattern which is required for clap's ArgAction::Version
+#[allow(clippy::manual_non_exhaustive)]
 pub struct Cli {
+    /// Print version
+    #[arg(short = 'v', short_alias = 'V', long = "version", action = clap::ArgAction::Version)]
+    version: (),
+
     #[command(subcommand)]
     pub command: Command,
 }
