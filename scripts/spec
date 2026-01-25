@@ -25,44 +25,71 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 ROOT_DIR="$(dirname "$SCRIPT_DIR")"
 SPECS_DIR="$ROOT_DIR/checks/specs"
-BATS_LOCAL_DIR="$SPECS_DIR/bats"
 
-# Initialize bats submodules if needed
-if [ ! -f "$BATS_LOCAL_DIR/bats-support/load.bash" ]; then
-    if [ -x "$BATS_LOCAL_DIR/install.sh" ]; then
-        echo "Initializing bats libraries..."
-        "$BATS_LOCAL_DIR/install.sh"
+# BATS configuration (global installation to user data directory)
+WK_DATA_DIR="${XDG_DATA_HOME:-$HOME/.local/share}/wok"
+BATS_DIR="$WK_DATA_DIR/bats"
+BATS="$BATS_DIR/bats-core/bin/bats"
+export BATS_LIB_PATH="$BATS_DIR"
+
+# BATS versions
+BATS_CORE_VERSION="v1.11.0"
+BATS_SUPPORT_VERSION="v0.3.0"
+BATS_ASSERT_VERSION="v2.1.0"
+
+# Download and extract a BATS component
+download_bats_component() {
+    local repo="$1"
+    local version="$2"
+    local target="$3"
+    local url="https://github.com/bats-core/${repo}/archive/refs/tags/${version}.tar.gz"
+    local temp_file
+    temp_file=$(mktemp)
+
+    echo "Downloading $repo $version..."
+    if command -v curl >/dev/null 2>&1; then
+        curl -fsSL "$url" -o "$temp_file"
+    elif command -v wget >/dev/null 2>&1; then
+        wget -q "$url" -O "$temp_file"
+    else
+        echo "Error: curl or wget required to download BATS" >&2
+        rm -f "$temp_file"
+        exit 1
     fi
-fi
 
-# Always use local bats for consistent behavior across environments
-BATS="$BATS_LOCAL_DIR/bats-core/bin/bats"
+    # Extract to target directory
+    mkdir -p "$BATS_DIR"
+    tar -xzf "$temp_file" -C "$BATS_DIR"
+    rm -f "$temp_file"
 
-# Find bats library path (support/assert)
-export BATS_LIB_PATH=""
-for p in /usr/local/lib /opt/homebrew/lib /usr/lib; do
-    if [ -d "$p/bats-support" ] && [ -d "$p/bats-assert" ]; then
-        export BATS_LIB_PATH="$p"
-        break
+    # Rename extracted directory (removes version suffix)
+    local extracted_dir="$BATS_DIR/${repo}-${version#v}"
+    if [ -d "$extracted_dir" ]; then
+        rm -rf "$BATS_DIR/$target"
+        mv "$extracted_dir" "$BATS_DIR/$target"
     fi
-done
 
-# Fall back to local libraries
-if [ -z "$BATS_LIB_PATH" ]; then
-    export BATS_LIB_PATH="$BATS_LOCAL_DIR"
-fi
+    echo "$repo installed to $BATS_DIR/$target"
+}
 
-# Verify bats is available
-if [ ! -x "$BATS" ]; then
-    echo "Error: bats not found at $BATS" >&2
-    exit 1
-fi
+# Ensure BATS and its libraries are installed
+ensure_bats_installed() {
+    if [ -d "$BATS_DIR/bats-support" ] && [ -d "$BATS_DIR/bats-assert" ] && [ -x "$BATS" ]; then
+        return 0
+    fi
 
-# Verify bats libraries are available
-if [ ! -f "$BATS_LIB_PATH/bats-support/load.bash" ]; then
-    echo "Error: bats libraries not found at $BATS_LIB_PATH" >&2
-    exit 1
-fi
+    echo "Installing BATS libraries to $BATS_DIR..."
+    mkdir -p "$BATS_DIR"
+
+    [ -x "$BATS" ] || download_bats_component "bats-core" "$BATS_CORE_VERSION" "bats-core"
+    [ -d "$BATS_DIR/bats-support" ] || download_bats_component "bats-support" "$BATS_SUPPORT_VERSION" "bats-support"
+    [ -d "$BATS_DIR/bats-assert" ] || download_bats_component "bats-assert" "$BATS_ASSERT_VERSION" "bats-assert"
+
+    echo "BATS installation complete!"
+    echo ""
+}
+
+ensure_bats_installed
 
 # Default binary paths - auto-detect from build output or fall back to PATH
 if [ -z "${WK_BIN:-}" ]; then
