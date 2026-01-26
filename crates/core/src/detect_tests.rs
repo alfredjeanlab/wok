@@ -1,32 +1,24 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Alfred Jean LLC
 
-#![allow(clippy::bool_assert_comparison)]
-
 use super::*;
 
 #[test]
-fn is_foreground_process_returns_bool() {
-    // is_foreground_process should return a boolean without panicking
-    let result = is_foreground_process();
-    // In test environment, we're typically running in foreground
-    assert!(result == true || result == false);
+fn is_foreground_process_does_not_panic() {
+    // Just verify the function doesn't panic
+    let _: bool = is_foreground_process();
 }
 
 #[test]
-fn detect_returns_valid_result() {
-    // In a test environment, detect_ai_assistant should return a valid Option
-    // It may return Some (if running under an AI assistant) or None
-    let result = detect_ai_assistant();
-    // Verify it's a valid Option - the function should not panic
-    let _ = result;
+fn detect_ai_assistant_does_not_panic() {
+    // Just verify the function doesn't panic
+    let _: Option<AiAssistant> = detect_ai_assistant();
 }
 
 #[test]
-fn is_ai_subprocess_returns_bool() {
-    // is_ai_subprocess should always return a boolean without panicking
-    let result = is_ai_subprocess();
-    assert!(result || !result);
+fn is_ai_subprocess_does_not_panic() {
+    // Just verify the function doesn't panic
+    let _: bool = is_ai_subprocess();
 }
 
 #[test]
@@ -130,8 +122,7 @@ fn env_detection_tests() {
 }
 
 #[test]
-fn is_human_interactive_returns_bool() {
-    // Should return a boolean without panicking
-    let result = is_human_interactive();
-    assert!(result || !result);
+fn is_human_interactive_does_not_panic() {
+    // Just verify the function doesn't panic
+    let _: bool = is_human_interactive();
 }

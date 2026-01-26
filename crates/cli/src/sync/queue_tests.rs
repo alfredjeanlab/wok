@@ -38,7 +38,7 @@ fn test_queue_file_with_blank_lines() {
         .append(true)
         .open(&queue_path)
         .unwrap();
-    writeln!(file, "").unwrap();
+    writeln!(file).unwrap();
     writeln!(file, "   ").unwrap();
 
     queue.enqueue(&make_test_op(2000)).unwrap();

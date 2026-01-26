@@ -5,6 +5,9 @@
 // and not every test file uses every helper.
 #![allow(dead_code)]
 #![allow(unused_imports)]
+#![allow(clippy::panic)]
+#![allow(clippy::unwrap_used)]
+#![allow(clippy::expect_used)]
 
 use assert_cmd::cargo::cargo_bin_cmd;
 use assert_cmd::Command;

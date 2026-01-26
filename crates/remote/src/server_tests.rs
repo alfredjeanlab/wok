@@ -6,7 +6,6 @@
 //! Provides a TestServer that runs on a random port with fault injection
 //! capabilities for testing client behavior under various conditions.
 
-#![cfg(test)]
 #![allow(dead_code)]
 #![allow(clippy::unwrap_used)]
 #![allow(clippy::expect_used)]

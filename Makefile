@@ -30,7 +30,7 @@ install:
 
 check:
 	cargo fmt
-	cargo clippy -- -D warnings
+	cargo clippy --all-targets --all-features -- -D warnings
 	cargo check
 	quench check --fix
 	cargo audit

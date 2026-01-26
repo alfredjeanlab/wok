@@ -37,7 +37,7 @@ fn test_get_deps_from_issue() {
 
     let deps = ctx.db.get_deps_from("child").unwrap();
     // Should have both tracks and blocks relationships
-    assert!(deps.len() >= 1);
+    assert!(!deps.is_empty());
 }
 
 #[test]

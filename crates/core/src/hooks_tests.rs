@@ -66,7 +66,7 @@ fn uninstall_hooks_at(base: &Path, scope: HookScope) -> io::Result<()> {
     remove_wk_hooks(&mut settings);
 
     // If empty, remove the file; otherwise write back
-    if settings.as_object().map_or(true, |o| o.is_empty()) {
+    if settings.as_object().is_none_or(|o| o.is_empty()) {
         fs::remove_file(&abs_path)?;
     } else {
         let content = serde_json::to_string_pretty(&settings)

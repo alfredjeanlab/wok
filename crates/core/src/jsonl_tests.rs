@@ -88,7 +88,7 @@ fn write_all_replaces_content() {
         id: 2,
         name: "replaced".into(),
     };
-    write_all(&path, &[r2.clone()]).unwrap();
+    write_all(&path, std::slice::from_ref(&r2)).unwrap();
 
     let records: Vec<TestRecord> = read_all(&path).unwrap();
     assert_eq!(records, vec![r2]);

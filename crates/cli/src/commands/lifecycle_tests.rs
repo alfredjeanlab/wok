@@ -680,8 +680,10 @@ fn test_bulk_result_with_transition_failures() {
 
 #[test]
 fn test_bulk_result_mixed_failures() {
-    let mut result = BulkResult::default();
-    result.success_count = 2;
+    let mut result = BulkResult {
+        success_count: 2,
+        ..Default::default()
+    };
     result.unknown_ids.push("test-1".to_string());
     result
         .transition_failures

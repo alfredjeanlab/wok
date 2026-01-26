@@ -3,6 +3,10 @@
 
 //! Integration tests for wk-remote server binary.
 
+#![allow(clippy::panic)]
+#![allow(clippy::unwrap_used)]
+#![allow(clippy::expect_used)]
+
 use std::process::{Child, Command, Stdio};
 use std::time::Duration;
 

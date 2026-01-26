@@ -11,6 +11,7 @@
 //! The `wk-remote` binary must be built and available in the same target directory.
 //! Run `cargo build -p wk-remote` before running these tests.
 
+#![allow(clippy::panic)]
 #![allow(clippy::unwrap_used)]
 #![allow(clippy::expect_used)]
 
