@@ -2,39 +2,46 @@
 load '../../helpers/common'
 
 # Input limit tests based on REQUIREMENTS.md:
-# - Issue titles: max 500 characters
+# - Issue titles: auto-truncated at 120 characters (with ellipsis)
 # - Note content: max 10,000 characters
 # - Label names: max 100 characters
 # - Reason text: max 500 characters
 
-# Title limits (500 characters)
+# Title limits (auto-truncation at 120 characters)
 
-@test "new accepts title at 500 character limit" {
-    local title=$(printf 'a%.0s' {1..500})
-    run "$WK_BIN" new "$title"
-    assert_success
+@test "new accepts title at 120 character limit without truncation" {
+    local title=$(printf 'x%.0s' {1..120})
+    id=$(create_issue task "$title")
+    # Title should be preserved exactly as given
+    run "$WK_BIN" show "$id" --output json
+    refute_output --partial '..."'
 }
 
-@test "new rejects title exceeding 500 characters" {
-    local title=$(printf 'a%.0s' {1..501})
-    run "$WK_BIN" new "$title"
-    assert_failure
-    assert_output --partial "500"
+@test "new truncates title exceeding 120 characters" {
+    local title=$(printf 'x%.0s' {1..501})
+    id=$("$WK_BIN" new "$title" --output id)
+    # Title should be truncated with ellipsis, full content in description
+    run "$WK_BIN" show "$id" --output json
+    assert_output --partial '..."'
 }
 
-@test "edit accepts title at 500 character limit" {
+@test "edit accepts title at 120 character limit without truncation" {
     id=$(create_issue task "Original title")
-    local title=$(printf 'a%.0s' {1..500})
+    local title=$(printf 'x%.0s' {1..120})
     run "$WK_BIN" edit "$id" title "$title"
     assert_success
+    # Title should be preserved exactly as given
+    run "$WK_BIN" show "$id" --output json
+    refute_output --partial '..."'
 }
 
-@test "edit rejects title exceeding 500 characters" {
+@test "edit rejects title exceeding 120 characters" {
+    # Edit rejects long titles because truncation would implicitly change the description
     id=$(create_issue task "Original title")
-    local title=$(printf 'a%.0s' {1..501})
+    local title=$(printf 'x%.0s' {1..121})
     run "$WK_BIN" edit "$id" title "$title"
     assert_failure
-    assert_output --partial "500"
+    assert_output --partial "double-newline"
 }
 
 # Note limits (10,000 characters)

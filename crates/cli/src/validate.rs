@@ -97,6 +97,7 @@ pub fn validate_export_path(path: &str) -> Result<()> {
 
 /// Validate and normalize a title, returning processed result.
 pub fn validate_and_normalize_title(title: &str) -> Result<NormalizedTitle> {
+    // Normalize first - this handles truncation of long titles
     let normalized = normalize_title(title);
 
     // Check if result is empty after normalization

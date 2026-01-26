@@ -229,6 +229,7 @@ fn test_command_list_construction() {
         unassigned: false,
         filter: vec![],
         limit: None,
+        no_limit: false,
         blocked: false,
         all: false,
         output: OutputFormat::Text,
@@ -320,17 +321,19 @@ fn test_command_note_construction() {
 fn test_command_log_construction() {
     let cmd = Command::Log {
         id: Some("test-1".to_string()),
-        limit: 50,
+        limit: Some(50),
+        no_limit: false,
     };
     assert!(
-        matches!(cmd, Command::Log { id, limit } if id == Some("test-1".to_string()) && limit == 50)
+        matches!(cmd, Command::Log { id, limit, no_limit } if id == Some("test-1".to_string()) && limit == Some(50) && !no_limit)
     );
 
     let cmd = Command::Log {
         id: None,
-        limit: 20,
+        limit: None,
+        no_limit: true,
     };
-    assert!(matches!(cmd, Command::Log { id, limit } if id.is_none() && limit == 20));
+    assert!(matches!(cmd, Command::Log { id, limit, no_limit } if id.is_none() && limit.is_none() && no_limit));
 }
 
 #[test]

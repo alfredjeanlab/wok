@@ -13,10 +13,10 @@ use super::*;
 fn test_flag_consistency() {
     use clap::CommandFactory;
 
-    // Allowed short -> long mappings
+    // Allowed short -> long mappings for our manually defined flags
+    // Note: -h/--help is auto-managed by clap and not tracked here
     let allowed: std::collections::HashMap<char, &str> = [
         ('v', "version"), // -v, --version (top-level only)
-        ('h', "help"),    // -h, --help (top-level only)
         ('r', "reason"),
         ('t', "type"),
         ('l', "label"),
@@ -71,6 +71,11 @@ fn check_command_flags(
         }
 
         if let Some(short_char) = short {
+            // Skip clap's auto-added help flag
+            if short_char == 'h' && long == Some("help") {
+                continue;
+            }
+
             // Track that this short flag is used
             used_shorts.insert(short_char);
 

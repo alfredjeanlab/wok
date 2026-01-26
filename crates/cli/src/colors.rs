@@ -17,6 +17,12 @@ pub mod codes {
     pub const LITERAL: u8 = 250;
     /// Default values/context: medium grey
     pub const CONTEXT: u8 = 245;
+
+    /// Pre-formatted ANSI escape sequences for use in tests
+    pub const HEADER_START: &str = "\x1b[38;5;74m";
+    pub const LITERAL_START: &str = "\x1b[38;5;250m";
+    pub const CONTEXT_START: &str = "\x1b[38;5;245m";
+    pub const RESET: &str = "\x1b[0m";
 }
 
 /// Check if colors should be enabled based on TTY and environment variables.
@@ -45,29 +51,17 @@ const RESET: &str = "\x1b[0m";
 
 /// Apply header color (section titles) to text.
 pub fn header(text: &str) -> String {
-    if should_colorize() {
-        format!("{}{}{}", fg256(codes::HEADER), text, RESET)
-    } else {
-        text.to_string()
-    }
+    format!("{}{}{}", fg256(codes::HEADER), text, RESET)
 }
 
 /// Apply literal color (commands, options) to text.
 pub fn literal(text: &str) -> String {
-    if should_colorize() {
-        format!("{}{}{}", fg256(codes::LITERAL), text, RESET)
-    } else {
-        text.to_string()
-    }
+    format!("{}{}{}", fg256(codes::LITERAL), text, RESET)
 }
 
 /// Apply context color (default values, hints) to text.
 pub fn context(text: &str) -> String {
-    if should_colorize() {
-        format!("{}{}{}", fg256(codes::CONTEXT), text, RESET)
-    } else {
-        text.to_string()
-    }
+    format!("{}{}{}", fg256(codes::CONTEXT), text, RESET)
 }
 
 /// Colorize an examples help block.
@@ -140,7 +134,7 @@ pub fn examples(text: &str) -> String {
 }
 
 /// Colorize a command string, highlighting quoted content, placeholders, and flag values as context.
-fn colorize_command(cmd: &str) -> String {
+pub fn colorize_command(cmd: &str) -> String {
     let mut result = String::with_capacity(cmd.len() + 128);
     let mut chars = cmd.char_indices().peekable();
     let mut current_word_start = 0;
@@ -232,7 +226,7 @@ fn colorize_command(cmd: &str) -> String {
 }
 
 /// Find where the description starts (after 2+ spaces following the command).
-fn find_description_start(line: &str) -> Option<usize> {
+pub fn find_description_start(line: &str) -> Option<usize> {
     let bytes = line.as_bytes();
     let mut i = 0;
     let mut in_spaces = false;

@@ -31,11 +31,13 @@ pub fn run(
     unassigned: bool,
     filter: Vec<String>,
     limit: Option<usize>,
+    no_limit: bool,
     blocked_only: bool,
     all: bool,
     format: OutputFormat,
 ) -> Result<()> {
     let (db, _, _) = open_db()?;
+    let effective_limit = if no_limit { Some(0) } else { limit };
     run_impl(
         &db,
         status,
@@ -44,7 +46,7 @@ pub fn run(
         assignee,
         unassigned,
         filter,
-        limit,
+        effective_limit,
         blocked_only,
         all,
         format,

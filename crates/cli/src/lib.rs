@@ -38,7 +38,7 @@ mod daemon;
 mod display;
 pub mod filter;
 mod git_hooks;
-mod help;
+pub mod help;
 mod mode;
 mod normalize;
 mod schema;
@@ -133,11 +133,13 @@ pub fn run(command: Command) -> Result<()> {
             unassigned,
             filter,
             limit,
+            no_limit,
             blocked,
             all,
             output,
         } => commands::list::run(
-            status, r#type, label, assignee, unassigned, filter, limit, blocked, all, output,
+            status, r#type, label, assignee, unassigned, filter, limit, no_limit, blocked, all,
+            output,
         ),
         Command::Show { id, output } => commands::show::run(&id, &output),
         Command::Tree { id } => commands::tree::run(&id),
@@ -166,7 +168,7 @@ pub fn run(command: Command) -> Result<()> {
             content,
             replace,
         } => commands::note::run(&id, &content, replace),
-        Command::Log { id, limit } => commands::log::run(id, limit),
+        Command::Log { id, limit, no_limit } => commands::log::run(id, limit, no_limit),
         Command::Export { filepath } => commands::export::run(&filepath),
         Command::Import {
             file,
@@ -195,9 +197,10 @@ pub fn run(command: Command) -> Result<()> {
             unassigned,
             filter,
             limit,
+            no_limit,
             output,
         } => commands::search::run(
-            &query, status, r#type, label, assignee, unassigned, filter, limit, output,
+            &query, status, r#type, label, assignee, unassigned, filter, limit, no_limit, output,
         ),
         Command::Completion { shell } => {
             let mut cmd = Cli::command();

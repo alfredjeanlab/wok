@@ -7,9 +7,13 @@ use crate::error::Result;
 
 use super::open_db;
 
-pub fn run(id: Option<String>, limit: usize) -> Result<()> {
+/// Default limit for log output when not explicitly specified.
+const DEFAULT_LIMIT: usize = 20;
+
+pub fn run(id: Option<String>, limit: Option<usize>, no_limit: bool) -> Result<()> {
     let (db, _, _) = open_db()?;
-    run_impl(&db, id, limit)
+    let effective_limit = if no_limit { 0 } else { limit.unwrap_or(DEFAULT_LIMIT) };
+    run_impl(&db, id, effective_limit)
 }
 
 /// Internal implementation that accepts db for testing.

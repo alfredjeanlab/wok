@@ -16,9 +16,10 @@ fn parse(args: &[&str]) -> Result<Cli, clap::Error> {
 fn test_log_without_id() {
     let cli = parse(&["wk", "log"]).unwrap();
     match cli.command {
-        Command::Log { id, limit } => {
+        Command::Log { id, limit, no_limit } => {
             assert!(id.is_none());
-            assert_eq!(limit, 20); // default
+            assert!(limit.is_none()); // default handled by command impl
+            assert!(!no_limit);
         }
         _ => panic!("Expected Log command"),
     }
@@ -39,8 +40,9 @@ fn test_log_with_id() {
 fn test_log_with_limit() {
     let cli = parse(&["wk", "log", "--limit", "50"]).unwrap();
     match cli.command {
-        Command::Log { limit, .. } => {
-            assert_eq!(limit, 50);
+        Command::Log { limit, no_limit, .. } => {
+            assert_eq!(limit, Some(50));
+            assert!(!no_limit);
         }
         _ => panic!("Expected Log command"),
     }
@@ -50,8 +52,21 @@ fn test_log_with_limit() {
 fn test_log_with_limit_short_flag() {
     let cli = parse(&["wk", "log", "-n", "25"]).unwrap();
     match cli.command {
-        Command::Log { limit, .. } => {
-            assert_eq!(limit, 25);
+        Command::Log { limit, no_limit, .. } => {
+            assert_eq!(limit, Some(25));
+            assert!(!no_limit);
+        }
+        _ => panic!("Expected Log command"),
+    }
+}
+
+#[test]
+fn test_log_with_no_limit() {
+    let cli = parse(&["wk", "log", "--no-limit"]).unwrap();
+    match cli.command {
+        Command::Log { limit, no_limit, .. } => {
+            assert!(limit.is_none());
+            assert!(no_limit);
         }
         _ => panic!("Expected Log command"),
     }

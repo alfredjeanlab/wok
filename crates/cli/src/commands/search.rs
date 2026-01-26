@@ -29,11 +29,14 @@ pub fn run(
     unassigned: bool,
     filter: Vec<String>,
     limit: Option<usize>,
+    no_limit: bool,
     format: OutputFormat,
 ) -> Result<()> {
     let (db, _, _) = open_db()?;
+    let effective_limit = if no_limit { Some(0) } else { limit };
     run_impl(
-        &db, query, status, issue_type, label, assignee, unassigned, filter, limit, format,
+        &db, query, status, issue_type, label, assignee, unassigned, filter, effective_limit,
+        format,
     )
 }
 
@@ -113,20 +116,23 @@ pub(crate) fn run_impl(
         }
     });
 
-    // Use explicit limit or default
+    // Use explicit limit or default (0 = unlimited)
     let effective_limit = limit.unwrap_or(DEFAULT_LIMIT);
+    let unlimited = effective_limit == 0;
 
     // Calculate how many more results exist beyond the limit
     let total_count = issues.len();
-    let more_count = if total_count > effective_limit {
+    let more_count = if !unlimited && total_count > effective_limit {
         Some(total_count - effective_limit)
     } else {
         None
     };
 
+    let take_count = if unlimited { usize::MAX } else { effective_limit };
+
     match format {
         OutputFormat::Text => {
-            for issue in issues.iter().take(effective_limit) {
+            for issue in issues.iter().take(take_count) {
                 println!("{}", format_issue_line(issue));
             }
             if let Some(count) = more_count {
@@ -135,7 +141,7 @@ pub(crate) fn run_impl(
         }
         OutputFormat::Json => {
             let mut json_issues = Vec::new();
-            for issue in issues.iter().take(effective_limit) {
+            for issue in issues.iter().take(take_count) {
                 let labels = db.get_labels(&issue.id)?;
                 json_issues.push(IssueJson::new(
                     issue.id.clone(),
@@ -160,7 +166,7 @@ pub(crate) fn run_impl(
             println!("{}", serde_json::to_string_pretty(&output)?);
         }
         OutputFormat::Id => {
-            for issue in issues.iter().take(effective_limit) {
+            for issue in issues.iter().take(take_count) {
                 println!("{}", issue.id);
             }
         }

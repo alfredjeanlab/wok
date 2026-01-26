@@ -218,7 +218,7 @@ wk note <id> "note content"
 
 ```bash
 # View recent activity across all issues
-wk log [--limit N]
+wk log [--[no-]limit N]
 
 # View history for a specific issue
 wk log <id>

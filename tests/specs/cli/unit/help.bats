@@ -22,7 +22,7 @@ setup() {
     assert_success
     [ -n "$output" ]
     [ "${#output}" -gt 100 ]
-    assert_output --partial "wk"
+    assert_output --partial "wok"
     assert_output --partial "collaborative"
     assert_output --partial "offline-first"
     assert_output --partial "AI-friendly"
@@ -35,7 +35,7 @@ setup() {
 @test "--help and -h flags work" {
     run "$WK_BIN" --help
     assert_success
-    assert_output --partial "wk"
+    assert_output --partial "wok"
 
     run "$WK_BIN" -h
     assert_success

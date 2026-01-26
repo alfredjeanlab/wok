@@ -29,7 +29,6 @@ pub enum OutputFormat {
 #[command(name = "wok")]
 #[command(version = env!("CARGO_PKG_VERSION"))]
 #[command(disable_version_flag = true)]
-#[command(disable_help_flag = true)]
 #[command(
     about = "A collaborative, offline-first, AI-friendly issue tracker with dependency tracking"
 )]
@@ -47,10 +46,6 @@ pub struct Cli {
     /// Print version
     #[arg(short = 'v', short_alias = 'V', long = "version", action = clap::ArgAction::Version)]
     version: (),
-
-    /// Print help
-    #[arg(short = 'h', long = "help", action = clap::ArgAction::Help)]
-    help: (),
 
     #[command(subcommand)]
     pub command: Command,
@@ -253,8 +248,11 @@ Filter Expressions (-q/--filter):
         filter: Vec<String>,
 
         /// Maximum number of results
-        #[arg(long, short = 'n')]
+        #[arg(short = 'n', long, conflicts_with = "no_limit")]
         limit: Option<usize>,
+
+        #[arg(long, conflicts_with = "limit")]
+        no_limit: bool,
 
         /// Show only blocked issues
         #[arg(long)]
@@ -352,9 +350,12 @@ Filter Expressions (-q/--filter):
         #[arg(long = "filter", short = 'q')]
         filter: Vec<String>,
 
-        /// Maximum number of results (default: 25 for text output)
-        #[arg(long, short = 'n')]
+        /// Maximum number of results (default: 25)
+        #[arg(short = 'n', long, conflicts_with = "no_limit")]
         limit: Option<usize>,
+
+        #[arg(long, conflicts_with = "limit")]
+        no_limit: bool,
 
         /// Output format (text, json)
         #[arg(long = "output", short = 'o', value_enum, default_value = "text")]
@@ -498,9 +499,12 @@ Examples:
         /// Issue ID (optional, shows all if omitted)
         id: Option<String>,
 
-        /// Limit number of events
-        #[arg(short = 'n', long, default_value = "20")]
-        limit: usize,
+        /// Limit number of events (default: 20)
+        #[arg(short = 'n', long, conflicts_with = "no_limit")]
+        limit: Option<usize>,
+
+        #[arg(long, conflicts_with = "limit")]
+        no_limit: bool,
     },
 
     // ─────────────────────────────────────────────────────────────────────────

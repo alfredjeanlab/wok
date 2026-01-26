@@ -12,9 +12,7 @@ use crate::db::Database;
 use super::{apply_mutation, open_db};
 use crate::error::{Error, Result};
 use crate::models::{Action, Event, IssueType};
-use crate::validate::{
-    validate_and_normalize_title, validate_and_trim_description, validate_assignee,
-};
+use crate::validate::{validate_and_normalize_title, validate_and_trim_description, validate_assignee};
 
 pub fn run(id: &str, attr: &str, value: &str) -> Result<()> {
     let (db, config, work_dir) = open_db()?;
