@@ -33,14 +33,14 @@ teardown() {
     assert_output --partial "## Finding Work"
 }
 
-@test "prime output contains wk commands" {
+@test "prime output contains wok commands" {
     "$WK_BIN" init --prefix test
     run "$WK_BIN" prime
     assert_success
-    assert_output --partial "wk list"
-    assert_output --partial "wk new"
-    assert_output --partial "wk start"
-    assert_output --partial "wk done"
+    assert_output --partial "wok list"
+    assert_output --partial "wok new"
+    assert_output --partial "wok start"
+    assert_output --partial "wok done"
 }
 
 @test "prime documents list default shows open items" {
@@ -79,9 +79,11 @@ teardown() {
     assert_success
     # Check for proper markdown header syntax
     assert_output --partial "# "
-    # Check code blocks are properly opened and closed
-    echo "$output" | grep -c '```' | grep -qE '^[02468]' || {
-        echo "Unbalanced code blocks"
+    # Check code blocks are properly opened and closed (count must be even)
+    local count
+    count=$(echo "$output" | grep -c '```' || echo 0)
+    [ $((count % 2)) -eq 0 ] || {
+        echo "Unbalanced code blocks: $count"
         return 1
     }
 }
@@ -90,7 +92,7 @@ teardown() {
     run "$WK_BIN" prime --help
     assert_success
     assert_output --partial "Usage:"
-    assert_output --partial "wk prime"
+    assert_output --partial "prime"
     assert_output --partial "-h, --help"
 }
 

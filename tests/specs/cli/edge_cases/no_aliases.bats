@@ -66,7 +66,6 @@ load '../../helpers/common'
     run "$WK_BIN" help
     assert_success
     refute_output --partial "delete"
-    refute_output --partial "remove"
     refute_output --partial "create"
     refute_output --partial "update"
     refute_output --partial "push"
@@ -74,6 +73,7 @@ load '../../helpers/common'
     refute_output --partial "archive"
     # These need regex to avoid matching flags/substrings
     refute_output --regexp "^\s+add\s"
+    refute_output --regexp "^\s+remove\s"  # "remove" appears in descriptions, only check as command
     refute_output --regexp "^\s+status\s"
     refute_output --regexp " rm "
     # "version" can appear in --version flag but not as a subcommand

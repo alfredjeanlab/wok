@@ -84,8 +84,8 @@ setup_file() {
 @test "schema help shows examples" {
     run "$WK_BIN" schema --help
     assert_success
-    assert_output --partial "wk schema list"
-    assert_output --partial "wk schema show"
+    assert_output --partial "wok schema list"
+    assert_output --partial "wok schema show"
 }
 
 @test "schema list includes issue type enum values" {

@@ -48,7 +48,7 @@ fn print_formatted_help(args: &[String], to_stderr: bool) {
 
     // Find the subcommand being requested help for
     // Args could be: ["wk", "--help"], ["wk", "list", "--help"], ["wk", "help", "list"], etc.
-    let mut cmd = Cli::command();
+    let cmd = Cli::command();
 
     // Look for subcommand names in the args (skip binary name and flags)
     // Handle both "wk list --help" and "wk help list" patterns
@@ -58,12 +58,11 @@ fn print_formatted_help(args: &[String], to_stderr: bool) {
         .filter(|arg| !arg.starts_with('-'))
         .collect();
 
-    // If first non-flag is "help", use the second non-flag as the subcommand
-    // Otherwise use the first non-flag
-    let subcommand_name = if non_flags.first().map(|s| s.as_str()) == Some("help") {
-        non_flags.get(1).map(|s| s.as_str())
+    // If first non-flag is "help", skip it to get actual subcommand names
+    let subcommand_names: Vec<&str> = if non_flags.first().map(|s| s.as_str()) == Some("help") {
+        non_flags.iter().skip(1).map(|s| s.as_str()).collect()
     } else {
-        non_flags.first().map(|s| s.as_str())
+        non_flags.iter().map(|s| s.as_str()).collect()
     };
 
     let print_fn = if to_stderr {
@@ -72,16 +71,32 @@ fn print_formatted_help(args: &[String], to_stderr: bool) {
         help::print_help
     };
 
-    if let Some(name) = subcommand_name {
-        // Find the subcommand and format its help
-        for sub in cmd.get_subcommands_mut() {
-            if sub.get_name() == name || sub.get_all_aliases().any(|a| a == name) {
-                print_fn(sub);
-                return;
+    // Find the deepest matching subcommand
+    let mut target_cmd = find_subcommand(cmd, &subcommand_names);
+    print_fn(&mut target_cmd);
+}
+
+/// Recursively find a nested subcommand by name path.
+/// Returns an owned Command since we need to extract it from the parent.
+fn find_subcommand(mut cmd: clap::Command, names: &[&str]) -> clap::Command {
+    for name in names {
+        let mut found_sub = None;
+        for sub in cmd.get_subcommands() {
+            if sub.get_name() == *name || sub.get_all_aliases().any(|a| a == *name) {
+                found_sub = Some(sub.get_name().to_string());
+                break;
             }
         }
+        if let Some(sub_name) = found_sub {
+            // Clone the subcommand to get an owned version
+            if let Some(sub) = cmd.find_subcommand_mut(&sub_name) {
+                cmd = sub.clone();
+            } else {
+                break;
+            }
+        } else {
+            break;
+        }
     }
-
-    // No subcommand or not found - print main help
-    print_fn(&mut cmd);
+    cmd
 }

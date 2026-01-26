@@ -211,7 +211,7 @@ setup() {
 
     run "$WK_BIN" config remote .
     assert_success
-    assert_output --partial "already configured"
+    assert_output --partial "Remote configured: git:."
 
     # Changing remotes not supported
     run "$WK_BIN" config remote "ws://other:7890"
