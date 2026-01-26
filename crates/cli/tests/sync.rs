@@ -35,11 +35,11 @@ fn remote_status_remote_mode() {
 fn remote_sync_local_mode() {
     let temp = init_temp_local();
 
-    // In local mode, remote sync should say "nothing to sync"
+    // In local mode, remote sync should be silent (nothing to sync)
     wk().arg("remote")
         .arg("sync")
         .current_dir(temp.path())
         .assert()
         .success()
-        .stdout(predicate::str::contains("Not in remote mode"));
+        .stdout(predicate::str::is_empty());
 }

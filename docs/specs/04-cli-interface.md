@@ -366,15 +366,17 @@ wk remote stop
 
 **Behavior when remote is not configured:**
 - All commands detect the operating mode based on config
-- If no `[remote]` section exists in `.wok/config.toml`, prints:
+- `remote status` - Shows configuration hint:
   ```
-  Not in remote mode.
+  Status: not applicable (no remote configured)
 
   To enable remote sync, add a [remote] section to .wok/config.toml:
 
     [remote]
     url = "ws://your-server:7890"
   ```
+- `remote sync` - Silent (nothing to sync in local mode)
+- `remote stop` - Prints "Not in remote mode - no daemon to stop."
 
 **Behavior with remote configured:**
 - `remote status` - Shows daemon connection status, pending ops, last sync time
