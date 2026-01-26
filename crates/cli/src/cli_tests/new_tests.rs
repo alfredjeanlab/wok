@@ -30,6 +30,7 @@ fn test_new_with_title_only() {
             tracks,
             tracked_by,
             output,
+            prefix,
         } => {
             assert_eq!(type_or_title, "My issue title");
             assert!(title.is_none());
@@ -44,6 +45,7 @@ fn test_new_with_title_only() {
             assert!(tracks.is_empty());
             assert!(tracked_by.is_empty());
             assert!(matches!(output, OutputFormat::Text));
+            assert!(prefix.is_none());
         }
         _ => panic!("Expected New command"),
     }

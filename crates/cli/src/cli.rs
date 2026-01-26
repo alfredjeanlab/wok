@@ -68,7 +68,8 @@ Examples:
   wok new \"Task\" -a alice                Create task assigned to alice
   wok new bug \"Fix bug\" --blocks prj-1   Create bug that blocks prj-1
   wok new \"Task\" --tracked-by prj-feat   Create task tracked by a feature
-  wok new task \"My task\" -o id           Create task, output only ID"))]
+  wok new task \"My task\" -o id           Create task, output only ID
+  wok new \"Task\" --prefix other          Create task with a different prefix"))]
     New {
         /// Issue type (feature, task, bug, chore, idea) or title if type is omitted
         #[arg(value_parser = non_empty_string)]
@@ -121,6 +122,10 @@ Examples:
         /// Output format (text, json, id)
         #[arg(long = "output", short = 'o', value_enum, default_value = "text")]
         output: OutputFormat,
+
+        /// Create issue with specific prefix (overrides config prefix)
+        #[arg(long, short = 'p')]
+        prefix: Option<String>,
     },
 
     /// Start work on issue(s) (todo -> in_progress)
@@ -637,18 +642,22 @@ Available schemas: list, show, ready, search")
 /// Configuration management commands.
 #[derive(Subcommand)]
 pub enum ConfigCommand {
-    /// Rename the issue ID prefix (updates config and all existing issues)
+    /// Rename a prefix, updating all issues with that prefix
+    ///
+    /// Renames issues from `old-XXXX` to `new-XXXX`. Updates the config file
+    /// only if `old` is the current default prefix.
     #[command(
         arg_required_else_help = true,
         after_help = colors::examples("\
 Examples:
-  wok config rename old new    Rename prefix from 'old' to 'new'")
+  wok config rename old new        Rename 'old-*' issues to 'new-*'
+  wok config rename proj app       Rename 'proj' prefix to 'app'")
     )]
     Rename {
-        /// The old prefix to rename from (2+ lowercase alphanumeric with at least one letter)
+        /// The prefix to rename from (e.g., 'old' renames 'old-XXXX' issues)
         old_prefix: String,
 
-        /// The new prefix to rename to (2+ lowercase alphanumeric with at least one letter)
+        /// The prefix to rename to (e.g., 'new' creates 'new-XXXX' IDs)
         new_prefix: String,
     },
     /// Configure remote sync for the issue tracker
@@ -663,6 +672,16 @@ Examples:
     Remote {
         /// Remote URL: "." or "git:." for current repo, "git:<path>" for separate repo, or "ws://..." for WebSocket
         url: String,
+    },
+    /// List all prefixes in the issue tracker
+    #[command(after_help = colors::examples("\
+Examples:
+  wok config prefixes              List all prefixes with issue counts
+  wok config prefixes -o json      Output as JSON"))]
+    Prefixes {
+        /// Output format
+        #[arg(long = "output", short = 'o', value_enum, default_value = "text")]
+        output: OutputFormat,
     },
 }
 

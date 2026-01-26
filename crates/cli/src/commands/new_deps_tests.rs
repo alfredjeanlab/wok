@@ -36,6 +36,7 @@ fn test_run_impl_with_blocks() {
         vec![],
         vec![],
         OutputFormat::Text,
+        None,
     );
 
     assert!(result.is_ok());
@@ -76,6 +77,7 @@ fn test_run_impl_with_blocked_by() {
         vec![],
         vec![],
         OutputFormat::Text,
+        None,
     );
 
     assert!(result.is_ok());
@@ -114,6 +116,7 @@ fn test_run_impl_with_tracks() {
         vec!["test-subtask".to_string()],
         vec![],
         OutputFormat::Text,
+        None,
     );
 
     assert!(result.is_ok());
@@ -159,6 +162,7 @@ fn test_run_impl_with_tracked_by() {
         vec![],
         vec!["test-feature".to_string()],
         OutputFormat::Text,
+        None,
     );
 
     assert!(result.is_ok());
@@ -205,6 +209,7 @@ fn test_run_impl_with_comma_separated_blocks() {
         vec![],
         vec![],
         OutputFormat::Text,
+        None,
     );
 
     assert!(result.is_ok());
@@ -245,6 +250,7 @@ fn test_run_impl_with_invalid_target_fails() {
         vec![],
         vec![],
         OutputFormat::Text,
+        None,
     );
 
     // Should fail because target doesn't exist

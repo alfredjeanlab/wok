@@ -28,6 +28,7 @@ fn test_flag_consistency() {
         ('a', "assignee"),
         ('q', "filter"),
         ('n', "limit"),
+        ('p', "prefix"), // -p, --prefix (for new command)
     ]
     .into_iter()
     .collect();

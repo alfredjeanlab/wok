@@ -22,10 +22,12 @@ mod event;
 mod issue;
 mod link;
 mod note;
+mod prefix;
 
 pub use dependency::{Dependency, Relation, UserRelation};
 pub use event::{Action, Event};
 pub use issue::{Issue, Status};
 pub use link::{parse_link_url, Link, LinkRel, LinkType};
 pub use note::Note;
+pub use prefix::PrefixInfo;
 pub use wk_core::IssueType;
