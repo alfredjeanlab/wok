@@ -88,6 +88,7 @@ fn test_command_new_construction() {
         tracks: vec![],
         tracked_by: vec![],
         output: OutputFormat::Text,
+        prefix: None,
     };
     if let Command::New {
         type_or_title,
@@ -141,6 +142,7 @@ fn test_command_new_with_dependencies_construction() {
         tracks: vec![],
         tracked_by: vec!["feature-1".to_string()],
         output: OutputFormat::Text,
+        prefix: None,
     };
     if let Command::New {
         blocks,

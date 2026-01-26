@@ -105,6 +105,7 @@ pub fn run(command: Command) -> Result<()> {
             tracks,
             tracked_by,
             output,
+            prefix,
         } => commands::new::run(
             type_or_title,
             title,
@@ -119,6 +120,7 @@ pub fn run(command: Command) -> Result<()> {
             tracks,
             tracked_by,
             output,
+            prefix,
         ),
         Command::Start { ids } => commands::lifecycle::start(&ids),
         Command::Done { ids, reason } => commands::lifecycle::done(&ids, reason.as_deref()),

@@ -267,6 +267,7 @@ fn test_run_impl_creates_task() {
         vec![],
         vec![],
         OutputFormat::Text,
+        None,
     );
 
     assert!(result.is_ok());
@@ -299,6 +300,7 @@ fn test_run_impl_creates_bug() {
         vec![],
         vec![],
         OutputFormat::Text,
+        None,
     );
 
     assert!(result.is_ok());
@@ -328,6 +330,7 @@ fn test_run_impl_creates_feature() {
         vec![],
         vec![],
         OutputFormat::Text,
+        None,
     );
 
     assert!(result.is_ok());
@@ -357,6 +360,7 @@ fn test_run_impl_creates_chore() {
         vec![],
         vec![],
         OutputFormat::Text,
+        None,
     );
 
     assert!(result.is_ok());
@@ -387,6 +391,7 @@ fn test_run_impl_title_only_defaults_to_task() {
         vec![],
         vec![],
         OutputFormat::Text,
+        None,
     );
 
     assert!(result.is_ok());
@@ -417,6 +422,7 @@ fn test_run_impl_with_labels() {
         vec![],
         vec![],
         OutputFormat::Text,
+        None,
     );
 
     assert!(result.is_ok());
@@ -449,6 +455,7 @@ fn test_run_impl_with_note() {
         vec![],
         vec![],
         OutputFormat::Text,
+        None,
     );
 
     assert!(result.is_ok());
@@ -480,6 +487,7 @@ fn test_run_impl_empty_title_rejected() {
         vec![],
         vec![],
         OutputFormat::Text,
+        None,
     );
 
     assert!(result.is_err());
@@ -506,6 +514,7 @@ fn test_run_impl_whitespace_title_rejected() {
         vec![],
         vec![],
         OutputFormat::Text,
+        None,
     );
 
     assert!(result.is_err());
@@ -532,6 +541,7 @@ fn test_run_impl_invalid_type_rejected() {
         vec![],
         vec![],
         OutputFormat::Text,
+        None,
     );
 
     assert!(result.is_err());
@@ -558,6 +568,7 @@ fn test_run_impl_logs_events() {
         vec![],
         vec![],
         OutputFormat::Text,
+        None,
     )
     .unwrap();
 
@@ -593,6 +604,7 @@ fn test_run_impl_with_priority_0() {
         vec![],
         vec![],
         OutputFormat::Text,
+        None,
     );
 
     assert!(result.is_ok());
@@ -623,6 +635,7 @@ fn test_run_impl_with_priority_4() {
         vec![],
         vec![],
         OutputFormat::Text,
+        None,
     );
 
     assert!(result.is_ok());
@@ -653,6 +666,7 @@ fn test_run_impl_priority_with_existing_labels() {
         vec![],
         vec![],
         OutputFormat::Text,
+        None,
     );
 
     assert!(result.is_ok());
@@ -684,6 +698,7 @@ fn test_run_impl_without_priority() {
         vec![],
         vec![],
         OutputFormat::Text,
+        None,
     );
 
     assert!(result.is_ok());
@@ -717,6 +732,7 @@ fn test_run_impl_with_description() {
         vec![],
         vec![],
         OutputFormat::Text,
+        None,
     );
 
     assert!(result.is_ok());
@@ -748,6 +764,7 @@ fn test_run_impl_note_takes_precedence_over_description() {
         vec![],
         vec![],
         OutputFormat::Text,
+        None,
     );
 
     assert!(result.is_ok());
@@ -779,6 +796,7 @@ fn test_run_impl_without_description_or_note() {
         vec![],
         vec![],
         OutputFormat::Text,
+        None,
     );
 
     assert!(result.is_ok());
@@ -809,6 +827,7 @@ fn test_run_impl_description_with_labels() {
         vec![],
         vec![],
         OutputFormat::Text,
+        None,
     );
 
     assert!(result.is_ok());
@@ -845,6 +864,7 @@ fn test_run_impl_comma_separated_labels() {
         vec![],
         vec![],
         OutputFormat::Text,
+        None,
     );
 
     assert!(result.is_ok());
@@ -878,6 +898,7 @@ fn test_run_impl_comma_separated_and_multiple_labels() {
         vec![],
         vec![],
         OutputFormat::Text,
+        None,
     );
 
     assert!(result.is_ok());
@@ -911,6 +932,7 @@ fn test_run_impl_comma_separated_trims_whitespace() {
         vec![],
         vec![],
         OutputFormat::Text,
+        None,
     );
 
     assert!(result.is_ok());
@@ -943,6 +965,7 @@ fn test_run_impl_comma_separated_ignores_empty() {
         vec![],
         vec![],
         OutputFormat::Text,
+        None,
     );
 
     assert!(result.is_ok());
@@ -975,6 +998,7 @@ fn test_run_impl_comma_separated_with_priority() {
         vec![],
         vec![],
         OutputFormat::Text,
+        None,
     );
 
     assert!(result.is_ok());
@@ -1022,6 +1046,7 @@ fn test_run_impl_rejects_empty_prefix() {
         vec![],
         vec![],
         OutputFormat::Text,
+        None,
     );
 
     assert!(result.is_err());

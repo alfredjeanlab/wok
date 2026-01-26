@@ -223,3 +223,28 @@ load '../../helpers/common'
     assert_success
     assert_output --partial "scripted"
 }
+
+@test "new --prefix creates issue with different prefix" {
+    # Use subdirectory to avoid conflicts
+    mkdir -p newprefix && cd newprefix
+    "$WK_BIN" init --prefix main
+
+    # Create issue with different prefix using --prefix
+    run "$WK_BIN" new "NewPrefix Task" --prefix other -o id
+    assert_success
+    [[ "$output" == other-* ]]
+
+    # -p short form works
+    run "$WK_BIN" new "NewPrefix Short" -p short -o id
+    assert_success
+    [[ "$output" == short-* ]]
+
+    # Works with other flags
+    run "$WK_BIN" new bug "NewPrefix Bug" --prefix api --label urgent -o id
+    assert_success
+    [[ "$output" == api-* ]]
+
+    run "$WK_BIN" show "$output"
+    assert_success
+    assert_output --partial "urgent"
+}

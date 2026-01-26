@@ -13,6 +13,7 @@ pub mod issues;
 pub mod labels;
 pub mod links;
 pub mod notes;
+pub mod prefixes;
 mod schema;
 
 use chrono::{DateTime, Utc};
@@ -114,6 +115,7 @@ impl Database {
         self.conn.execute_batch(SCHEMA)?;
         self.migrate_add_assignee()?;
         self.migrate_add_hlc_columns()?;
+        self.migrate_backfill_prefixes()?;
         Ok(())
     }
 
@@ -160,6 +162,36 @@ impl Database {
             }
         }
 
+        Ok(())
+    }
+
+    /// Migration: Backfill prefixes table from existing issues.
+    ///
+    /// Extracts prefixes from issue IDs and populates the prefixes table
+    /// with correct issue counts. Only runs if the table is empty but
+    /// issues exist.
+    fn migrate_backfill_prefixes(&self) -> Result<()> {
+        // Check if migration is needed (prefixes table empty but issues exist)
+        let prefix_count: i64 = self
+            .conn
+            .query_row("SELECT COUNT(*) FROM prefixes", [], |row| row.get(0))
+            .unwrap_or(0);
+
+        if prefix_count == 0 {
+            // Backfill from existing issues by extracting prefix from ID
+            // Issue IDs follow pattern: {prefix}-{hash} where prefix is before first '-'
+            self.conn.execute(
+                "INSERT OR IGNORE INTO prefixes (prefix, created_at, issue_count)
+                 SELECT
+                     substr(id, 1, instr(id, '-') - 1) as prefix,
+                     MIN(created_at) as created_at,
+                     COUNT(*) as issue_count
+                 FROM issues
+                 WHERE id LIKE '%-%'
+                 GROUP BY prefix",
+                [],
+            )?;
+        }
         Ok(())
     }
 }

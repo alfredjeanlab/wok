@@ -5,9 +5,9 @@ use std::path::Path;
 
 use wk_core::{HlcClock, Op, OpPayload};
 
-use crate::cli::ConfigCommand;
+use crate::cli::{ConfigCommand, OutputFormat};
 use crate::config::{
-    find_work_dir, get_daemon_dir, write_gitignore, Config, RemoteConfig, RemoteType,
+    find_work_dir, get_daemon_dir, get_db_path, write_gitignore, Config, RemoteConfig, RemoteType,
 };
 use crate::daemon::{detect_daemon, request_sync, spawn_daemon};
 use crate::db::Database;
@@ -30,7 +30,62 @@ pub fn run(cmd: ConfigCommand) -> Result<()> {
             run_rename_prefix(&db, &config, &work_dir, &old_prefix, &new_prefix)
         }
         ConfigCommand::Remote { url } => run_config_remote(&url),
+        ConfigCommand::Prefixes { output } => run_list_prefixes(output),
     }
+}
+
+/// List all prefixes in the issue tracker.
+fn run_list_prefixes(output: OutputFormat) -> Result<()> {
+    let work_dir = find_work_dir()?;
+    let config = Config::load(&work_dir)?;
+    let db_path = get_db_path(&work_dir, &config);
+    let db = Database::open(&db_path)?;
+
+    let prefixes = db.list_prefixes()?;
+
+    match output {
+        OutputFormat::Text => {
+            if prefixes.is_empty() {
+                println!("No prefixes found.");
+                return Ok(());
+            }
+
+            // Show current/default prefix with marker
+            for p in &prefixes {
+                let marker = if p.prefix == config.prefix {
+                    " (default)"
+                } else {
+                    ""
+                };
+                let noun = if p.issue_count == 1 {
+                    "issue"
+                } else {
+                    "issues"
+                };
+                println!("{}: {} {}{}", p.prefix, p.issue_count, noun, marker);
+            }
+        }
+        OutputFormat::Json => {
+            let json = serde_json::json!({
+                "default": config.prefix,
+                "prefixes": prefixes.iter().map(|p| {
+                    serde_json::json!({
+                        "prefix": p.prefix,
+                        "issue_count": p.issue_count,
+                        "is_default": p.prefix == config.prefix
+                    })
+                }).collect::<Vec<_>>()
+            });
+            println!("{}", serde_json::to_string_pretty(&json)?);
+        }
+        OutputFormat::Id => {
+            // Just list prefix names
+            for p in &prefixes {
+                println!("{}", p.prefix);
+            }
+        }
+    }
+    Ok(())
 }
 
 /// Configure remote sync for an existing local-mode tracker.
@@ -277,6 +332,11 @@ fn rename_all_issue_ids(db: &Database, old_prefix: &str, new_prefix: &str) -> Re
 
     // Re-enable foreign keys regardless of success/failure
     db.conn.execute("PRAGMA foreign_keys = ON", [])?;
+
+    // Update the prefixes table (outside transaction since it doesn't have foreign key constraints)
+    if result.is_ok() {
+        db.rename_prefix(old_prefix, new_prefix)?;
+    }
 
     result
 }

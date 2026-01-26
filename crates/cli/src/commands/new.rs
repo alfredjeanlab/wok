@@ -11,7 +11,7 @@ use crate::db::Database;
 
 use super::open_db;
 use crate::error::{Error, Result};
-use crate::id::generate_unique_id;
+use crate::id::{generate_unique_id, validate_prefix};
 use crate::models::{Action, Event, Issue, IssueType, Status};
 use crate::validate::{
     validate_and_normalize_title, validate_and_trim_note, validate_assignee, validate_label,
@@ -39,6 +39,7 @@ pub fn run(
     tracks: Vec<String>,
     tracked_by: Vec<String>,
     output: OutputFormat,
+    prefix: Option<String>,
 ) -> Result<()> {
     let (db, config, work_dir) = open_db()?;
     run_impl(
@@ -58,6 +59,7 @@ pub fn run(
         tracks,
         tracked_by,
         output,
+        prefix,
     )
 }
 
@@ -97,14 +99,14 @@ const MAX_ID_COLLISION_RETRIES: u32 = 10;
 /// this race condition occurs.
 fn create_issue_with_retry(
     db: &Database,
-    config: &Config,
+    prefix: &str,
     issue_type: IssueType,
     title: &str,
     assignee: Option<String>,
 ) -> Result<(String, Issue)> {
     for _ in 0..MAX_ID_COLLISION_RETRIES {
         let created_at = Utc::now();
-        let id = generate_unique_id(&config.prefix, title, &created_at, |id| {
+        let id = generate_unique_id(prefix, title, &created_at, |id| {
             db.issue_exists(id).unwrap_or(false)
         });
 
@@ -162,6 +164,7 @@ pub(crate) fn run_impl(
     tracks: Vec<String>,
     tracked_by: Vec<String>,
     output: OutputFormat,
+    prefix: Option<String>,
 ) -> Result<()> {
     // Expand comma-separated labels into individual labels
     let mut labels = expand_labels(&labels);
@@ -204,19 +207,45 @@ pub(crate) fn run_impl(
         (None, None) => None,
     };
 
-    // Validate that prefix is not empty - empty prefix would create IDs like "-a1b2"
-    // which cause CLI issues because they look like flags
-    if config.prefix.is_empty() {
-        return Err(crate::error::Error::CannotCreateIssue {
-            reason: "project has no prefix configured\n  hint: workspace links without a prefix can only view issues, not create them".to_string(),
-        });
-    }
+    // Determine which prefix to use
+    let effective_prefix = match prefix {
+        Some(p) => {
+            // Validate the provided prefix
+            if !validate_prefix(&p) {
+                return Err(Error::InvalidPrefix);
+            }
+            p
+        }
+        None => {
+            // Use config prefix (existing behavior)
+            // Validate that prefix is not empty - empty prefix would create IDs like "-a1b2"
+            // which cause CLI issues because they look like flags
+            if config.prefix.is_empty() {
+                return Err(crate::error::Error::CannotCreateIssue {
+                    reason: "project has no prefix configured\n  hint: workspace links without a prefix can only view issues, not create them".to_string(),
+                });
+            }
+            config.prefix.clone()
+        }
+    };
+
+    // Track the prefix in the prefixes table
+    db.ensure_prefix(&effective_prefix)?;
 
     // Create issue with retry on ID collision.
     // Race condition: two processes may generate the same ID simultaneously
     // if they check existence at the same time. We retry with a new timestamp
     // if a UNIQUE constraint violation occurs.
-    let (id, issue) = create_issue_with_retry(db, config, issue_type, &normalized.title, assignee)?;
+    let (id, issue) = create_issue_with_retry(
+        db,
+        &effective_prefix,
+        issue_type,
+        &normalized.title,
+        assignee,
+    )?;
+
+    // Increment the prefix count after successful issue creation
+    db.increment_prefix_count(&effective_prefix)?;
 
     // Log creation event and queue for sync
     let core_issue_type = issue_type

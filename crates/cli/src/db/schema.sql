@@ -64,6 +64,13 @@ CREATE TABLE IF NOT EXISTS links (
     FOREIGN KEY (issue_id) REFERENCES issues(id)
 );
 
+-- Prefix registry (auto-populated)
+CREATE TABLE IF NOT EXISTS prefixes (
+    prefix TEXT PRIMARY KEY,
+    created_at TEXT NOT NULL,
+    issue_count INTEGER NOT NULL DEFAULT 0
+);
+
 -- Indexes
 CREATE INDEX IF NOT EXISTS idx_issues_status ON issues(status);
 CREATE INDEX IF NOT EXISTS idx_issues_type ON issues(type);
@@ -72,3 +79,4 @@ CREATE INDEX IF NOT EXISTS idx_deps_rel ON deps(rel);
 CREATE INDEX IF NOT EXISTS idx_labels_label ON labels(label);
 CREATE INDEX IF NOT EXISTS idx_events_issue ON events(issue_id);
 CREATE INDEX IF NOT EXISTS idx_links_issue ON links(issue_id);
+CREATE INDEX IF NOT EXISTS idx_prefixes_count ON prefixes(issue_count DESC);
