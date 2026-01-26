@@ -333,7 +333,9 @@ fn test_command_log_construction() {
         limit: None,
         no_limit: true,
     };
-    assert!(matches!(cmd, Command::Log { id, limit, no_limit } if id.is_none() && limit.is_none() && no_limit));
+    assert!(
+        matches!(cmd, Command::Log { id, limit, no_limit } if id.is_none() && limit.is_none() && no_limit)
+    );
 }
 
 #[test]

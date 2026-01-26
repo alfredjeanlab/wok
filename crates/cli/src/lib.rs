@@ -168,7 +168,11 @@ pub fn run(command: Command) -> Result<()> {
             content,
             replace,
         } => commands::note::run(&id, &content, replace),
-        Command::Log { id, limit, no_limit } => commands::log::run(id, limit, no_limit),
+        Command::Log {
+            id,
+            limit,
+            no_limit,
+        } => commands::log::run(id, limit, no_limit),
         Command::Export { filepath } => commands::export::run(&filepath),
         Command::Import {
             file,

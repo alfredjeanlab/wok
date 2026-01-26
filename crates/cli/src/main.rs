@@ -49,7 +49,11 @@ fn print_formatted_help(args: &[String]) {
 
     // Look for subcommand names in the args (skip binary name and flags)
     // Handle both "wk list --help" and "wk help list" patterns
-    let non_flags: Vec<&String> = args.iter().skip(1).filter(|arg| !arg.starts_with('-')).collect();
+    let non_flags: Vec<&String> = args
+        .iter()
+        .skip(1)
+        .filter(|arg| !arg.starts_with('-'))
+        .collect();
 
     // If first non-flag is "help", use the second non-flag as the subcommand
     // Otherwise use the first non-flag

@@ -223,9 +223,7 @@ fn colorize_command_line(line: &str) -> Option<String> {
     }
 
     // Find where the command ends (before multiple spaces)
-    let cmd_end = trimmed
-        .find("  ")
-        .unwrap_or(trimmed.len());
+    let cmd_end = trimmed.find("  ").unwrap_or(trimmed.len());
 
     if cmd_end == 0 {
         return None;
@@ -236,11 +234,7 @@ fn colorize_command_line(line: &str) -> Option<String> {
 
     // Handle [un]command format
     let colored_cmd = if let Some(base) = cmd.strip_prefix("[un]") {
-        format!(
-            "{}{}",
-            colors::context("[un]"),
-            colors::literal(base)
-        )
+        format!("{}{}", colors::context("[un]"), colors::literal(base))
     } else {
         colors::literal(cmd)
     };
@@ -358,12 +352,7 @@ fn colorize_example_line(line: &str) -> Option<String> {
         (trimmed, "")
     };
 
-    Some(format!(
-        "{}{}{}",
-        indent,
-        colorize_command(cmd),
-        desc
-    ))
+    Some(format!("{}{}{}", indent, colorize_command(cmd), desc))
 }
 
 /// Colorize a command string unconditionally.
@@ -486,12 +475,7 @@ fn colorize_doc_label_line(line: &str) -> Option<String> {
     let label = &trimmed[..=colon_pos]; // Include the colon
     let value = &trimmed[colon_pos + 2..]; // Skip ": "
 
-    Some(format!(
-        "{}{} {}",
-        indent,
-        label,
-        colors::literal(value)
-    ))
+    Some(format!("{}{} {}", indent, label, colors::literal(value)))
 }
 
 /// Generate clap Styles for help output.

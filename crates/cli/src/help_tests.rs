@@ -42,7 +42,10 @@ mod consolidation {
         // The short flag -n should be preserved in the consolidated output
         let input = "  -n, --limit <N>  Desc\n      --no-limit   Desc2";
         let result = consolidate_negatable_flags(input);
-        assert!(result.contains("-n, --[no-]limit"), "Short flag should be preserved");
+        assert!(
+            result.contains("-n, --[no-]limit"),
+            "Short flag should be preserved"
+        );
     }
 
     #[test]
@@ -50,7 +53,10 @@ mod consolidation {
         // The value placeholder <N> should be preserved
         let input = "  -n, --limit <N>  Desc\n      --no-limit   Desc2";
         let result = consolidate_negatable_flags(input);
-        assert!(result.contains("<N>"), "Value placeholder should be preserved");
+        assert!(
+            result.contains("<N>"),
+            "Value placeholder should be preserved"
+        );
     }
 
     #[test]
@@ -58,8 +64,14 @@ mod consolidation {
         // The description from the positive flag should be used
         let input = "  -n, --limit <N>  Maximum results\n      --no-limit   Unlimited";
         let result = consolidate_negatable_flags(input);
-        assert!(result.contains("Maximum results"), "Description from positive flag should be used");
-        assert!(!result.contains("Unlimited"), "Description from no- flag should not appear");
+        assert!(
+            result.contains("Maximum results"),
+            "Description from positive flag should be used"
+        );
+        assert!(
+            !result.contains("Unlimited"),
+            "Description from no- flag should not appear"
+        );
     }
 
     #[test]
@@ -68,10 +80,16 @@ mod consolidation {
         let input = "      --no-limit   Remove limit\n      --other      Other flag\n  -n, --limit <N>  Limit results";
         let result = consolidate_negatable_flags(input);
         // All three lines should remain
-        assert!(result.contains("--no-limit"), "no-limit should remain separate");
+        assert!(
+            result.contains("--no-limit"),
+            "no-limit should remain separate"
+        );
         assert!(result.contains("--other"), "other should remain");
         assert!(result.contains("--limit"), "limit should remain separate");
-        assert!(!result.contains("--[no-]limit"), "Should not consolidate non-adjacent");
+        assert!(
+            !result.contains("--[no-]limit"),
+            "Should not consolidate non-adjacent"
+        );
     }
 
     #[test]
@@ -87,7 +105,10 @@ mod consolidation {
         // Consolidate flags where positive has no short flag
         let input = "      --verbose   Be verbose\n      --no-verbose   Be quiet";
         let result = consolidate_negatable_flags(input);
-        assert!(result.contains("--[no-]verbose"), "Should consolidate without short flag");
+        assert!(
+            result.contains("--[no-]verbose"),
+            "Should consolidate without short flag"
+        );
     }
 
     #[test]
@@ -107,7 +128,10 @@ mod consolidation {
     fn handles_no_options() {
         let input = "Some description text\n\nAnother paragraph";
         let result = consolidate_negatable_flags(input);
-        assert_eq!(result, input, "Non-option text should pass through unchanged");
+        assert_eq!(
+            result, input,
+            "Non-option text should pass through unchanged"
+        );
     }
 }
 
@@ -124,7 +148,10 @@ mod command_colorization {
         // "  new         Description" should colorize "new" as literal
         let result = colorize_help_forced("  new         Create a new issue");
         // Should contain ANSI code for literal color (250)
-        assert!(result.contains(LITERAL_START), "Should have literal color code");
+        assert!(
+            result.contains(LITERAL_START),
+            "Should have literal color code"
+        );
         assert!(result.contains("new"), "Should contain command name");
     }
 
@@ -133,9 +160,15 @@ mod command_colorization {
         // "[un]dep" should have [un] in context color, dep in literal color
         let result = colorize_help_forced("  [un]dep     Add/remove dependency");
         // Should contain context color (245) for [un]
-        assert!(result.contains(CONTEXT_START), "Should have context color for [un]");
+        assert!(
+            result.contains(CONTEXT_START),
+            "Should have context color for [un]"
+        );
         // Should contain literal color (250) for dep
-        assert!(result.contains(LITERAL_START), "Should have literal color for dep");
+        assert!(
+            result.contains(LITERAL_START),
+            "Should have literal color for dep"
+        );
     }
 
     #[test]
@@ -240,7 +273,10 @@ mod header_colorization {
         // When colors enabled, this gets header color applied
         let line = "Usage: wok <COMMAND>";
         // Usage line starts with "Usage:" - this is special-cased in colorize_help
-        assert!(line.starts_with("Usage:"), "Should be recognized as usage line");
+        assert!(
+            line.starts_with("Usage:"),
+            "Should be recognized as usage line"
+        );
     }
 
     #[test]
@@ -256,7 +292,10 @@ mod header_colorization {
         // Multi-word headers like "Issue Tracking:" should also be detected
         let line = "Issue Tracking:";
         assert!(line.ends_with(':'), "Header should end with colon");
-        assert!(!line.contains("  "), "Single space is fine, double space is not");
+        assert!(
+            !line.contains("  "),
+            "Single space is fine, double space is not"
+        );
     }
 
     #[test]
@@ -291,9 +330,31 @@ mod full_help {
     fn commands_contains_all_command_names() {
         let result = commands();
         let expected_commands = [
-            "new", "dep", "show", "tree", "list", "ready", "search", "start", "done", "close",
-            "reopen", "edit", "note", "label", "link", "log", "init", "hooks", "config", "remote",
-            "export", "import", "schema", "completion", "prime",
+            "new",
+            "dep",
+            "show",
+            "tree",
+            "list",
+            "ready",
+            "search",
+            "start",
+            "done",
+            "close",
+            "reopen",
+            "edit",
+            "note",
+            "label",
+            "link",
+            "log",
+            "init",
+            "hooks",
+            "config",
+            "remote",
+            "export",
+            "import",
+            "schema",
+            "completion",
+            "prime",
         ];
         for cmd in expected_commands {
             assert!(result.contains(cmd), "commands() should contain '{}'", cmd);
@@ -443,25 +504,29 @@ mod integration {
         // Header should be colored
         assert!(
             result.contains(&format!("{}Options:{}", HEADER_START, RESET)),
-            "Header should be HEADER colored in:\n{}", result
+            "Header should be HEADER colored in:\n{}",
+            result
         );
 
         // Short flag should be literal colored
         assert!(
             result.contains(&format!("{}-n{}", LITERAL_START, RESET)),
-            "Short flag -n should be LITERAL colored in:\n{}", result
+            "Short flag -n should be LITERAL colored in:\n{}",
+            result
         );
 
         // Long flag should be literal colored
         assert!(
             result.contains(&format!("{}--limit{}", LITERAL_START, RESET)),
-            "Long flag --limit should be LITERAL colored in:\n{}", result
+            "Long flag --limit should be LITERAL colored in:\n{}",
+            result
         );
 
         // Value placeholder should be context colored
         assert!(
             result.contains(&format!("{}<N>{}", CONTEXT_START, RESET)),
-            "Value placeholder <N> should be CONTEXT colored in:\n{}", result
+            "Value placeholder <N> should be CONTEXT colored in:\n{}",
+            result
         );
     }
 
@@ -474,63 +539,76 @@ mod integration {
         // [no-] should be context colored
         assert!(
             result.contains(&format!("{}[no-]{}", CONTEXT_START, RESET)),
-            "[no-] should be CONTEXT colored in:\n{}", result
+            "[no-] should be CONTEXT colored in:\n{}",
+            result
         );
 
         // -- should be literal colored
         assert!(
             result.contains(&format!("{}--{}", LITERAL_START, RESET)),
-            "-- should be LITERAL colored in:\n{}", result
+            "-- should be LITERAL colored in:\n{}",
+            result
         );
 
         // limit should be literal colored
         assert!(
             result.contains(&format!("{}limit{}", LITERAL_START, RESET)),
-            "limit should be LITERAL colored in:\n{}", result
+            "limit should be LITERAL colored in:\n{}",
+            result
         );
     }
 
     /// Test [default: ...] and [possible values: ...] through full pipeline
     #[test]
     fn option_metadata_through_colorize_help() {
-        let input = "Options:\n  -o, --output <O>  Output [default: text] [possible values: text, json]";
+        let input =
+            "Options:\n  -o, --output <O>  Output [default: text] [possible values: text, json]";
         let result = colorize_help_forced(input);
 
         // [default: text] should be context colored
         assert!(
             result.contains(&format!("{}[default: text]{}", CONTEXT_START, RESET)),
-            "[default: text] should be CONTEXT colored in:\n{}", result
+            "[default: text] should be CONTEXT colored in:\n{}",
+            result
         );
 
         // [possible values: ...] should be context colored
         assert!(
-            result.contains(&format!("{}[possible values: text, json]{}", CONTEXT_START, RESET)),
-            "[possible values: ...] should be CONTEXT colored in:\n{}", result
+            result.contains(&format!(
+                "{}[possible values: text, json]{}",
+                CONTEXT_START, RESET
+            )),
+            "[possible values: ...] should be CONTEXT colored in:\n{}",
+            result
         );
     }
 
     /// Test command lines through full pipeline
     #[test]
     fn command_line_through_colorize_help() {
-        let input = "Commands:\n  new         Create a new issue\n  [un]dep     Add/remove dependency";
+        let input =
+            "Commands:\n  new         Create a new issue\n  [un]dep     Add/remove dependency";
         let result = colorize_help_forced(input);
 
         // "new" should be literal colored
         assert!(
             result.contains(&format!("{}new{}", LITERAL_START, RESET)),
-            "new should be LITERAL colored in:\n{}", result
+            "new should be LITERAL colored in:\n{}",
+            result
         );
 
         // [un] should be context colored
         assert!(
             result.contains(&format!("{}[un]{}", CONTEXT_START, RESET)),
-            "[un] should be CONTEXT colored in:\n{}", result
+            "[un] should be CONTEXT colored in:\n{}",
+            result
         );
 
         // "dep" should be literal colored
         assert!(
             result.contains(&format!("{}dep{}", LITERAL_START, RESET)),
-            "dep should be LITERAL colored in:\n{}", result
+            "dep should be LITERAL colored in:\n{}",
+            result
         );
     }
 
@@ -543,19 +621,22 @@ mod integration {
         // <id> should be context colored
         assert!(
             result.contains(&format!("{}<id>{}", CONTEXT_START, RESET)),
-            "<id> should be CONTEXT colored in:\n{}", result
+            "<id> should be CONTEXT colored in:\n{}",
+            result
         );
 
         // "My task" should be context colored
         assert!(
             result.contains(&format!("{}\"My task\"{}", CONTEXT_START, RESET)),
-            "\"My task\" should be CONTEXT colored in:\n{}", result
+            "\"My task\" should be CONTEXT colored in:\n{}",
+            result
         );
 
         // wok should be literal colored
         assert!(
             result.contains(&format!("{}wok{}", LITERAL_START, RESET)),
-            "wok should be LITERAL colored in:\n{}", result
+            "wok should be LITERAL colored in:\n{}",
+            result
         );
     }
 
@@ -569,13 +650,15 @@ mod integration {
         // The label including colon appears, but not preceded by color escape
         assert!(
             result.contains("Syntax:"),
-            "Syntax: label should be present in:\n{}", result
+            "Syntax: label should be present in:\n{}",
+            result
         );
 
         // Value after colon should be literal colored
         assert!(
             result.contains(&format!("{}FIELD [OP VALUE]{}", LITERAL_START, RESET)),
-            "Value should be LITERAL colored in:\n{}", result
+            "Value should be LITERAL colored in:\n{}",
+            result
         );
     }
 
@@ -596,16 +679,26 @@ Options:
         let result = colorize_help_forced(input);
 
         // Verify key colorizations
-        assert!(result.contains(&format!("{}Options:{}", HEADER_START, RESET)),
-            "Options: header missing");
-        assert!(result.contains(&format!("{}[no-]{}", CONTEXT_START, RESET)),
-            "[no-] should be CONTEXT");
-        assert!(result.contains(&format!("{}<LIMIT>{}", CONTEXT_START, RESET)),
-            "<LIMIT> should be CONTEXT");
-        assert!(result.contains(&format!("{}[default: text]{}", CONTEXT_START, RESET)),
-            "[default: text] should be CONTEXT");
-        assert!(result.contains(&format!("{}--status{}", LITERAL_START, RESET)),
-            "--status should be LITERAL");
+        assert!(
+            result.contains(&format!("{}Options:{}", HEADER_START, RESET)),
+            "Options: header missing"
+        );
+        assert!(
+            result.contains(&format!("{}[no-]{}", CONTEXT_START, RESET)),
+            "[no-] should be CONTEXT"
+        );
+        assert!(
+            result.contains(&format!("{}<LIMIT>{}", CONTEXT_START, RESET)),
+            "<LIMIT> should be CONTEXT"
+        );
+        assert!(
+            result.contains(&format!("{}[default: text]{}", CONTEXT_START, RESET)),
+            "[default: text] should be CONTEXT"
+        );
+        assert!(
+            result.contains(&format!("{}--status{}", LITERAL_START, RESET)),
+            "--status should be LITERAL"
+        );
     }
 
     /// Debug: Print actual regex captures for option lines
@@ -708,7 +801,11 @@ mod colorization_params {
             has_colored(&result, text, expected_color),
             "Expected '{}' to be colored with {:?} in:\n{}",
             text,
-            if expected_color == CONTEXT_START { "CONTEXT" } else { "LITERAL" },
+            if expected_color == CONTEXT_START {
+                "CONTEXT"
+            } else {
+                "LITERAL"
+            },
             result
         );
     }
@@ -732,7 +829,11 @@ mod colorization_params {
             has_colored(&result, text, expected_color),
             "Expected '{}' to be colored with {:?} in:\n{}",
             text,
-            if expected_color == CONTEXT_START { "CONTEXT" } else { "LITERAL" },
+            if expected_color == CONTEXT_START {
+                "CONTEXT"
+            } else {
+                "LITERAL"
+            },
             result
         );
     }
@@ -789,7 +890,11 @@ mod colorization_params {
             has_colored(&result, text, expected_color),
             "Expected '{}' to be colored with {:?} in:\n{}",
             text,
-            if expected_color == CONTEXT_START { "CONTEXT" } else { "LITERAL" },
+            if expected_color == CONTEXT_START {
+                "CONTEXT"
+            } else {
+                "LITERAL"
+            },
             result
         );
     }

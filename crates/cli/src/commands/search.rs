@@ -35,7 +35,15 @@ pub fn run(
     let (db, _, _) = open_db()?;
     let effective_limit = if no_limit { Some(0) } else { limit };
     run_impl(
-        &db, query, status, issue_type, label, assignee, unassigned, filter, effective_limit,
+        &db,
+        query,
+        status,
+        issue_type,
+        label,
+        assignee,
+        unassigned,
+        filter,
+        effective_limit,
         format,
     )
 }
@@ -128,7 +136,11 @@ pub(crate) fn run_impl(
         None
     };
 
-    let take_count = if unlimited { usize::MAX } else { effective_limit };
+    let take_count = if unlimited {
+        usize::MAX
+    } else {
+        effective_limit
+    };
 
     match format {
         OutputFormat::Text => {

@@ -12,7 +12,11 @@ const DEFAULT_LIMIT: usize = 20;
 
 pub fn run(id: Option<String>, limit: Option<usize>, no_limit: bool) -> Result<()> {
     let (db, _, _) = open_db()?;
-    let effective_limit = if no_limit { 0 } else { limit.unwrap_or(DEFAULT_LIMIT) };
+    let effective_limit = if no_limit {
+        0
+    } else {
+        limit.unwrap_or(DEFAULT_LIMIT)
+    };
     run_impl(&db, id, effective_limit)
 }
 
