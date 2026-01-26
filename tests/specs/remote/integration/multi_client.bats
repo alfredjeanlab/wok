@@ -199,7 +199,7 @@ load '../helpers/remote_common'
 
     # Wait for propagation to B (with longer timeout for CI reliability)
     cd "$dir_b"
-    wait_for_issue "Real-time test" 500  # 500 attempts = ~10 seconds
+    wait_for_issue "Real-time test" 200  # 200 attempts @ 50ms = ~10 seconds
 
     # B should see the issue without calling sync
     run "$WK_BIN" list --all

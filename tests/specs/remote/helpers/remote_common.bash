@@ -448,7 +448,7 @@ wait_for_issue() {
         if "$WK_BIN" list --all 2>/dev/null | grep -q "$title"; then
             return 0
         fi
-        sleep 0.02  # Slightly longer sleep for CI environments
+        sleep 0.05  # 50ms - balances responsiveness with CI latency
         ((attempt++))
     done
 
