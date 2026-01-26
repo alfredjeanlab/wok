@@ -68,10 +68,17 @@ pub fn format_help(cmd: &mut Command) -> String {
     let consolidated = consolidate_negatable_flags(&raw_help);
 
     // Apply colors if enabled
-    if colors::should_colorize() {
+    let output = if colors::should_colorize() {
         colorize_help_forced(&consolidated)
     } else {
         consolidated
+    };
+
+    // Ensure trailing newline for clean shell output (avoids zsh '%' marker)
+    if output.ends_with('\n') {
+        output
+    } else {
+        format!("{}\n", output)
     }
 }
 
