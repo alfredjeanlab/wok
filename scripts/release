@@ -158,6 +158,12 @@ if ! git push origin main; then
 fi
 step_pass "Pushed 'main' to origin"
 
+step_start "Pushing 'main' to github"
+if ! git push github main; then
+    step_fail "Failed to push to github"
+fi
+step_pass "Pushed 'main' to github"
+
 # Step 6: Wait for CI checks
 step_start "Waiting for CI checks to pass"
 echo "    (this may take a few minutes)"
@@ -220,6 +226,12 @@ if ! git push origin "$TAG_NAME"; then
     step_fail "Failed to push tag to origin"
 fi
 step_pass "Pushed tag '$TAG_NAME' to origin"
+
+step_start "Pushing tag '$TAG_NAME' to github"
+if ! git push github "$TAG_NAME"; then
+    step_fail "Failed to push tag to github"
+fi
+step_pass "Pushed tag '$TAG_NAME' to github"
 
 # Step 8: Wait for tag CI/release build
 step_start "Waiting for release build"
