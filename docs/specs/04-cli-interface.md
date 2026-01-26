@@ -335,6 +335,11 @@ wk completion fish > ~/.config/fish/completions/wk.fish
 ### Configuration Management
 
 ```bash
+# List all prefixes in the database
+wk config prefixes
+wk config prefixes -o json       # Output as JSON
+wk config prefixes -o id         # Output prefix names only
+
 # Rename issue ID prefix (updates all existing issues in database)
 wk config rename <old-prefix> <new-prefix>
 
@@ -343,11 +348,16 @@ wk config rename proj newproj    # Rename prefix from 'proj' to 'newproj'
 wk config rename old new         # Rename prefix from 'old' to 'new'
 ```
 
-**Behavior:**
+**Behavior (`config prefixes`):**
+- Lists all prefixes with their issue counts
+- Marks the default prefix (from config) with "(default)"
+- JSON output includes `default`, `prefixes` array with `prefix`, `issue_count`, `is_default`
+
+**Behavior (`config rename`):**
 - Both old and new prefix are required (since database may contain issues with multiple prefixes)
 - Only issues matching the old prefix pattern are renamed
 - Config file is updated only if old prefix matches the current config prefix
-- All related tables are updated atomically (issues, deps, labels, notes, events, links)
+- All related tables are updated atomically (issues, deps, labels, notes, events, links, prefixes)
 - Both prefixes must be valid (2+ lowercase alphanumeric with at least one letter)
 - If old and new prefix are the same, no changes are made (noop with message)
 

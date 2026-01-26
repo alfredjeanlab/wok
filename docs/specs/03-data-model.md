@@ -71,6 +71,13 @@ CREATE TABLE links (
     FOREIGN KEY (issue_id) REFERENCES issues(id)
 );
 
+-- Prefix registry (auto-populated)
+CREATE TABLE prefixes (
+    prefix TEXT PRIMARY KEY,       -- e.g. "proj", "api"
+    created_at TEXT NOT NULL,      -- when prefix was first used
+    issue_count INTEGER NOT NULL DEFAULT 0
+);
+
 -- Indexes
 CREATE INDEX idx_issues_status ON issues(status);
 CREATE INDEX idx_issues_type ON issues(type);
@@ -79,6 +86,7 @@ CREATE INDEX idx_deps_rel ON deps(rel);
 CREATE INDEX idx_labels_label ON labels(label);
 CREATE INDEX idx_events_issue ON events(issue_id);
 CREATE INDEX idx_links_issue ON links(issue_id);
+CREATE INDEX idx_prefixes_count ON prefixes(issue_count DESC);
 ```
 
 ## ID Generation

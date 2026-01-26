@@ -33,6 +33,41 @@ wk init --prefix prj
 wk init --path /path/to/shared --prefix prj
 ```
 
+## Prefix Registry
+
+The database maintains a `prefixes` table that automatically tracks all prefixes used in issue IDs:
+
+```sql
+CREATE TABLE prefixes (
+    prefix TEXT PRIMARY KEY,
+    created_at TEXT NOT NULL,
+    issue_count INTEGER NOT NULL DEFAULT 0
+);
+```
+
+Prefixes are tracked automatically:
+- When creating an issue, the prefix is registered and its count incremented
+- When renaming a prefix via `wk config rename`, the table is updated
+- Existing databases are backfilled on first open
+
+List all prefixes with `wk config prefixes`:
+
+```bash
+wk config prefixes
+# proj: 5 issues (default)
+# api: 2 issues
+
+wk config prefixes -o json
+# {"default": "proj", "prefixes": [...]}
+```
+
+Create issues with different prefixes using `--prefix`:
+
+```bash
+wk new "API task" --prefix api
+# Creates api-XXXX instead of using config prefix
+```
+
 ## Git Integration (User Choice)
 
 The CLI does NOT automatically configure git. Users choose:
