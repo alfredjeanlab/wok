@@ -3,10 +3,10 @@ load '../../helpers/common'
 
 @test "import from file, stdin, and --input flag" {
     # Import from file
-    cat > import.jsonl << 'EOF'
+    cat > t1_import.jsonl << 'EOF'
 {"id":"test-imp1","issue_type":"task","title":"Imported task","status":"todo","created_at":"2024-01-01T00:00:00Z","updated_at":"2024-01-01T00:00:00Z","labels":[],"notes":[],"deps":[],"events":[]}
 EOF
-    run "$WK_BIN" import import.jsonl
+    run "$WK_BIN" import t1_import.jsonl
     assert_success
     run "$WK_BIN" show test-imp1
     assert_success
@@ -20,10 +20,10 @@ EOF
     assert_output --partial "Stdin task"
 
     # --input flag
-    cat > import2.jsonl << 'EOF'
+    cat > t1_import2.jsonl << 'EOF'
 {"id":"test-iflag","issue_type":"task","title":"Flag task","status":"todo","created_at":"2024-01-01T00:00:00Z","updated_at":"2024-01-01T00:00:00Z","labels":[],"notes":[],"deps":[],"events":[]}
 EOF
-    run "$WK_BIN" import --input import2.jsonl
+    run "$WK_BIN" import --input t1_import2.jsonl
     assert_success
 }
 
@@ -34,10 +34,10 @@ EOF
     run "$WK_BIN" show "$id"
     assert_success
     assert_output --partial "Original title"
-    cat > import.jsonl << EOF
+    cat > t2_import.jsonl << EOF
 {"id":"$id","issue_type":"task","title":"Updated title","status":"todo","created_at":"2024-01-01T00:00:00Z","updated_at":"2024-01-01T00:00:00Z","labels":[],"notes":[],"deps":[],"events":[]}
 EOF
-    run "$WK_BIN" import import.jsonl
+    run "$WK_BIN" import t2_import.jsonl
     assert_success
     run "$WK_BIN" show "$id"
     assert_output --partial "Updated title"
@@ -45,19 +45,19 @@ EOF
     # Detects collisions
     id2=$(create_issue task "Original")
     "$WK_BIN" start "$id2"
-    cat > import2.jsonl << EOF
+    cat > t2_import2.jsonl << EOF
 {"id":"$id2","issue_type":"task","title":"Original","status":"todo","created_at":"2024-01-01T00:00:00Z","updated_at":"2024-01-01T00:00:00Z","labels":[],"notes":[],"deps":[],"events":[]}
 EOF
-    run "$WK_BIN" import import2.jsonl
+    run "$WK_BIN" import t2_import2.jsonl
     assert_success
     assert_output --partial "collision"
 }
 
 @test "import --dry-run shows preview without creating" {
-    cat > import.jsonl << 'EOF'
+    cat > t3_import.jsonl << 'EOF'
 {"id":"test-dry1","issue_type":"task","title":"Dry run task","status":"todo","created_at":"2024-01-01T00:00:00Z","updated_at":"2024-01-01T00:00:00Z","labels":[],"notes":[],"deps":[],"events":[]}
 EOF
-    run "$WK_BIN" import --dry-run import.jsonl
+    run "$WK_BIN" import --dry-run t3_import.jsonl
     assert_success
     assert_output --partial "create"
     run "$WK_BIN" show test-dry1
@@ -65,10 +65,10 @@ EOF
 }
 
 @test "import warns about missing dependencies" {
-    cat > import.jsonl << 'EOF'
+    cat > t4_import.jsonl << 'EOF'
 {"id":"test-dep1","issue_type":"task","title":"Task with deps","status":"todo","created_at":"2024-01-01T00:00:00Z","updated_at":"2024-01-01T00:00:00Z","labels":[],"notes":[],"deps":[{"from_id":"test-dep1","to_id":"nonexistent-123","relation":"blocks","created_at":"2024-01-01T00:00:00Z"}],"events":[]}
 EOF
-    run "$WK_BIN" import import.jsonl
+    run "$WK_BIN" import t4_import.jsonl
     assert_success
     assert_output --partial "warning"
     assert_output --partial "nonexistent"
@@ -76,11 +76,11 @@ EOF
 
 @test "import --status, --type, --label, --prefix filters" {
     # --status filter
-    cat > import.jsonl << 'EOF'
+    cat > t5_import.jsonl << 'EOF'
 {"id":"test-filt1","issue_type":"task","title":"Todo task","status":"todo","created_at":"2024-01-01T00:00:00Z","updated_at":"2024-01-01T00:00:00Z","labels":[],"notes":[],"deps":[],"events":[]}
 {"id":"test-filt2","issue_type":"task","title":"Done task","status":"done","created_at":"2024-01-01T00:00:00Z","updated_at":"2024-01-01T00:00:00Z","labels":[],"notes":[],"deps":[],"events":[]}
 EOF
-    run "$WK_BIN" import --status todo import.jsonl
+    run "$WK_BIN" import --status todo t5_import.jsonl
     assert_success
     run "$WK_BIN" show test-filt1
     assert_success
@@ -88,11 +88,11 @@ EOF
     assert_failure
 
     # --type filter
-    cat > import2.jsonl << 'EOF'
+    cat > t5_import2.jsonl << 'EOF'
 {"id":"test-type1","issue_type":"task","title":"Task","status":"todo","created_at":"2024-01-01T00:00:00Z","updated_at":"2024-01-01T00:00:00Z","labels":[],"notes":[],"deps":[],"events":[]}
 {"id":"test-type2","issue_type":"bug","title":"Bug","status":"todo","created_at":"2024-01-01T00:00:00Z","updated_at":"2024-01-01T00:00:00Z","labels":[],"notes":[],"deps":[],"events":[]}
 EOF
-    run "$WK_BIN" import --type task import2.jsonl
+    run "$WK_BIN" import --type task t5_import2.jsonl
     assert_success
     run "$WK_BIN" show test-type1
     assert_success
@@ -100,11 +100,11 @@ EOF
     assert_failure
 
     # --label filter
-    cat > import3.jsonl << 'EOF'
+    cat > t5_import3.jsonl << 'EOF'
 {"id":"test-label1","issue_type":"task","title":"Labeled","status":"todo","created_at":"2024-01-01T00:00:00Z","updated_at":"2024-01-01T00:00:00Z","labels":["urgent"],"notes":[],"deps":[],"events":[]}
 {"id":"test-label2","issue_type":"task","title":"Unlabeled","status":"todo","created_at":"2024-01-01T00:00:00Z","updated_at":"2024-01-01T00:00:00Z","labels":[],"notes":[],"deps":[],"events":[]}
 EOF
-    run "$WK_BIN" import --label urgent import3.jsonl
+    run "$WK_BIN" import --label urgent t5_import3.jsonl
     assert_success
     run "$WK_BIN" show test-label1
     assert_success
@@ -112,11 +112,11 @@ EOF
     assert_failure
 
     # --prefix filter
-    cat > import4.jsonl << 'EOF'
+    cat > t5_import4.jsonl << 'EOF'
 {"id":"myproj-a1","issue_type":"task","title":"My project task","status":"todo","created_at":"2024-01-01T00:00:00Z","updated_at":"2024-01-01T00:00:00Z","labels":[],"notes":[],"deps":[],"events":[]}
 {"id":"other-b2","issue_type":"task","title":"Other project task","status":"todo","created_at":"2024-01-01T00:00:00Z","updated_at":"2024-01-01T00:00:00Z","labels":[],"notes":[],"deps":[],"events":[]}
 EOF
-    run "$WK_BIN" import --prefix myproj import4.jsonl
+    run "$WK_BIN" import --prefix myproj t5_import4.jsonl
     assert_success
     run "$WK_BIN" show myproj-a1
     assert_success
@@ -262,17 +262,17 @@ EOF
 }
 
 @test "import rejects -i and -p shorthands" {
-    cat > import.jsonl << 'EOF'
+    cat > t11_import.jsonl << 'EOF'
 {"id":"test-i","issue_type":"task","title":"Test","status":"todo","created_at":"2024-01-01T00:00:00Z","updated_at":"2024-01-01T00:00:00Z","labels":[],"notes":[],"deps":[],"events":[]}
 EOF
-    run "$WK_BIN" import -i import.jsonl
+    run "$WK_BIN" import -i t11_import.jsonl
     assert_failure
     assert_output --partial "unexpected argument '-i'"
 
-    cat > import2.jsonl << 'EOF'
+    cat > t11_import2.jsonl << 'EOF'
 {"id":"myproj-test","issue_type":"task","title":"Test","status":"todo","created_at":"2024-01-01T00:00:00Z","updated_at":"2024-01-01T00:00:00Z","labels":[],"notes":[],"deps":[],"events":[]}
 EOF
-    run "$WK_BIN" import -p myproj import2.jsonl
+    run "$WK_BIN" import -p myproj t11_import2.jsonl
     assert_failure
     assert_output --partial "unexpected argument '-p'"
 }
