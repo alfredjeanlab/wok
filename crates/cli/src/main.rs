@@ -22,12 +22,15 @@ fn main() {
         }
         Err(e) => {
             // Check if this is a help or version request
-            if e.kind() == clap::error::ErrorKind::DisplayHelp
-                || e.kind() == clap::error::ErrorKind::DisplayHelpOnMissingArgumentOrSubcommand
-            {
-                // Get the command and subcommand from args to find which help to show
+            if e.kind() == clap::error::ErrorKind::DisplayHelp {
+                // User explicitly requested help (--help)
                 let args: Vec<String> = std::env::args().collect();
-                print_formatted_help(&args);
+                print_formatted_help(&args, false);
+            } else if e.kind() == clap::error::ErrorKind::DisplayHelpOnMissingArgumentOrSubcommand {
+                // Missing required arguments - show help to stderr, exit with error
+                let args: Vec<String> = std::env::args().collect();
+                print_formatted_help(&args, true);
+                std::process::exit(2);
             } else if e.kind() == clap::error::ErrorKind::DisplayVersion {
                 // Let clap handle version display
                 e.exit();
@@ -40,7 +43,7 @@ fn main() {
 }
 
 /// Print help with negatable flag consolidation.
-fn print_formatted_help(args: &[String]) {
+fn print_formatted_help(args: &[String], to_stderr: bool) {
     use wkrs::help;
 
     // Find the subcommand being requested help for
@@ -63,16 +66,22 @@ fn print_formatted_help(args: &[String]) {
         non_flags.first().map(|s| s.as_str())
     };
 
+    let print_fn = if to_stderr {
+        help::eprint_help
+    } else {
+        help::print_help
+    };
+
     if let Some(name) = subcommand_name {
         // Find the subcommand and format its help
         for sub in cmd.get_subcommands_mut() {
             if sub.get_name() == name || sub.get_all_aliases().any(|a| a == name) {
-                help::print_help(sub);
+                print_fn(sub);
                 return;
             }
         }
     }
 
     // No subcommand or not found - print main help
-    help::print_help(&mut cmd);
+    print_fn(&mut cmd);
 }

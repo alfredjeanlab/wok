@@ -14,6 +14,7 @@
 //! 4. Applying colors manually to the final output
 
 use std::io::Write;
+use std::sync::LazyLock;
 
 use clap::builder::styling::Styles;
 use clap::Command;
@@ -23,8 +24,10 @@ use crate::colors;
 
 /// Regex to parse option lines in help output.
 /// Captures: 1=indent, 2=short+comma, 3=long flag name, 4=value placeholder, 5=description
-fn option_line_re() -> Regex {
-    Regex::new(
+/// These are compile-time constant patterns that are verified at test time.
+/// Using match with unreachable! since these patterns are hard-coded and known-valid.
+static OPTION_LINE_RE: LazyLock<Regex> = LazyLock::new(|| {
+    match Regex::new(
         r"(?x)
         ^(\s*)                          # 1: indent
         ((?:-\w,\s+)?)                  # 2: optional short flag with comma and space
@@ -32,14 +35,17 @@ fn option_line_re() -> Regex {
         (\s+<[^>]+>|\s+\[[^\]]+\])?     # 4: optional value placeholder
         (\s{2,}.+)?$                    # 5: description (preceded by 2+ spaces)
     ",
-    )
-    .expect("valid regex")
-}
+    ) {
+        Ok(re) => re,
+        Err(_) => unreachable!("static regex pattern"),
+    }
+});
 
 /// Regex to detect `--no-X` flags.
-fn no_flag_re() -> Regex {
-    Regex::new(r"^no-(.+)$").expect("valid regex")
-}
+static NO_FLAG_RE: LazyLock<Regex> = LazyLock::new(|| match Regex::new(r"^no-(.+)$") {
+    Ok(re) => re,
+    Err(_) => unreachable!("static regex pattern"),
+});
 
 /// Format help output for a command with flag consolidation.
 ///
@@ -47,10 +53,16 @@ fn no_flag_re() -> Regex {
 /// clap's help output, consolidates negatable flags, and applies colors.
 pub fn format_help(cmd: &mut Command) -> String {
     // Capture clap's help output
+    // Writing to Vec<u8> and converting UTF-8 are infallible for clap help output
     let mut buf = Vec::new();
-    cmd.write_help(&mut buf)
-        .expect("write_help should not fail");
-    let raw_help = String::from_utf8(buf).expect("help output should be valid UTF-8");
+    match cmd.write_help(&mut buf) {
+        Ok(()) => {}
+        Err(_) => unreachable!("write_help to Vec<u8> is infallible"),
+    }
+    let raw_help = match String::from_utf8(buf) {
+        Ok(s) => s,
+        Err(_) => unreachable!("clap help output is always valid UTF-8"),
+    };
 
     // Consolidate --flag/--no-flag pairs
     let consolidated = consolidate_negatable_flags(&raw_help);
@@ -71,13 +83,21 @@ pub fn print_help(cmd: &mut Command) {
     let _ = stdout.flush();
 }
 
+/// Print formatted help to stderr (for usage errors).
+pub fn eprint_help(cmd: &mut Command) {
+    let help = format_help(cmd);
+    let mut stderr = std::io::stderr();
+    let _ = stderr.write_all(help.as_bytes());
+    let _ = stderr.flush();
+}
+
 /// Consolidate `--flag` and `--no-flag` pairs into `--[no-]flag` format.
 ///
 /// Scans the help text looking for adjacent option lines where one is `--no-X`
 /// and the other is `--X`. Merges them into a single `--[no-]X` line.
 fn consolidate_negatable_flags(text: &str) -> String {
-    let option_re = option_line_re();
-    let no_re = no_flag_re();
+    let option_re = &OPTION_LINE_RE;
+    let no_re = &NO_FLAG_RE;
 
     let lines: Vec<&str> = text.lines().collect();
     let mut result = Vec::new();
@@ -154,7 +174,7 @@ fn merge_flag_pair(positive_caps: &regex::Captures, flag_name: &str) -> String {
 /// This is the main colorization function - always applies colors.
 /// Used by format_help when colorization is enabled, and directly by tests.
 pub fn colorize_help_forced(text: &str) -> String {
-    let option_re = option_line_re();
+    let option_re = &OPTION_LINE_RE;
     let mut result = Vec::new();
 
     for line in text.lines() {

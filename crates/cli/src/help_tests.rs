@@ -704,7 +704,6 @@ Options:
     /// Debug: Print actual regex captures for option lines
     #[test]
     fn debug_option_regex_captures() {
-        let re = option_line_re();
         let lines = [
             "  -n, --[no-]limit <LIMIT>   Maximum results",
             "  -o, --output <OUTPUT>      Output [default: text]",
@@ -714,7 +713,7 @@ Options:
 
         for line in lines {
             eprintln!("\nLine: {:?}", line);
-            if let Some(caps) = re.captures(line) {
+            if let Some(caps) = OPTION_LINE_RE.captures(line) {
                 eprintln!("  1 indent: {:?}", caps.get(1).map(|m| m.as_str()));
                 eprintln!("  2 short:  {:?}", caps.get(2).map(|m| m.as_str()));
                 eprintln!("  3 flag:   {:?}", caps.get(3).map(|m| m.as_str()));
