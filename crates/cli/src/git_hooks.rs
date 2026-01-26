@@ -70,6 +70,12 @@ pub fn install_hooks(repo_path: &Path) -> Result<()> {
     Ok(())
 }
 
+/// Old hook pattern that needs updating (missing --quiet).
+const OLD_SYNC_PATTERN: &str = "wok remote sync 2>/dev/null";
+
+/// New hook pattern with --quiet flag.
+const NEW_SYNC_PATTERN: &str = "wok remote sync --quiet 2>/dev/null";
+
 /// Install a single hook.
 fn install_hook(hooks_dir: &Path, name: &str, content: &str) -> Result<()> {
     let hook_path = hooks_dir.join(name);
@@ -83,6 +89,11 @@ fn install_hook(hooks_dir: &Path, name: &str, content: &str) -> Result<()> {
 
     // Check if wk hook is already installed
     if existing.contains(WK_HOOK_MARKER) {
+        // Check if hook needs updating (old version without --quiet)
+        if existing.contains(OLD_SYNC_PATTERN) && !existing.contains(NEW_SYNC_PATTERN) {
+            let updated = existing.replace(OLD_SYNC_PATTERN, NEW_SYNC_PATTERN);
+            fs::write(&hook_path, updated)?;
+        }
         return Ok(());
     }
 

@@ -107,3 +107,30 @@ fn test_install_hooks_preserves_existing() {
     assert!(content.contains("existing hook"));
     assert!(content.contains(WK_HOOK_MARKER));
 }
+
+#[test]
+fn test_install_hooks_updates_old_hooks() {
+    let temp = TempDir::new().unwrap();
+    init_git_repo(temp.path());
+
+    let git_dir = find_git_dir(temp.path()).unwrap();
+    let hooks_dir = git_dir.join("hooks");
+    fs::create_dir_all(&hooks_dir).unwrap();
+
+    // Create old-style hook without --quiet
+    let post_push = hooks_dir.join("post-push");
+    let old_hook = r#"#!/bin/sh
+# wk-remote-sync
+# Trigger wok remote sync after pushing to remote
+wok remote sync 2>/dev/null || true
+"#;
+    fs::write(&post_push, old_hook).unwrap();
+
+    install_hooks(temp.path()).unwrap();
+
+    let content = fs::read_to_string(&post_push).unwrap();
+    // Should now have --quiet
+    assert!(content.contains("wok remote sync --quiet 2>/dev/null"));
+    // Should not have old pattern
+    assert!(!content.contains("wok remote sync 2>/dev/null || true"));
+}
