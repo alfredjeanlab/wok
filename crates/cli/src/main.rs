@@ -27,10 +27,17 @@ fn main() {
                 let args: Vec<String> = std::env::args().collect();
                 print_formatted_help(&args, false);
             } else if e.kind() == clap::error::ErrorKind::DisplayHelpOnMissingArgumentOrSubcommand {
-                // Missing required arguments - show help to stderr, exit with error
                 let args: Vec<String> = std::env::args().collect();
-                print_formatted_help(&args, true);
-                std::process::exit(2);
+                // Check if this is just bare "wk" with no arguments
+                let has_subcommand = args.iter().skip(1).any(|a| !a.starts_with('-'));
+                if has_subcommand {
+                    // Missing required arguments for a subcommand - show help to stderr, exit with error
+                    print_formatted_help(&args, true);
+                    std::process::exit(2);
+                } else {
+                    // No subcommand at all (bare "wk") - show help to stdout, exit success
+                    print_formatted_help(&args, false);
+                }
             } else if e.kind() == clap::error::ErrorKind::DisplayVersion {
                 // Let clap handle version display
                 e.exit();

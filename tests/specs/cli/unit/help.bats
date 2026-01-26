@@ -17,6 +17,16 @@ setup() {
     test_setup
 }
 
+@test "wok without arguments shows help and exits 0" {
+    run "$WK_BIN"
+    assert_success
+    assert_output --partial "wok"
+    assert_output --partial "Usage"
+    assert_output --partial "init"
+    assert_output --partial "new"
+    assert_output --partial "list"
+}
+
 @test "help displays usage information and available commands" {
     run "$WK_BIN" help
     assert_success
