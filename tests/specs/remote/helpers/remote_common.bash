@@ -43,7 +43,7 @@ wait_port_released() {
             return 0
         fi
         sleep 0.01
-        ((attempt++))
+        ((++attempt))
     done
 
     echo "Error: Port $port not released after $max_attempts attempts" >&2
@@ -134,7 +134,7 @@ wait_server_ready() {
             return 0
         fi
         sleep 0.02  # Slightly longer sleep for CI environments
-        ((attempt++))
+        ((++attempt))
     done
 
     echo "Error: Server not ready on port $port after $max_attempts attempts" >&2
@@ -270,7 +270,7 @@ wait_daemon_connected() {
             return 0
         fi
         sleep 0.01
-        ((attempt++))
+        ((++attempt))
     done
 
     echo "Error: Daemon not connected after $max_attempts attempts" >&2
@@ -291,7 +291,7 @@ wait_daemon_disconnected() {
             return 0
         fi
         sleep 0.01
-        ((attempt++))
+        ((++attempt))
     done
 
     echo "Error: Daemon not disconnected after $max_attempts attempts" >&2
@@ -343,7 +343,7 @@ wait_synced() {
             return 0
         fi
         sleep 0.01
-        ((attempt++))
+        ((++attempt))
     done
 
     echo "Error: Not fully synced after $max_attempts attempts (pending: $pending)" >&2
@@ -449,7 +449,7 @@ wait_for_issue() {
             return 0
         fi
         sleep 0.05  # 50ms - balances responsiveness with CI latency
-        ((attempt++))
+        ((++attempt))
     done
 
     echo "Error: Issue '$title' not found after $max_attempts attempts" >&2
@@ -471,7 +471,7 @@ wait_for_status() {
             return 0
         fi
         sleep 0.02  # Slightly longer sleep for CI environments
-        ((attempt++))
+        ((++attempt))
     done
 
     echo "Error: Issue '$id' status not '$expected' after $max_attempts attempts (got: $status)" >&2
