@@ -28,7 +28,7 @@ pub fn status() -> Result<()> {
         OperatingMode::Local => {
             println!("Status: not applicable (no remote configured)");
             println!();
-            println!("To enable remote sync, add a [remote] section to .work/config.toml:");
+            println!("To enable remote sync, add a [remote] section to .wok/config.toml:");
             println!();
             println!("  [remote]");
             println!("  url = \"ws://your-server:7890\"");
@@ -114,7 +114,7 @@ pub fn stop() -> Result<()> {
 }
 
 /// Sync now with remote server.
-pub fn sync(force: bool, quiet: bool) -> Result<()> {
+pub fn sync(force: bool, _quiet: bool) -> Result<()> {
     let work_dir = find_work_dir()?;
     let config = Config::load(&work_dir)?;
     let daemon_dir = get_daemon_dir(&work_dir, &config);
@@ -122,14 +122,8 @@ pub fn sync(force: bool, quiet: bool) -> Result<()> {
 
     match mode {
         OperatingMode::Local => {
-            if !quiet {
-                println!("Not in remote mode - nothing to sync.");
-                println!();
-                println!("To enable remote sync, add a [remote] section to .work/config.toml:");
-                println!();
-                println!("  [remote]");
-                println!("  url = \"ws://your-server:7890\"");
-            }
+            // In local mode, there's nothing to sync - be silent.
+            // Use `wok remote status` to see configuration advice.
         }
         OperatingMode::Remote => {
             let remote = config.remote.as_ref().ok_or(Error::Config(

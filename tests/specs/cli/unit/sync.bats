@@ -22,19 +22,18 @@ teardown() {
     assert_output --partial "not"
 }
 
-@test "remote sync in local mode says nothing to sync" {
+@test "remote sync in local mode is silent" {
     run "$WK_BIN" init --prefix test --local
     assert_success
     run "$WK_BIN" remote sync
     assert_success
-    assert_output --partial "Not in remote mode"
-    assert_output --partial "nothing to sync"
+    assert_output ""
 }
 
-@test "remote sync provides configuration hint" {
+@test "remote status provides configuration hint" {
     run "$WK_BIN" init --prefix test --local
     assert_success
-    run "$WK_BIN" remote sync
+    run "$WK_BIN" remote status
     assert_success
     assert_output --partial "[remote]"
     assert_output --partial "url"
