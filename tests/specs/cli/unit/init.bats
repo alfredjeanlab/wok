@@ -43,11 +43,12 @@ teardown() {
     assert_failure
     [ -n "$output" ]
 
-    # Also fails if .wok exists
+    # Succeeds if .wok exists but has no config.toml
     rm -rf .wok
     mkdir -p .wok
     run "$WK_BIN" init --prefix prj
-    assert_failure
+    assert_success
+    [ -f ".wok/config.toml" ]
 }
 
 @test "init with --path creates at specified location" {

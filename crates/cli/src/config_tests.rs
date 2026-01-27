@@ -70,6 +70,18 @@ fn test_already_initialized() {
 }
 
 #[test]
+fn test_init_succeeds_with_empty_wok_dir() {
+    let temp = TempDir::new().unwrap();
+    let work_dir = temp.path().join(".wok");
+    std::fs::create_dir_all(&work_dir).unwrap();
+
+    // Init should succeed when .wok exists but has no config.toml
+    let result = init_work_dir(temp.path(), "test");
+    assert!(result.is_ok());
+    assert!(work_dir.join("config.toml").exists());
+}
+
+#[test]
 fn test_config_load_missing_file() {
     let temp = TempDir::new().unwrap();
     let result = Config::load(temp.path());

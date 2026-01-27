@@ -302,7 +302,7 @@ pub fn get_daemon_dir(work_dir: &Path, config: &Config) -> PathBuf {
 pub fn init_work_dir(path: &Path, prefix: &str) -> Result<PathBuf> {
     let work_dir = path.join(WORK_DIR_NAME);
 
-    if work_dir.exists() {
+    if work_dir.join(CONFIG_FILE_NAME).exists() {
         return Err(Error::AlreadyInitialized(work_dir.display().to_string()));
     }
 
@@ -318,7 +318,7 @@ pub fn init_work_dir(path: &Path, prefix: &str) -> Result<PathBuf> {
 pub fn init_workspace_link(path: &Path, workspace: &str, prefix: Option<&str>) -> Result<PathBuf> {
     let work_dir = path.join(WORK_DIR_NAME);
 
-    if work_dir.exists() {
+    if work_dir.join(CONFIG_FILE_NAME).exists() {
         return Err(Error::AlreadyInitialized(work_dir.display().to_string()));
     }
 
