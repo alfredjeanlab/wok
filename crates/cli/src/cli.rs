@@ -367,12 +367,12 @@ Filter Expressions (-q/--filter):
         output: OutputFormat,
     },
 
-    /// Show full details of an issue
+    /// Show full details of issue(s)
     #[command(arg_required_else_help = true)]
     Show {
-        /// Issue ID
-        id: String,
-
+        /// Issue ID(s)
+        #[arg(num_args = 1..)]
+        ids: Vec<String>,
         /// Output format (text, json)
         #[arg(long = "output", short = 'o', default_value = "text")]
         output: String,

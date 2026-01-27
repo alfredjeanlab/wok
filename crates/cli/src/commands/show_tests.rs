@@ -219,7 +219,7 @@ fn test_run_impl_text_format() {
     let ctx = TestContext::new();
     ctx.create_issue("test-1", IssueType::Task, "Test issue");
 
-    let result = run_impl(&ctx.db, "test-1", "text");
+    let result = run_impl(&ctx.db, &["test-1".to_string()], "text");
     assert!(result.is_ok());
 }
 
@@ -228,7 +228,7 @@ fn test_run_impl_json_format() {
     let ctx = TestContext::new();
     ctx.create_issue("test-1", IssueType::Task, "Test issue");
 
-    let result = run_impl(&ctx.db, "test-1", "json");
+    let result = run_impl(&ctx.db, &["test-1".to_string()], "json");
     assert!(result.is_ok());
 }
 
@@ -238,7 +238,7 @@ fn test_run_impl_with_labels() {
     ctx.create_issue("test-1", IssueType::Task, "Test issue")
         .add_label("test-1", "urgent");
 
-    let result = run_impl(&ctx.db, "test-1", "text");
+    let result = run_impl(&ctx.db, &["test-1".to_string()], "text");
     assert!(result.is_ok());
 }
 
@@ -246,7 +246,7 @@ fn test_run_impl_with_labels() {
 fn test_run_impl_nonexistent_issue() {
     let ctx = TestContext::new();
 
-    let result = run_impl(&ctx.db, "nonexistent", "text");
+    let result = run_impl(&ctx.db, &["nonexistent".to_string()], "text");
     assert!(result.is_err());
 }
 
@@ -255,6 +255,48 @@ fn test_run_impl_invalid_format() {
     let ctx = TestContext::new();
     ctx.create_issue("test-1", IssueType::Task, "Test issue");
 
-    let result = run_impl(&ctx.db, "test-1", "invalid");
+    let result = run_impl(&ctx.db, &["test-1".to_string()], "invalid");
+    assert!(result.is_err());
+}
+
+#[test]
+fn test_run_impl_multiple_issues_text() {
+    let ctx = TestContext::new();
+    ctx.create_issue("test-1", IssueType::Task, "First issue")
+        .create_issue("test-2", IssueType::Task, "Second issue");
+
+    let result = run_impl(
+        &ctx.db,
+        &["test-1".to_string(), "test-2".to_string()],
+        "text",
+    );
+    assert!(result.is_ok());
+}
+
+#[test]
+fn test_run_impl_multiple_issues_json() {
+    let ctx = TestContext::new();
+    ctx.create_issue("test-1", IssueType::Task, "First issue")
+        .create_issue("test-2", IssueType::Task, "Second issue");
+
+    let result = run_impl(
+        &ctx.db,
+        &["test-1".to_string(), "test-2".to_string()],
+        "json",
+    );
+    assert!(result.is_ok());
+}
+
+#[test]
+fn test_run_impl_fails_if_any_id_invalid() {
+    let ctx = TestContext::new();
+    ctx.create_issue("test-1", IssueType::Task, "Valid issue");
+
+    // Should fail because "nonexistent" is invalid, even though test-1 is valid
+    let result = run_impl(
+        &ctx.db,
+        &["test-1".to_string(), "nonexistent".to_string()],
+        "text",
+    );
     assert!(result.is_err());
 }

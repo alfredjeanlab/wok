@@ -16,8 +16,8 @@ fn parse(args: &[&str]) -> Result<Cli, clap::Error> {
 fn test_show_command() {
     let cli = parse(&["wk", "show", "prj-1234"]).unwrap();
     match cli.command {
-        Command::Show { id, output } => {
-            assert_eq!(id, "prj-1234");
+        Command::Show { ids, output } => {
+            assert_eq!(ids, vec!["prj-1234"]);
             assert_eq!(output, "text"); // default output
         }
         _ => panic!("Expected Show command"),
@@ -28,8 +28,8 @@ fn test_show_command() {
 fn test_show_command_with_json_output() {
     let cli = parse(&["wk", "show", "prj-1234", "--output", "json"]).unwrap();
     match cli.command {
-        Command::Show { id, output } => {
-            assert_eq!(id, "prj-1234");
+        Command::Show { ids, output } => {
+            assert_eq!(ids, vec!["prj-1234"]);
             assert_eq!(output, "json");
         }
         _ => panic!("Expected Show command"),
@@ -40,8 +40,32 @@ fn test_show_command_with_json_output() {
 fn test_show_command_with_output_short() {
     let cli = parse(&["wk", "show", "prj-1234", "-o", "json"]).unwrap();
     match cli.command {
-        Command::Show { id, output } => {
-            assert_eq!(id, "prj-1234");
+        Command::Show { ids, output } => {
+            assert_eq!(ids, vec!["prj-1234"]);
+            assert_eq!(output, "json");
+        }
+        _ => panic!("Expected Show command"),
+    }
+}
+
+#[test]
+fn test_show_command_multiple_ids() {
+    let cli = parse(&["wk", "show", "prj-1", "prj-2", "prj-3"]).unwrap();
+    match cli.command {
+        Command::Show { ids, output } => {
+            assert_eq!(ids, vec!["prj-1", "prj-2", "prj-3"]);
+            assert_eq!(output, "text");
+        }
+        _ => panic!("Expected Show command"),
+    }
+}
+
+#[test]
+fn test_show_command_multiple_ids_with_json() {
+    let cli = parse(&["wk", "show", "prj-1", "prj-2", "-o", "json"]).unwrap();
+    match cli.command {
+        Command::Show { ids, output } => {
+            assert_eq!(ids, vec!["prj-1", "prj-2"]);
             assert_eq!(output, "json");
         }
         _ => panic!("Expected Show command"),

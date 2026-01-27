@@ -77,7 +77,7 @@ fn show_json_format() {
         .unwrap()
         .trim_end_matches(':');
 
-    // Show with JSON output should output valid JSON structure
+    // Show with JSON output should output valid compact JSON (JSONL format)
     wk().arg("show")
         .arg(id)
         .arg("--output")
@@ -86,9 +86,9 @@ fn show_json_format() {
         .assert()
         .success()
         .stdout(predicate::str::contains("\"id\":"))
-        .stdout(predicate::str::contains("\"title\": \"Test JSON output\""))
-        .stdout(predicate::str::contains("\"issue_type\": \"task\""))
-        .stdout(predicate::str::contains("\"status\": \"todo\""))
+        .stdout(predicate::str::contains("\"title\":\"Test JSON output\""))
+        .stdout(predicate::str::contains("\"issue_type\":\"task\""))
+        .stdout(predicate::str::contains("\"status\":\"todo\""))
         .stdout(predicate::str::contains("\"labels\":"))
         .stdout(predicate::str::contains("\"backend\""))
         .stdout(predicate::str::contains("\"events\":"));

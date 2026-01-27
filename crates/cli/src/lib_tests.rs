@@ -256,10 +256,12 @@ fn test_command_list_construction() {
 #[test]
 fn test_command_show_construction() {
     let cmd = Command::Show {
-        id: "test-1".to_string(),
+        ids: vec!["test-1".to_string()],
         output: "json".to_string(),
     };
-    assert!(matches!(cmd, Command::Show { id, output } if id == "test-1" && output == "json"));
+    assert!(
+        matches!(cmd, Command::Show { ids, output } if ids == vec!["test-1"] && output == "json")
+    );
 }
 
 #[test]
