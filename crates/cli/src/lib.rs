@@ -143,7 +143,7 @@ pub fn run(command: Command) -> Result<()> {
             status, r#type, label, assignee, unassigned, filter, limit, no_limit, blocked, all,
             output,
         ),
-        Command::Show { id, output } => commands::show::run(&id, &output),
+        Command::Show { ids, output } => commands::show::run(&ids, &output),
         Command::Tree { id } => commands::tree::run(&id),
         Command::Link { id, url, reason } => commands::link::add(&id, &url, reason),
         Command::Unlink { id, url } => commands::link::remove(&id, &url),

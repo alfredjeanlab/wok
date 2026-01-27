@@ -94,3 +94,44 @@ load '../../helpers/common'
     run "$WK_BIN" show
     assert_failure
 }
+
+@test "show: multiple issues in text mode separated by ---" {
+    id1=$(create_issue task "First issue")
+    id2=$(create_issue task "Second issue")
+    run "$WK_BIN" show "$id1" "$id2"
+    assert_success
+    assert_output --partial "First issue"
+    assert_output --partial "---"
+    assert_output --partial "Second issue"
+}
+
+@test "show: multiple issues in json mode outputs JSONL" {
+    id1=$(create_issue task "First issue")
+    id2=$(create_issue task "Second issue")
+    run "$WK_BIN" show "$id1" "$id2" -o json
+    assert_success
+    # Count lines - should be 2 (one per issue)
+    line_count=$(echo "$output" | wc -l | tr -d ' ')
+    assert_equal "$line_count" "2"
+    # Each line should be valid JSON
+    echo "$output" | head -1 | jq . >/dev/null
+    echo "$output" | tail -1 | jq . >/dev/null
+}
+
+@test "show: single issue json format is compact (JSONL)" {
+    id=$(create_issue task "Test issue")
+    run "$WK_BIN" show "$id" -o json
+    assert_success
+    # Single line of JSON (compact format)
+    line_count=$(echo "$output" | wc -l | tr -d ' ')
+    assert_equal "$line_count" "1"
+    # Should be valid JSON
+    echo "$output" | jq . >/dev/null
+}
+
+@test "show: fails if any ID is invalid" {
+    id=$(create_issue task "Test issue")
+    run "$WK_BIN" show "$id" nonexistent
+    assert_failure
+    assert_output --partial "not found"
+}

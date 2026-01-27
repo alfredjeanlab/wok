@@ -24,54 +24,89 @@ struct IssueDetails {
     events: Vec<Event>,
 }
 
-pub fn run(id: &str, format: &str) -> Result<()> {
+pub fn run(ids: &[String], format: &str) -> Result<()> {
     let (db, _, _) = open_db()?;
-    run_impl(&db, id, format)
+    run_impl(&db, ids, format)
 }
 
 /// Internal implementation that accepts db for testing.
-pub(crate) fn run_impl(db: &Database, id: &str, format: &str) -> Result<()> {
-    let resolved_id = db.resolve_id(id)?;
-    let issue = db.get_issue(&resolved_id)?;
-    let labels = db.get_labels(&resolved_id)?;
-    let blockers = db.get_blockers(&resolved_id)?;
-    let blocking = db.get_blocking(&resolved_id)?;
-    let parents = db.get_tracking(&resolved_id)?;
-    let children = db.get_tracked(&resolved_id)?;
-    let links = db.get_links(&resolved_id)?;
-    let events = db.get_events(&resolved_id)?;
+pub(crate) fn run_impl(db: &Database, ids: &[String], format: &str) -> Result<()> {
+    // Resolve all IDs first (fail fast if any is invalid)
+    let resolved_ids: Vec<String> = ids
+        .iter()
+        .map(|id| db.resolve_id(id))
+        .collect::<Result<Vec<_>>>()?;
 
     match format {
-        "json" => {
-            let notes = db.get_notes(&resolved_id)?;
-            let details = IssueDetails {
-                issue,
-                labels,
-                blockers,
-                blocking,
-                parents,
-                children,
-                notes,
-                links,
-                events,
-            };
-            let json = serde_json::to_string_pretty(&details)?;
-            println!("{}", json);
-        }
-        "text" => {
-            let notes = db.get_notes_by_status(&resolved_id)?;
-            let output = format_issue_details(
-                &issue, &labels, &blockers, &blocking, &parents, &children, &notes, &links, &events,
-            );
-            println!("{}", output);
-        }
-        _ => {
-            return Err(Error::UnknownFormat {
-                format: format.to_string(),
-            });
-        }
+        "json" => output_json(db, &resolved_ids),
+        "text" => output_text(db, &resolved_ids),
+        _ => Err(Error::UnknownFormat {
+            format: format.to_string(),
+        }),
     }
+}
 
+fn build_issue_details(db: &Database, id: &str) -> Result<IssueDetails> {
+    let issue = db.get_issue(id)?;
+    let labels = db.get_labels(id)?;
+    let blockers = db.get_blockers(id)?;
+    let blocking = db.get_blocking(id)?;
+    let parents = db.get_tracking(id)?;
+    let children = db.get_tracked(id)?;
+    let notes = db.get_notes(id)?;
+    let links = db.get_links(id)?;
+    let events = db.get_events(id)?;
+
+    Ok(IssueDetails {
+        issue,
+        labels,
+        blockers,
+        blocking,
+        parents,
+        children,
+        notes,
+        links,
+        events,
+    })
+}
+
+fn output_json(db: &Database, ids: &[String]) -> Result<()> {
+    for id in ids {
+        let details = build_issue_details(db, id)?;
+        // Use to_string (not to_string_pretty) for JSONL format
+        let json = serde_json::to_string(&details)?;
+        println!("{json}");
+    }
+    Ok(())
+}
+
+fn output_text(db: &Database, ids: &[String]) -> Result<()> {
+    for (i, id) in ids.iter().enumerate() {
+        if i > 0 {
+            println!("---");
+        }
+        output_single_text(db, id)?;
+    }
+    Ok(())
+}
+
+fn output_single_text(db: &Database, id: &str) -> Result<()> {
+    let issue = db.get_issue(id)?;
+    let labels = db.get_labels(id)?;
+    let blockers = db.get_blockers(id)?;
+    let blocking = db.get_blocking(id)?;
+    let parents = db.get_tracking(id)?;
+    let children = db.get_tracked(id)?;
+    let notes = db.get_notes_by_status(id)?;
+    let links = db.get_links(id)?;
+    let events = db.get_events(id)?;
+
+    print!(
+        "{}",
+        format_issue_details(
+            &issue, &labels, &blockers, &blocking, &parents, &children, &notes, &links, &events,
+        )
+    );
     Ok(())
 }
 
