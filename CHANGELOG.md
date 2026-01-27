@@ -4,6 +4,22 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [0.3.1]
+
+### Added
+
+- **Multiple IDs in `wok show`**: Pass multiple issue IDs to `wok show` with JSONL output format for batch inspection.
+
+- **Multiple prefix support**: Configure multiple prefixes for multi-project collaboration via prefix configuration.
+
+### Changed
+
+- **CLI refactor**: Extracted shared argument structs to reduce code duplication in the CLI.
+
+### Fixed
+
+- **`wok init` when `.wok` directory exists**: Allow initialization when `.wok` directory exists but has no `config.toml`.
+
 ## [0.3.0]
 
 ### Added
