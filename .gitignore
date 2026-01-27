@@ -3,6 +3,7 @@
 .quench/
 .wok/
 .v0/
+.v0.profile.rc
 
 # Build artifacts
 target/
@@ -10,5 +11,4 @@ target/
 coverage.out
 coverage/
 *.profraw
-
 
