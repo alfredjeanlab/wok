@@ -1982,7 +1982,7 @@ checksum = "d7249219f66ced02969388cf2bb044a09756a083d0fab1e566056b04d9fbcaa5"
 
 [[package]]
 name = "wk"
-version = "0.3.0"
+version = "0.3.1"
 dependencies = [
  "anstyle",
  "assert_cmd",
@@ -2015,7 +2015,7 @@ dependencies = [
 
 [[package]]
 name = "wk-core"
-version = "0.3.0"
+version = "0.3.1"
 dependencies = [
  "chrono",
  "dirs",
@@ -2031,7 +2031,7 @@ dependencies = [
 
 [[package]]
 name = "wk-remote"
-version = "0.3.0"
+version = "0.3.1"
 dependencies = [
  "clap",
  "futures-util",
