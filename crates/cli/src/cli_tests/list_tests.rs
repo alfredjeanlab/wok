@@ -18,14 +18,13 @@ fn test_list_default() {
     match cli.command {
         Command::List {
             status,
-            r#type,
-            label,
+            type_label,
             blocked,
             ..
         } => {
             assert!(status.is_empty());
-            assert!(r#type.is_empty());
-            assert!(label.is_empty());
+            assert!(type_label.r#type.is_empty());
+            assert!(type_label.label.is_empty());
             assert!(!blocked);
         }
         _ => panic!("Expected List command"),
@@ -47,8 +46,8 @@ fn test_list_with_status() {
 fn test_list_with_type() {
     let cli = parse(&["wk", "list", "-t", "bug"]).unwrap();
     match cli.command {
-        Command::List { r#type, .. } => {
-            assert_eq!(r#type, vec!["bug".to_string()]);
+        Command::List { type_label, .. } => {
+            assert_eq!(type_label.r#type, vec!["bug".to_string()]);
         }
         _ => panic!("Expected List command"),
     }
@@ -58,8 +57,8 @@ fn test_list_with_type() {
 fn test_list_with_type_long_flag() {
     let cli = parse(&["wk", "list", "--type", "bug"]).unwrap();
     match cli.command {
-        Command::List { r#type, .. } => {
-            assert_eq!(r#type, vec!["bug".to_string()]);
+        Command::List { type_label, .. } => {
+            assert_eq!(type_label.r#type, vec!["bug".to_string()]);
         }
         _ => panic!("Expected List command"),
     }
@@ -76,8 +75,8 @@ fn test_list_old_type_flag_fails() {
 fn test_list_with_label() {
     let cli = parse(&["wk", "list", "-l", "urgent"]).unwrap();
     match cli.command {
-        Command::List { label, .. } => {
-            assert_eq!(label, vec!["urgent".to_string()]);
+        Command::List { type_label, .. } => {
+            assert_eq!(type_label.label, vec!["urgent".to_string()]);
         }
         _ => panic!("Expected List command"),
     }
@@ -116,8 +115,8 @@ fn test_list_with_comma_separated_status() {
 fn test_list_with_repeated_labels() {
     let cli = parse(&["wk", "list", "-l", "a", "-l", "b"]).unwrap();
     match cli.command {
-        Command::List { label, .. } => {
-            assert_eq!(label, vec!["a".to_string(), "b".to_string()]);
+        Command::List { type_label, .. } => {
+            assert_eq!(type_label.label, vec!["a".to_string(), "b".to_string()]);
         }
         _ => panic!("Expected List command"),
     }
@@ -137,9 +136,14 @@ fn test_list_with_mixed_filters() {
     ])
     .unwrap();
     match cli.command {
-        Command::List { status, label, .. } => {
+        Command::List {
+            status, type_label, ..
+        } => {
             assert_eq!(status, vec!["todo".to_string()]);
-            assert_eq!(label, vec!["urgent,bug".to_string(), "backend".to_string()]);
+            assert_eq!(
+                type_label.label,
+                vec!["urgent,bug".to_string(), "backend".to_string()]
+            );
         }
         _ => panic!("Expected List command"),
     }
@@ -151,15 +155,14 @@ fn test_ready_default() {
     let cli = parse(&["wk", "ready"]).unwrap();
     match cli.command {
         Command::Ready {
-            r#type,
-            label,
+            type_label,
             assignee,
             unassigned,
             all_assignees,
             output,
         } => {
-            assert!(r#type.is_empty());
-            assert!(label.is_empty());
+            assert!(type_label.r#type.is_empty());
+            assert!(type_label.label.is_empty());
             assert!(assignee.is_empty());
             assert!(!unassigned);
             assert!(!all_assignees);
@@ -173,8 +176,8 @@ fn test_ready_default() {
 fn test_ready_with_type_filter() {
     let cli = parse(&["wk", "ready", "-t", "bug"]).unwrap();
     match cli.command {
-        Command::Ready { r#type, .. } => {
-            assert_eq!(r#type, vec!["bug".to_string()]);
+        Command::Ready { type_label, .. } => {
+            assert_eq!(type_label.r#type, vec!["bug".to_string()]);
         }
         _ => panic!("Expected Ready command"),
     }
@@ -184,8 +187,8 @@ fn test_ready_with_type_filter() {
 fn test_ready_with_label_filter() {
     let cli = parse(&["wk", "ready", "-l", "urgent"]).unwrap();
     match cli.command {
-        Command::Ready { label, .. } => {
-            assert_eq!(label, vec!["urgent".to_string()]);
+        Command::Ready { type_label, .. } => {
+            assert_eq!(type_label.label, vec!["urgent".to_string()]);
         }
         _ => panic!("Expected Ready command"),
     }
@@ -195,9 +198,9 @@ fn test_ready_with_label_filter() {
 fn test_ready_with_combined_filters() {
     let cli = parse(&["wk", "ready", "-t", "bug", "-l", "urgent"]).unwrap();
     match cli.command {
-        Command::Ready { r#type, label, .. } => {
-            assert_eq!(r#type, vec!["bug".to_string()]);
-            assert_eq!(label, vec!["urgent".to_string()]);
+        Command::Ready { type_label, .. } => {
+            assert_eq!(type_label.r#type, vec!["bug".to_string()]);
+            assert_eq!(type_label.label, vec!["urgent".to_string()]);
         }
         _ => panic!("Expected Ready command"),
     }
@@ -220,8 +223,8 @@ fn test_ready_accepts_label_flag() {
     // --label is now the correct flag (--tag was renamed to --label)
     let cli = parse(&["wk", "ready", "--label", "foo"]).unwrap();
     match cli.command {
-        Command::Ready { label, .. } => {
-            assert_eq!(label, vec!["foo".to_string()]);
+        Command::Ready { type_label, .. } => {
+            assert_eq!(type_label.label, vec!["foo".to_string()]);
         }
         _ => panic!("Expected Ready command"),
     }
