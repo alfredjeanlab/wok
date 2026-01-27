@@ -13,7 +13,7 @@
 //! This file contains tests for command variants that can be tested without
 //! filesystem dependencies, validating the routing logic works correctly.
 
-use crate::{Command, OutputFormat};
+use crate::{AssigneeArgs, Command, LimitArgs, OutputFormat, TypeLabelArgs};
 
 // Note: Most Command variants require open_db() which needs filesystem access.
 // Those are tested via integration tests in tests/integration.rs.
@@ -225,28 +225,33 @@ fn test_command_lifecycle_construction() {
 fn test_command_list_construction() {
     let cmd = Command::List {
         status: vec!["todo".to_string(), "in_progress".to_string()],
-        r#type: vec!["task".to_string()],
-        label: vec!["urgent".to_string()],
-        assignee: vec![],
-        unassigned: false,
+        type_label: TypeLabelArgs {
+            r#type: vec!["task".to_string()],
+            label: vec!["urgent".to_string()],
+        },
+        assignee_args: AssigneeArgs {
+            assignee: vec![],
+            unassigned: false,
+        },
         filter: vec![],
-        limit: None,
-        no_limit: false,
+        limits: LimitArgs {
+            limit: None,
+            no_limit: false,
+        },
         blocked: false,
         all: false,
         output: OutputFormat::Text,
     };
     if let Command::List {
         status,
-        r#type,
-        label,
+        type_label,
         blocked,
         ..
     } = cmd
     {
         assert_eq!(status.len(), 2);
-        assert_eq!(r#type, vec!["task".to_string()]);
-        assert_eq!(label, vec!["urgent".to_string()]);
+        assert_eq!(type_label.r#type, vec!["task".to_string()]);
+        assert_eq!(type_label.label, vec!["urgent".to_string()]);
         assert!(!blocked);
     } else {
         panic!("Expected List command");
@@ -325,20 +330,24 @@ fn test_command_note_construction() {
 fn test_command_log_construction() {
     let cmd = Command::Log {
         id: Some("test-1".to_string()),
-        limit: Some(50),
-        no_limit: false,
+        limits: LimitArgs {
+            limit: Some(50),
+            no_limit: false,
+        },
     };
     assert!(
-        matches!(cmd, Command::Log { id, limit, no_limit } if id == Some("test-1".to_string()) && limit == Some(50) && !no_limit)
+        matches!(cmd, Command::Log { id, limits } if id == Some("test-1".to_string()) && limits.limit == Some(50) && !limits.no_limit)
     );
 
     let cmd = Command::Log {
         id: None,
-        limit: None,
-        no_limit: true,
+        limits: LimitArgs {
+            limit: None,
+            no_limit: true,
+        },
     };
     assert!(
-        matches!(cmd, Command::Log { id, limit, no_limit } if id.is_none() && limit.is_none() && no_limit)
+        matches!(cmd, Command::Log { id, limits } if id.is_none() && limits.limit.is_none() && limits.no_limit)
     );
 }
 
@@ -353,15 +362,17 @@ fn test_command_export_construction() {
 #[test]
 fn test_command_ready_construction() {
     let cmd = Command::Ready {
-        r#type: vec!["bug".to_string()],
-        label: vec!["backend".to_string()],
+        type_label: TypeLabelArgs {
+            r#type: vec!["bug".to_string()],
+            label: vec!["backend".to_string()],
+        },
         assignee: vec![],
         unassigned: false,
         all_assignees: false,
         output: OutputFormat::Text,
     };
-    assert!(matches!(cmd, Command::Ready { r#type, label, output, .. }
-        if r#type == vec!["bug".to_string()] && label == vec!["backend".to_string()] && matches!(output, OutputFormat::Text)
+    assert!(matches!(cmd, Command::Ready { type_label, output, .. }
+        if type_label.r#type == vec!["bug".to_string()] && type_label.label == vec!["backend".to_string()] && matches!(output, OutputFormat::Text)
     ));
 }
 

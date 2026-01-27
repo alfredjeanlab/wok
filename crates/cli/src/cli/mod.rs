@@ -1,10 +1,14 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Alfred Jean LLC
 
+mod args;
+
 use crate::colors;
 use crate::help;
 use clap::{Parser, Subcommand, ValueEnum};
 use clap_complete::Shell;
+
+pub use args::{AssigneeArgs, LimitArgs, TypeLabelArgs};
 
 /// Parse a string that must not be empty or whitespace-only.
 fn non_empty_string(s: &str) -> Result<String, String> {
@@ -232,32 +236,18 @@ Filter Expressions (-q/--filter):
         #[arg(long, short)]
         status: Vec<String>,
 
-        /// Filter by type (comma-separated for OR, repeat for AND)
-        #[arg(long, short = 't')]
-        r#type: Vec<String>,
+        #[command(flatten)]
+        type_label: TypeLabelArgs,
 
-        /// Filter by label (comma-separated for OR, repeat for AND)
-        #[arg(long, short)]
-        label: Vec<String>,
-
-        /// Filter by assignee (comma-separated for OR, repeat for AND)
-        #[arg(long, short, value_delimiter = ',')]
-        assignee: Vec<String>,
-
-        /// Show only unassigned issues
-        #[arg(long, conflicts_with = "assignee")]
-        unassigned: bool,
+        #[command(flatten)]
+        assignee_args: AssigneeArgs,
 
         /// Filter expression (e.g., "age < 3d", "updated > 1w")
         #[arg(long = "filter", short = 'q')]
         filter: Vec<String>,
 
-        /// Maximum number of results
-        #[arg(short = 'n', long, conflicts_with = "no_limit")]
-        limit: Option<usize>,
-
-        #[arg(long, conflicts_with = "limit")]
-        no_limit: bool,
+        #[command(flatten)]
+        limits: LimitArgs,
 
         /// Show only blocked issues
         #[arg(long)]
@@ -282,13 +272,8 @@ Examples:
   wok ready --unassigned          Show only unassigned ready issues
   wok ready --all-assignees       Show all ready issues regardless of assignment"))]
     Ready {
-        /// Filter by type (comma-separated for OR, repeat for AND)
-        #[arg(long, short = 't')]
-        r#type: Vec<String>,
-
-        /// Filter by label (comma-separated for OR, repeat for AND)
-        #[arg(long, short)]
-        label: Vec<String>,
+        #[command(flatten)]
+        type_label: TypeLabelArgs,
 
         /// Filter by assignee (comma-separated for OR)
         #[arg(long, short, value_delimiter = ',')]
@@ -335,32 +320,18 @@ Filter Expressions (-q/--filter):
         #[arg(long, short)]
         status: Vec<String>,
 
-        /// Filter by type (comma-separated for OR, repeat for AND)
-        #[arg(long, short = 't')]
-        r#type: Vec<String>,
+        #[command(flatten)]
+        type_label: TypeLabelArgs,
 
-        /// Filter by label (comma-separated for OR, repeat for AND)
-        #[arg(long, short)]
-        label: Vec<String>,
-
-        /// Filter by assignee (comma-separated for OR)
-        #[arg(long, short, value_delimiter = ',')]
-        assignee: Vec<String>,
-
-        /// Show only unassigned issues
-        #[arg(long, conflicts_with = "assignee")]
-        unassigned: bool,
+        #[command(flatten)]
+        assignee_args: AssigneeArgs,
 
         /// Filter expression (e.g., "age < 3d", "updated > 1w")
         #[arg(long = "filter", short = 'q')]
         filter: Vec<String>,
 
-        /// Maximum number of results (default: 25)
-        #[arg(short = 'n', long, conflicts_with = "no_limit")]
-        limit: Option<usize>,
-
-        #[arg(long, conflicts_with = "limit")]
-        no_limit: bool,
+        #[command(flatten)]
+        limits: LimitArgs,
 
         /// Output format (text, json)
         #[arg(long = "output", short = 'o', value_enum, default_value = "text")]
@@ -504,12 +475,8 @@ Examples:
         /// Issue ID (optional, shows all if omitted)
         id: Option<String>,
 
-        /// Limit number of events (default: 20)
-        #[arg(short = 'n', long, conflicts_with = "no_limit")]
-        limit: Option<usize>,
-
-        #[arg(long, conflicts_with = "limit")]
-        no_limit: bool,
+        #[command(flatten)]
+        limits: LimitArgs,
     },
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -581,13 +548,8 @@ Examples:
         #[arg(long, short)]
         status: Vec<String>,
 
-        /// Filter by type (comma-separated for OR, repeat for AND)
-        #[arg(long, short = 't')]
-        r#type: Vec<String>,
-
-        /// Filter by label (comma-separated for OR, repeat for AND)
-        #[arg(long, short)]
-        label: Vec<String>,
+        #[command(flatten)]
+        type_label: TypeLabelArgs,
 
         /// Filter by ID prefix
         #[arg(long)]
@@ -762,5 +724,5 @@ Examples:
 }
 
 #[cfg(test)]
-#[path = "cli_tests/mod.rs"]
+#[path = "../cli_tests/mod.rs"]
 mod tests;
