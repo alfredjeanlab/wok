@@ -5,6 +5,7 @@
 #![allow(clippy::expect_used)]
 
 use super::*;
+use yare::parameterized;
 
 // Helper to parse CLI args
 fn parse(args: &[&str]) -> Result<Cli, clap::Error> {
@@ -227,5 +228,126 @@ fn test_ready_accepts_label_flag() {
             assert_eq!(type_label.label, vec!["foo".to_string()]);
         }
         _ => panic!("Expected Ready command"),
+    }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Phase 4: Parameterized output format tests
+// ─────────────────────────────────────────────────────────────────────────────
+
+#[test]
+fn test_list_output_format_text_default() {
+    let cli = parse(&["wk", "list"]).unwrap();
+    match cli.command {
+        Command::List { output, .. } => {
+            assert!(matches!(output, OutputFormat::Text));
+        }
+        _ => panic!("Expected List command"),
+    }
+}
+
+#[test]
+fn test_list_output_format_json_long() {
+    let cli = parse(&["wk", "list", "--output", "json"]).unwrap();
+    match cli.command {
+        Command::List { output, .. } => {
+            assert!(matches!(output, OutputFormat::Json));
+        }
+        _ => panic!("Expected List command"),
+    }
+}
+
+#[test]
+fn test_list_output_format_json_short() {
+    let cli = parse(&["wk", "list", "-o", "json"]).unwrap();
+    match cli.command {
+        Command::List { output, .. } => {
+            assert!(matches!(output, OutputFormat::Json));
+        }
+        _ => panic!("Expected List command"),
+    }
+}
+
+#[test]
+fn test_list_output_format_ids_long() {
+    let cli = parse(&["wk", "list", "--output", "ids"]).unwrap();
+    match cli.command {
+        Command::List { output, .. } => {
+            assert!(matches!(output, OutputFormat::Id));
+        }
+        _ => panic!("Expected List command"),
+    }
+}
+
+#[test]
+fn test_list_output_format_ids_short() {
+    let cli = parse(&["wk", "list", "-o", "ids"]).unwrap();
+    match cli.command {
+        Command::List { output, .. } => {
+            assert!(matches!(output, OutputFormat::Id));
+        }
+        _ => panic!("Expected List command"),
+    }
+}
+
+#[test]
+fn test_list_output_format_id_alias() {
+    let cli = parse(&["wk", "list", "-o", "id"]).unwrap();
+    match cli.command {
+        Command::List { output, .. } => {
+            assert!(matches!(output, OutputFormat::Id));
+        }
+        _ => panic!("Expected List command"),
+    }
+}
+
+#[test]
+fn test_list_output_format_text_explicit() {
+    let cli = parse(&["wk", "list", "-o", "text"]).unwrap();
+    match cli.command {
+        Command::List { output, .. } => {
+            assert!(matches!(output, OutputFormat::Text));
+        }
+        _ => panic!("Expected List command"),
+    }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Phase 5: Parameterized filter flag tests
+// ─────────────────────────────────────────────────────────────────────────────
+
+#[parameterized(
+    single_filter_short = { &["wk", "list", "-q", "age < 1d"], vec!["age < 1d"] },
+    single_filter_long = { &["wk", "list", "--filter", "closed < 1w"], vec!["closed < 1w"] },
+    multiple_filters = { &["wk", "list", "-q", "age < 1d", "-q", "updated < 1h"], vec!["age < 1d", "updated < 1h"] },
+)]
+fn test_list_filter_parsing(args: &[&str], expected: Vec<&str>) {
+    let cli = parse(args).unwrap();
+    match cli.command {
+        Command::List { filter, .. } => {
+            let expected: Vec<String> = expected.iter().map(|s| s.to_string()).collect();
+            assert_eq!(filter, expected);
+        }
+        _ => panic!("Expected List command"),
+    }
+}
+
+#[parameterized(
+    limit_short = { &["wk", "list", "-n", "50"], Some(50) },
+    limit_long = { &["wk", "list", "--limit", "100"], Some(100) },
+    no_limit_flag = { &["wk", "list", "--no-limit"], None },
+)]
+fn test_list_limit_parsing(args: &[&str], expected_limit: Option<usize>) {
+    let cli = parse(args).unwrap();
+    match cli.command {
+        Command::List { limits, .. } => {
+            if expected_limit.is_none() {
+                // --no-limit flag was used
+                assert!(limits.no_limit);
+            } else {
+                assert_eq!(limits.limit, expected_limit);
+            }
+        }
+        _ => panic!("Expected List command"),
     }
 }
