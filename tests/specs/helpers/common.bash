@@ -20,6 +20,20 @@ fi
 # Default to searching PATH if WK_BIN not set
 export WK_BIN="${WK_BIN:-wk}"
 
+# Verify WK_BIN is executable
+# Usage: require_wk_bin (call in setup_file if needed)
+require_wk_bin() {
+    if [ -x "$WK_BIN" ]; then
+        return 0
+    elif command -v "$WK_BIN" >/dev/null 2>&1; then
+        return 0
+    else
+        echo "Error: WK_BIN='$WK_BIN' not found or not executable" >&2
+        echo "Build with 'cargo build' or set WK_BIN to binary path" >&2
+        return 1
+    fi
+}
+
 # Create isolated test directory
 setup() {
     TEST_DIR="$(mktemp -d)"
@@ -128,7 +142,7 @@ get_status() {
 # Usage: type=$(get_type "$id")
 get_type() {
     local id="$1"
-    "$WK_BIN" show "$id" | grep -oE '\[epic\]|\[task\]|\[bug\]' | head -1
+    "$WK_BIN" show "$id" | grep -oE '\[epic\]|\[task\]|\[bug\]|\[feature\]|\[chore\]|\[idea\]' | head -1
 }
 
 # Helper: Count issues in list output
