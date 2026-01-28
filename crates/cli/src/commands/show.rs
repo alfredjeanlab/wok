@@ -73,7 +73,7 @@ fn build_issue_details(db: &Database, id: &str) -> Result<IssueDetails> {
 fn output_json(db: &Database, ids: &[String]) -> Result<()> {
     for id in ids {
         let details = build_issue_details(db, id)?;
-        let json = serde_json::to_string_pretty(&details)?;
+        let json = serde_json::to_string(&details)?;
         println!("{json}");
     }
     Ok(())
