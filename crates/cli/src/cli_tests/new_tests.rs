@@ -5,6 +5,7 @@
 #![allow(clippy::expect_used)]
 
 use super::*;
+use yare::parameterized;
 
 // Helper to parse CLI args
 fn parse(args: &[&str]) -> Result<Cli, clap::Error> {
@@ -402,6 +403,186 @@ fn test_new_with_all_dependency_flags() {
             assert_eq!(blocked_by, vec!["b"]);
             assert_eq!(tracks, vec!["c"]);
             assert_eq!(tracked_by, vec!["d"]);
+        }
+        _ => panic!("Expected New command"),
+    }
+}
+
+// Parameterized tests for IssueType parsing at CLI level
+
+#[parameterized(
+    task_lower = { "task", "Task title" },
+    task_upper = { "TASK", "Task title" },
+    task_mixed = { "Task", "Task title" },
+    feature_lower = { "feature", "Feature title" },
+    feature_upper = { "FEATURE", "Feature title" },
+    feature_mixed = { "Feature", "Feature title" },
+    bug_lower = { "bug", "Bug title" },
+    bug_upper = { "BUG", "Bug title" },
+    bug_mixed = { "Bug", "Bug title" },
+    chore_lower = { "chore", "Chore title" },
+    chore_upper = { "CHORE", "Chore title" },
+    chore_mixed = { "Chore", "Chore title" },
+    idea_lower = { "idea", "Idea title" },
+    idea_upper = { "IDEA", "Idea title" },
+    idea_mixed = { "Idea", "Idea title" },
+)]
+fn test_new_type_parsing(type_str: &str, title: &str) {
+    let cli = parse(&["wk", "new", type_str, title]).unwrap();
+    match cli.command {
+        Command::New {
+            type_or_title,
+            title: parsed_title,
+            ..
+        } => {
+            assert_eq!(type_or_title, type_str);
+            assert_eq!(parsed_title, Some(title.to_string()));
+        }
+        _ => panic!("Expected New command"),
+    }
+}
+
+#[parameterized(
+    epic = { "epic" },
+    story = { "story" },
+    invalid = { "invalid" },
+)]
+fn test_new_invalid_type_passes_cli_parsing(type_str: &str) {
+    // Invalid types pass CLI parsing (validation happens in run_impl)
+    let cli = parse(&["wk", "new", type_str, "Title"]);
+    assert!(
+        cli.is_ok(),
+        "CLI parsing should succeed for any non-empty type"
+    );
+}
+
+#[test]
+fn test_new_empty_type_rejected_at_cli() {
+    // Empty type is rejected by clap's non_empty_string validator
+    let cli = parse(&["wk", "new", "", "Title"]);
+    assert!(cli.is_err());
+}
+
+// Parameterized tests for output format
+
+#[parameterized(
+    text_default = { &["wk", "new", "task", "Test"] as &[&str] },
+)]
+fn test_new_output_format_default_text(args: &[&str]) {
+    let cli = parse(args).unwrap();
+    match cli.command {
+        Command::New { output, .. } => {
+            assert!(matches!(output, OutputFormat::Text));
+        }
+        _ => panic!("Expected New command"),
+    }
+}
+
+#[parameterized(
+    id_short = { &["wk", "new", "task", "Test", "-o", "id"] as &[&str] },
+    id_long = { &["wk", "new", "task", "Test", "--output", "id"] as &[&str] },
+)]
+fn test_new_output_format_id(args: &[&str]) {
+    let cli = parse(args).unwrap();
+    match cli.command {
+        Command::New { output, .. } => {
+            assert!(matches!(output, OutputFormat::Id));
+        }
+        _ => panic!("Expected New command"),
+    }
+}
+
+#[parameterized(
+    ids_short = { &["wk", "new", "task", "Test", "-o", "ids"] as &[&str] },
+    ids_long = { &["wk", "new", "task", "Test", "--output", "ids"] as &[&str] },
+)]
+fn test_new_output_format_ids_alias(args: &[&str]) {
+    // "ids" is an alias for "id" for backwards compatibility
+    let cli = parse(args).unwrap();
+    match cli.command {
+        Command::New { output, .. } => {
+            assert!(matches!(output, OutputFormat::Id));
+        }
+        _ => panic!("Expected New command"),
+    }
+}
+
+#[parameterized(
+    json_short = { &["wk", "new", "task", "Test", "-o", "json"] as &[&str] },
+    json_long = { &["wk", "new", "task", "Test", "--output", "json"] as &[&str] },
+)]
+fn test_new_output_format_json(args: &[&str]) {
+    let cli = parse(args).unwrap();
+    match cli.command {
+        Command::New { output, .. } => {
+            assert!(matches!(output, OutputFormat::Json));
+        }
+        _ => panic!("Expected New command"),
+    }
+}
+
+// Prefix flag tests
+
+#[test]
+fn test_new_with_prefix_long() {
+    let cli = parse(&["wk", "new", "task", "Test", "--prefix", "custom"]).unwrap();
+    match cli.command {
+        Command::New { prefix, .. } => {
+            assert_eq!(prefix, Some("custom".to_string()));
+        }
+        _ => panic!("Expected New command"),
+    }
+}
+
+#[test]
+fn test_new_with_prefix_short() {
+    let cli = parse(&["wk", "new", "task", "Test", "-p", "short"]).unwrap();
+    match cli.command {
+        Command::New { prefix, .. } => {
+            assert_eq!(prefix, Some("short".to_string()));
+        }
+        _ => panic!("Expected New command"),
+    }
+}
+
+#[test]
+fn test_new_prefix_default_none() {
+    let cli = parse(&["wk", "new", "task", "Test"]).unwrap();
+    match cli.command {
+        Command::New { prefix, .. } => {
+            assert!(prefix.is_none());
+        }
+        _ => panic!("Expected New command"),
+    }
+}
+
+#[test]
+fn test_new_prefix_with_other_flags() {
+    let cli = parse(&[
+        "wk",
+        "new",
+        "bug",
+        "Fix crash",
+        "--prefix",
+        "api",
+        "-l",
+        "urgent",
+        "-o",
+        "id",
+    ])
+    .unwrap();
+    match cli.command {
+        Command::New {
+            type_or_title,
+            prefix,
+            label,
+            output,
+            ..
+        } => {
+            assert_eq!(type_or_title, "bug");
+            assert_eq!(prefix, Some("api".to_string()));
+            assert_eq!(label, vec!["urgent"]);
+            assert!(matches!(output, OutputFormat::Id));
         }
         _ => panic!("Expected New command"),
     }
