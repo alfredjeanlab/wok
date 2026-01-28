@@ -47,6 +47,7 @@ expect_used = "deny"
 tempfile = "3"
 assert_cmd = "2"
 predicates = "3"
+similar-asserts = "1"
 yare = "3"
 criterion = { version = "0.8", features = ["html_reports"] }
 

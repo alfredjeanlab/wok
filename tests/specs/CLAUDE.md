@@ -45,3 +45,51 @@ make spec-cli ARGS='--filter "list"'
 # Run unimplemented specs
 make spec-todo
 ```
+
+## Rust Specs
+
+For tests that benefit from Rust's type system or complex setup:
+
+```bash
+# Run Rust specs
+cargo test --test specs
+
+# Run specific test
+cargo test --test specs smoke_test_wk_version
+```
+
+### Structure
+
+- `crates/cli/tests/specs.rs` - Entry point, imports prelude
+- `crates/cli/tests/specs_prelude.rs` - Helpers (Project, Wk, assertions)
+- `tests/specs/prelude.rs` - Reference copy of helpers (canonical documentation)
+
+### Core Helpers
+
+```rust
+// Isolated project with temp directory
+let project = Project::new("test");
+
+// Run commands in project context
+project.wk().args(["new", "task", "My task"]).output().success();
+
+// Create issue and get ID
+let id = project.create_issue("task", "My task");
+
+// Standalone command (no project context)
+Wk::new().arg("--version").output().success();
+```
+
+### When to Use Rust vs BATS
+
+Use **Rust specs** when:
+- Complex setup/teardown logic
+- Type-safe fixtures or builders
+- Testing internal behavior (with `wkrs` lib)
+- Parameterized tests with `yare`
+
+Use **BATS specs** when:
+- Simple command-line invocation checks
+- Testing shell integration (pipes, redirects)
+- Quick iteration on CLI behavior
+- Documenting user-facing examples
