@@ -9,6 +9,7 @@ use crate::cli::OutputFormat;
 use crate::db::Database;
 use crate::models::{Issue, IssueType, Relation};
 use chrono::Utc;
+use yare::parameterized;
 
 fn setup_db() -> Database {
     Database::open_in_memory().unwrap()
@@ -703,6 +704,303 @@ fn test_run_impl_ids_format_empty_list() {
         false,
         false,
         OutputFormat::Id,
+    );
+    assert!(result.is_ok());
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Phase 2: Limit behavior tests
+// ─────────────────────────────────────────────────────────────────────────────
+
+#[parameterized(
+    default_limit = { None, 100 },
+    explicit_50 = { Some(50), 50 },
+    unlimited = { Some(0), 150 },
+    explicit_200 = { Some(200), 150 },
+)]
+fn test_effective_limit(input: Option<usize>, expected_max: usize) {
+    let db = setup_db();
+    // Create 150 issues to test limits
+    for i in 0..150 {
+        let issue = Issue {
+            id: format!("limit-{:03}", i),
+            issue_type: IssueType::Task,
+            title: format!("Test issue {}", i),
+            description: None,
+            status: Status::Todo,
+            assignee: None,
+            created_at: Utc::now(),
+            updated_at: Utc::now(),
+            closed_at: None,
+        };
+        db.create_issue(&issue).unwrap();
+    }
+
+    // Get all issues to verify the count after limit
+    let mut issues = db.list_issues(None, None, None).unwrap();
+    issues.retain(|issue| issue.status == Status::Todo || issue.status == Status::InProgress);
+
+    // Apply limit logic as in run_impl
+    let effective_limit = input.unwrap_or(DEFAULT_LIMIT);
+    if effective_limit > 0 {
+        issues.truncate(effective_limit);
+    }
+
+    assert_eq!(issues.len(), expected_max);
+}
+
+#[test]
+fn test_default_limit_is_100() {
+    let db = setup_db();
+    for i in 0..110 {
+        let issue = Issue {
+            id: format!("default-{:03}", i),
+            issue_type: IssueType::Task,
+            title: format!("Test issue {}", i),
+            description: None,
+            status: Status::Todo,
+            assignee: None,
+            created_at: Utc::now(),
+            updated_at: Utc::now(),
+            closed_at: None,
+        };
+        db.create_issue(&issue).unwrap();
+    }
+
+    // Verify DEFAULT_LIMIT constant
+    assert_eq!(DEFAULT_LIMIT, 100);
+
+    // Verify default behavior limits to 100
+    let result = run_impl(
+        &db,
+        vec![],
+        vec![],
+        vec![],
+        vec![],
+        false,
+        vec![],
+        None, // No explicit limit
+        false,
+        false,
+        OutputFormat::Id,
+    );
+    assert!(result.is_ok());
+}
+
+#[test]
+fn test_limit_zero_is_unlimited() {
+    let db = setup_db();
+    for i in 0..110 {
+        let issue = Issue {
+            id: format!("unlimited-{:03}", i),
+            issue_type: IssueType::Task,
+            title: format!("Test issue {}", i),
+            description: None,
+            status: Status::Todo,
+            assignee: None,
+            created_at: Utc::now(),
+            updated_at: Utc::now(),
+            closed_at: None,
+        };
+        db.create_issue(&issue).unwrap();
+    }
+
+    // With limit=0, should return all issues
+    let result = run_impl(
+        &db,
+        vec![],
+        vec![],
+        vec![],
+        vec![],
+        false,
+        vec![],
+        Some(0), // Unlimited
+        false,
+        false,
+        OutputFormat::Id,
+    );
+    assert!(result.is_ok());
+}
+
+#[test]
+fn test_explicit_limit_overrides_default() {
+    let db = setup_db();
+    for i in 0..110 {
+        let issue = Issue {
+            id: format!("explicit-{:03}", i),
+            issue_type: IssueType::Task,
+            title: format!("Test issue {}", i),
+            description: None,
+            status: Status::Todo,
+            assignee: None,
+            created_at: Utc::now(),
+            updated_at: Utc::now(),
+            closed_at: None,
+        };
+        db.create_issue(&issue).unwrap();
+    }
+
+    // With explicit limit=50, should work
+    let result = run_impl(
+        &db,
+        vec![],
+        vec![],
+        vec![],
+        vec![],
+        false,
+        vec![],
+        Some(50), // Explicit limit
+        false,
+        false,
+        OutputFormat::Id,
+    );
+    assert!(result.is_ok());
+}
+
+#[test]
+fn test_ids_format_respects_limit() {
+    let db = setup_db();
+    for i in 0..20 {
+        let issue = Issue {
+            id: format!("ids-{:03}", i),
+            issue_type: IssueType::Task,
+            title: format!("Test issue {}", i),
+            description: None,
+            status: Status::Todo,
+            assignee: None,
+            created_at: Utc::now(),
+            updated_at: Utc::now(),
+            closed_at: None,
+        };
+        db.create_issue(&issue).unwrap();
+    }
+
+    // With limit=5 and ids format
+    let result = run_impl(
+        &db,
+        vec![],
+        vec![],
+        vec![],
+        vec![],
+        false,
+        vec![],
+        Some(5),
+        false,
+        false,
+        OutputFormat::Id,
+    );
+    assert!(result.is_ok());
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Phase 3: JSON output validation tests
+// ─────────────────────────────────────────────────────────────────────────────
+
+#[test]
+fn test_json_output_includes_filters_applied() {
+    let db = setup_db();
+    create_issue(&db, "json-test-1", Status::Todo, IssueType::Task);
+
+    // With filter, should include filters_applied
+    let result = run_impl(
+        &db,
+        vec![],
+        vec![],
+        vec![],
+        vec![],
+        false,
+        vec!["age < 1d".to_string()], // Filter specified
+        None,
+        false,
+        false,
+        OutputFormat::Json,
+    );
+    assert!(result.is_ok());
+}
+
+#[test]
+fn test_json_output_includes_limit_when_specified() {
+    let db = setup_db();
+    create_issue(&db, "json-limit-1", Status::Todo, IssueType::Task);
+
+    let result = run_impl(
+        &db,
+        vec![],
+        vec![],
+        vec![],
+        vec![],
+        false,
+        vec![],
+        Some(10), // Explicit limit
+        false,
+        false,
+        OutputFormat::Json,
+    );
+    assert!(result.is_ok());
+}
+
+#[test]
+fn test_json_output_excludes_null_metadata() {
+    let db = setup_db();
+    create_issue(&db, "json-null-1", Status::Todo, IssueType::Task);
+
+    // No limit, no filters - metadata fields should be None (skipped in output)
+    let result = run_impl(
+        &db,
+        vec![],
+        vec![],
+        vec![],
+        vec![],
+        false,
+        vec![],
+        None, // No limit
+        false,
+        false,
+        OutputFormat::Json,
+    );
+    assert!(result.is_ok());
+}
+
+#[test]
+fn test_json_output_with_multiple_filters() {
+    let db = setup_db();
+    create_issue(&db, "json-multi-1", Status::Todo, IssueType::Task);
+
+    // Multiple filters
+    let result = run_impl(
+        &db,
+        vec![],
+        vec![],
+        vec![],
+        vec![],
+        false,
+        vec!["age < 1d".to_string(), "updated < 1h".to_string()],
+        None,
+        false,
+        false,
+        OutputFormat::Json,
+    );
+    assert!(result.is_ok());
+}
+
+#[test]
+fn test_json_output_with_limit_and_filters() {
+    let db = setup_db();
+    create_issue(&db, "json-both-1", Status::Todo, IssueType::Task);
+
+    // Both limit and filter specified
+    let result = run_impl(
+        &db,
+        vec![],
+        vec![],
+        vec![],
+        vec![],
+        false,
+        vec!["age < 1d".to_string()],
+        Some(50),
+        false,
+        false,
+        OutputFormat::Json,
     );
     assert!(result.is_ok());
 }

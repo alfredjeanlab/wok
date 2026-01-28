@@ -167,5 +167,3 @@ macro_rules! assert_output {
         similar_asserts::assert_eq!($actual.trim(), $expected.trim());
     };
 }
-
-pub use assert_output;
