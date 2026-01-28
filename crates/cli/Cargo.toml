@@ -50,6 +50,11 @@ predicates = "3"
 similar-asserts = "1"
 yare = "3"
 criterion = { version = "0.8", features = ["html_reports"] }
+serde_json = "1"
+
+[[test]]
+name = "spec_new"
+path = "../../tests/specs/cli/new.rs"
 
 [[bench]]
 name = "filter"

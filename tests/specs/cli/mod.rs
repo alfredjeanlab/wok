@@ -3,3 +3,4 @@
 
 mod common;
 mod init;
+mod new;
