@@ -6,6 +6,20 @@ load '../../helpers/common'
 # Default to searching PATH if WK_REMOTE_BIN not set
 export WK_REMOTE_BIN="${WK_REMOTE_BIN:-wk-remote}"
 
+# Verify WK_REMOTE_BIN is executable
+# Usage: require_wk_remote_bin (call in setup_file if needed)
+require_wk_remote_bin() {
+    if [ -x "$WK_REMOTE_BIN" ]; then
+        return 0
+    elif command -v "$WK_REMOTE_BIN" >/dev/null 2>&1; then
+        return 0
+    else
+        echo "Error: WK_REMOTE_BIN='$WK_REMOTE_BIN' not found or not executable" >&2
+        echo "Build with 'cargo build --workspace' or set WK_REMOTE_BIN to binary path" >&2
+        return 1
+    fi
+}
+
 # Port range for parallel test execution (17800-18999)
 PORT_RANGE_START=17800
 PORT_RANGE_END=18999
