@@ -5,9 +5,10 @@
 #![allow(clippy::expect_used)]
 
 use crate::cli::OutputFormat;
-use crate::commands::new::run_impl;
+use crate::commands::new::{expand_labels, run_impl};
 use crate::commands::testing::TestContext;
 use crate::models::{Action, IssueType, Status};
+use yare::parameterized;
 
 #[test]
 fn test_create_issue_basic() {
@@ -1056,4 +1057,37 @@ fn test_run_impl_rejects_empty_prefix() {
         "Expected error about no prefix, got: {}",
         err
     );
+}
+
+// Parameterized tests for expand_labels function
+
+#[parameterized(
+    single_label = { vec!["urgent".into()], vec!["urgent"] },
+    multiple_labels = { vec!["a".into(), "b".into()], vec!["a", "b"] },
+    comma_separated = { vec!["a,b,c".into()], vec!["a", "b", "c"] },
+    mixed_comma_and_multiple = { vec!["a,b".into(), "c".into()], vec!["a", "b", "c"] },
+    whitespace_trimmed = { vec!["  a  ,  b  ".into()], vec!["a", "b"] },
+    empty_filtered = { vec!["a,,b".into()], vec!["a", "b"] },
+    single_with_spaces = { vec!["  urgent  ".into()], vec!["urgent"] },
+    all_empty = { vec![",,".into()], Vec::<&str>::new() },
+    empty_string = { vec!["".into()], Vec::<&str>::new() },
+)]
+fn test_expand_labels(input: Vec<String>, expected: Vec<&str>) {
+    let result = expand_labels(&input);
+    assert_eq!(result, expected);
+}
+
+// Test expand_labels with priority label integration
+#[test]
+fn test_expand_labels_preserves_priority_syntax() {
+    let input = vec!["priority:1,backend".into()];
+    let result = expand_labels(&input);
+    assert_eq!(result, vec!["priority:1", "backend"]);
+}
+
+#[test]
+fn test_expand_labels_with_colons() {
+    let input = vec!["project:auth,status:blocked".into()];
+    let result = expand_labels(&input);
+    assert_eq!(result, vec!["project:auth", "status:blocked"]);
 }

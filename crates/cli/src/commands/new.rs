@@ -65,7 +65,7 @@ pub fn run(
 
 /// Expand comma-separated labels into individual labels.
 /// For example, ["a,b", "c"] becomes ["a", "b", "c"].
-fn expand_labels(labels: &[String]) -> Vec<String> {
+pub(crate) fn expand_labels(labels: &[String]) -> Vec<String> {
     labels
         .iter()
         .flat_map(|label| {
