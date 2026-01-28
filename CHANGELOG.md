@@ -8,7 +8,7 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 
-- **Multiple IDs in `wok show`**: Pass multiple issue IDs to `wok show` with JSONL output format for batch inspection.
+- **Multiple IDs in `wok show`**: Pass multiple issue IDs to `wok show` for batch inspection. Uses compact JSONL format (one issue per line) for easy parsing.
 
 - **Multiple prefix support**: Configure multiple prefixes for multi-project collaboration via prefix configuration.
 
