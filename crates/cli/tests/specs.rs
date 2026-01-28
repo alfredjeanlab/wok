@@ -55,16 +55,8 @@ fn project_lifecycle() {
         .stdout(predicates::str::contains("Integration test"));
 
     // Start the issue
-    project
-        .wk()
-        .args(["start", &id])
-        .output()
-        .success();
+    project.wk().args(["start", &id]).output().success();
 
     // Complete the issue
-    project
-        .wk()
-        .args(["done", &id])
-        .output()
-        .success();
+    project.wk().args(["done", &id]).output().success();
 }

@@ -4,3 +4,4 @@
 mod common;
 mod init;
 mod new;
+mod show;
