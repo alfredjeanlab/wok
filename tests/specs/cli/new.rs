@@ -8,25 +8,7 @@
 #![allow(clippy::unwrap_used)]
 #![allow(clippy::expect_used)]
 
-use assert_cmd::cargo::cargo_bin_cmd;
-use assert_cmd::Command;
-use predicates::prelude::*;
-use tempfile::TempDir;
-
-fn wk() -> Command {
-    cargo_bin_cmd!("wk")
-}
-
-fn init_temp() -> TempDir {
-    let temp = TempDir::new().unwrap();
-    wk().arg("init")
-        .arg("--prefix")
-        .arg("test")
-        .current_dir(temp.path())
-        .assert()
-        .success();
-    temp
-}
+use super::common::*;
 
 fn create_issue_with_opts(temp: &TempDir, type_: &str, title: &str, opts: &[&str]) -> String {
     let mut cmd = wk();
@@ -463,10 +445,24 @@ fn new_id_format_prefix_hex() {
 
     let id = String::from_utf8_lossy(&output.stdout).trim().to_string();
     // ID format: prefix-xxxx where xxxx is hex
-    let re = regex::Regex::new(r"^[a-z]+-[a-f0-9]+$").unwrap();
+    // Validate without regex: should have format like "test-abc123"
+    let parts: Vec<&str> = id.splitn(2, '-').collect();
+    assert_eq!(
+        parts.len(),
+        2,
+        "ID should have prefix-suffix format: {}",
+        id
+    );
     assert!(
-        re.is_match(&id),
-        "ID format should be prefix-hex, got: {}",
+        parts[0].chars().all(|c| c.is_ascii_lowercase()),
+        "Prefix should be lowercase letters: {}",
+        id
+    );
+    assert!(
+        parts[1]
+            .chars()
+            .all(|c| c.is_ascii_hexdigit() && !c.is_ascii_uppercase()),
+        "Suffix should be lowercase hex: {}",
         id
     );
 }
