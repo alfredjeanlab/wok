@@ -157,7 +157,7 @@ load '../../helpers/common'
     run "$WK_BIN" show "$id" --output json
     assert_success
     assert_output --partial '"links":'
-    assert_output --partial '"link_type": "github"'
+    assert_output --partial '"link_type":"github"'
 
     run "$WK_BIN" log "$id"
     assert_output --partial "linked"
@@ -203,9 +203,9 @@ load '../../helpers/common'
     run "$WK_BIN" show "$id" --output json
     assert_success
     # The links array should only have issues/2
-    [[ "$(echo "$output" | grep -o '"url": "https://github.com/org/repo/issues/[0-9]"' | wc -l)" -eq 1 ]]
-    assert_output --partial '"url": "https://github.com/org/repo/issues/2"'
-    refute_output --partial '"url": "https://github.com/org/repo/issues/1"'
+    [[ "$(echo "$output" | grep -o '"url":"https://github.com/org/repo/issues/[0-9]"' | wc -l)" -eq 1 ]]
+    assert_output --partial '"url":"https://github.com/org/repo/issues/2"'
+    refute_output --partial '"url":"https://github.com/org/repo/issues/1"'
 }
 
 @test "log shows unlinked event" {
