@@ -372,3 +372,86 @@ fn test_attribute_case_insensitive() {
     let issue = ctx.db.get_issue("test-1").unwrap();
     assert_eq!(issue.title, "New title");
 }
+
+#[test]
+fn test_title_with_double_newline_normalized() {
+    let ctx = TestContext::new();
+    ctx.create_issue("test-1", IssueType::Task, "Original");
+
+    // Title with double-newline after threshold should be split
+    let result = run_impl(
+        &ctx.db,
+        &ctx.config,
+        &ctx.work_dir,
+        "test-1",
+        "title",
+        "New title here\n\nThis is extra content",
+    );
+    assert!(result.is_ok());
+
+    let issue = ctx.db.get_issue("test-1").unwrap();
+    assert_eq!(issue.title, "New title here");
+
+    // Extracted content should be added as a note
+    let notes = ctx.db.get_notes("test-1").unwrap();
+    assert_eq!(notes.len(), 1);
+    assert_eq!(notes[0].content, "This is extra content");
+
+    // Should log both Edited and Noted events
+    let events = ctx.db.get_events("test-1").unwrap();
+    assert!(events.iter().any(|e| e.action == Action::Edited));
+    assert!(events.iter().any(|e| e.action == Action::Noted));
+}
+
+#[test]
+fn test_title_long_normalized_and_noted() {
+    let ctx = TestContext::new();
+    ctx.create_issue("test-1", IssueType::Task, "Original");
+
+    // Title exceeding 120 chars should be truncated, full content added as note
+    let long_title = "x".repeat(130);
+    let result = run_impl(
+        &ctx.db,
+        &ctx.config,
+        &ctx.work_dir,
+        "test-1",
+        "title",
+        &long_title,
+    );
+    assert!(result.is_ok());
+
+    let issue = ctx.db.get_issue("test-1").unwrap();
+    // Title should be truncated with ellipsis (120 chars + "...")
+    assert!(issue.title.ends_with("..."));
+    assert!(issue.title.len() <= 123); // 120 + "..."
+
+    // Full content should be in a note
+    let notes = ctx.db.get_notes("test-1").unwrap();
+    assert_eq!(notes.len(), 1);
+    assert_eq!(notes[0].content, long_title);
+}
+
+#[test]
+fn test_title_normalized_no_note_on_closed_issue() {
+    let ctx = TestContext::new();
+    ctx.create_issue("test-1", IssueType::Task, "Original")
+        .set_status("test-1", Status::Closed);
+
+    // Title with extractable content on closed issue: title updates, no note added
+    let result = run_impl(
+        &ctx.db,
+        &ctx.config,
+        &ctx.work_dir,
+        "test-1",
+        "title",
+        "New title here\n\nThis is extra content",
+    );
+    assert!(result.is_ok());
+
+    let issue = ctx.db.get_issue("test-1").unwrap();
+    assert_eq!(issue.title, "New title here");
+
+    // No note should be added to closed issues
+    let notes = ctx.db.get_notes("test-1").unwrap();
+    assert!(notes.is_empty());
+}

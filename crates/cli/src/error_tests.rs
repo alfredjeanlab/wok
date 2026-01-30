@@ -260,14 +260,6 @@ fn test_error_unknown_attribute_display() {
     assert!(msg.contains("badattr"));
 }
 
-#[test]
-fn test_error_title_contains_description_display() {
-    let err = Error::TitleContainsDescription;
-    let msg = err.to_string();
-    assert!(msg.contains("double-newline"));
-    assert!(msg.contains("wok note"));
-}
-
 // Phase 4: Note and Lookup Error tests
 #[test]
 fn test_error_no_notes_to_replace_display() {

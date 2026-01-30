@@ -35,13 +35,15 @@ load '../../helpers/common'
     refute_output --partial '..."'
 }
 
-@test "edit rejects title exceeding 120 characters" {
-    # Edit rejects long titles because truncation would implicitly change the description
+@test "edit normalizes title exceeding 120 characters" {
+    # Edit cleans long titles the same way new does: truncate and add note
     id=$(create_issue task "Original title")
     local title=$(printf 'x%.0s' {1..121})
     run "$WK_BIN" edit "$id" title "$title"
-    assert_failure
-    assert_output --partial "double-newline"
+    assert_success
+    # Title should be truncated with ellipsis
+    run "$WK_BIN" show "$id" --output json
+    assert_output --partial '..."'
 }
 
 # Note limits (10,000 characters)
