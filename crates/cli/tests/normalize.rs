@@ -290,20 +290,29 @@ fn edit_title_normalizes() {
 }
 
 #[test]
-fn edit_title_with_double_newline_rejected() {
+fn edit_title_with_double_newline_normalizes() {
     let temp = init_temp();
     let id = create_issue(&temp, "Original title");
 
-    // Editing title with double-newline at/past threshold should fail
-    // "Fix the bug" is 3 words, which triggers the split
+    // Editing title with double-newline normalizes like `new` command:
+    // splits at \n\n, uses first part as title, adds second part as note
     wk().arg("edit")
         .arg(&id)
         .arg("title")
         .arg("Fix the bug\n\nWith description")
         .current_dir(temp.path())
         .assert()
-        .failure()
-        .stderr(predicate::str::contains("double-newline"));
+        .success()
+        .stdout(predicate::str::contains("Fix the bug"));
+
+    // Verify the title was set and description was added as a note
+    wk().arg("show")
+        .arg(&id)
+        .current_dir(temp.path())
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("Title: Fix the bug"))
+        .stdout(predicate::str::contains("With description"));
 }
 
 #[test]

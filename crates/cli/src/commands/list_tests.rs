@@ -3,6 +3,7 @@
 
 #![allow(clippy::unwrap_used)]
 #![allow(clippy::expect_used)]
+#![allow(clippy::unnecessary_literal_unwrap)]
 
 use super::*;
 use crate::cli::OutputFormat;

@@ -1,6 +1,7 @@
 version = 1
 
 [check.cloc]
+max_lines_test = 2000
 advice_test = """
 Can tests be parameterized using `yare` to be more concise?
 If not, split large test files into a {module}_tests/ folder.

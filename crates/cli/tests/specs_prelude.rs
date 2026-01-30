@@ -14,6 +14,7 @@
 // These are intentionally exported for use in tests, even if not used in all tests
 #![allow(unused_imports)]
 #![allow(dead_code)]
+#![allow(clippy::expect_used)]
 
 use std::path::PathBuf;
 use std::process::Output;
