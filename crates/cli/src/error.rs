@@ -127,9 +127,6 @@ pub enum Error {
     #[error("unknown attribute '{attr}'")]
     UnknownAttribute { attr: String },
 
-    #[error("title contains double-newline; use 'wok note' for description")]
-    TitleContainsDescription,
-
     // Phase 4: Note and Lookup Errors
     #[error("no notes to replace for issue {issue_id}")]
     NoNotesToReplace { issue_id: String },

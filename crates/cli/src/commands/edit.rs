@@ -11,7 +11,7 @@ use crate::db::Database;
 
 use super::{apply_mutation, open_db};
 use crate::error::{Error, Result};
-use crate::models::{Action, Event, IssueType};
+use crate::models::{Action, Event, IssueType, Status};
 use crate::validate::{
     validate_and_normalize_title, validate_and_trim_description, validate_assignee,
 };
@@ -37,10 +37,6 @@ pub(crate) fn run_impl(
         "title" => {
             let normalized = validate_and_normalize_title(value)?;
 
-            if normalized.extracted_description.is_some() {
-                return Err(Error::TitleContainsDescription);
-            }
-
             let old_title = issue.title.clone();
             db.update_issue_title(&resolved_id, &normalized.title)?;
 
@@ -55,6 +51,22 @@ pub(crate) fn run_impl(
                     normalized.title.clone(),
                 )),
             )?;
+
+            // If normalization extracted a description, add it as a note
+            if let Some(extracted) = normalized.extracted_description {
+                if issue.status != Status::Closed {
+                    db.add_note(&resolved_id, issue.status, &extracted)?;
+
+                    apply_mutation(
+                        db,
+                        work_dir,
+                        config,
+                        Event::new(resolved_id.clone(), Action::Noted)
+                            .with_values(None, Some(extracted)),
+                        None,
+                    )?;
+                }
+            }
 
             println!("Updated title of {} to: {}", resolved_id, normalized.title);
         }
