@@ -4,6 +4,12 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [0.3.2]
+
+### Fixed
+
+- **`wok edit` title normalization**: The `edit` command now normalizes titles the same way the `new` command does (trimming whitespace, collapsing internal whitespace).
+
 ## [0.3.1]
 
 ### Added
