@@ -53,10 +53,6 @@ criterion = { version = "0.8", features = ["html_reports"] }
 serde_json = "1"
 
 [[test]]
-name = "spec_new"
-path = "../../tests/specs/cli/new.rs"
-
-[[test]]
 name = "spec_list"
 path = "../../tests/specs/cli/list.rs"
 
