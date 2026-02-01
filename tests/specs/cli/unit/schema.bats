@@ -25,10 +25,10 @@ setup_file() {
     run "$WK_BIN" schema list
     assert_success
 
-    # Check for key schema elements
+    # Check for key schema elements - list outputs an array of IssueJson
     assert_output --partial '"$schema"'
-    assert_output --partial '"issues"'
-    assert_output --partial '"ListOutputJson"'
+    assert_output --partial '"array"'
+    assert_output --partial '"IssueJson"'
 }
 
 @test "schema show outputs valid JSON" {
@@ -58,10 +58,11 @@ setup_file() {
     echo "$output" | jq . > /dev/null
 }
 
-@test "schema search includes 'more' field" {
+@test "schema search is array type" {
     run "$WK_BIN" schema search
     assert_success
-    assert_output --partial '"more"'
+    assert_output --partial '"array"'
+    assert_output --partial '"IssueJson"'
 }
 
 @test "all schemas have \$schema field" {

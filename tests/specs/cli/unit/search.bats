@@ -126,12 +126,12 @@ load '../../helpers/common'
     [ "$count" -eq 25 ]
     assert_output --partial "... 5 more"
 
-    # JSON includes more field
+    # JSON output is a plain array limited to 25 items
     run "$WK_BIN" search "SearchLimit test" --output json
     assert_success
     echo "$output" | jq . >/dev/null
-    local more=$(echo "$output" | jq '.more')
-    [ "$more" = "5" ]
+    local json_count=$(echo "$output" | jq 'length')
+    [ "$json_count" = "25" ]
 }
 
 @test "search does not show N more when under limit" {
@@ -143,12 +143,12 @@ load '../../helpers/common'
     assert_success
     refute_output --partial "more"
 
-    # JSON omits more field when under limit
+    # JSON output is a plain array with all results
     run "$WK_BIN" search "SearchUnderLimit" --output json
     assert_success
     echo "$output" | jq . >/dev/null
-    local more=$(echo "$output" | jq '.more')
-    [ "$more" = "null" ]
+    local json_count=$(echo "$output" | jq 'length')
+    [ "$json_count" = "10" ]
 }
 
 @test "search --filter with age and validation" {
@@ -189,7 +189,7 @@ load '../../helpers/common'
     [ "$count" -eq 2 ]
 }
 
-@test "search --filter and --limit work together with JSON metadata" {
+@test "search --filter and --limit work together with JSON output" {
     for i in $(seq 1 5); do
         create_issue task "SearchCombo $i"
     done
@@ -199,19 +199,19 @@ load '../../helpers/common'
     local count=$(echo "$output" | grep -c "SearchCombo")
     [ "$count" -eq 2 ]
 
-    # JSON includes filters_applied
+    # JSON output with filter is a plain array
     run "$WK_BIN" search "SearchCombo" --filter "age < 1d" --output json
     assert_success
     echo "$output" | jq . >/dev/null
-    local filters=$(echo "$output" | jq '.filters_applied')
-    [ "$filters" != "null" ]
+    local json_count=$(echo "$output" | jq 'length')
+    [ "$json_count" = "5" ]
 
-    # JSON includes limit when specified
-    run "$WK_BIN" search "SearchCombo" --limit 5 --output json
+    # JSON output with limit respects the limit
+    run "$WK_BIN" search "SearchCombo" --limit 3 --output json
     assert_success
     echo "$output" | jq . >/dev/null
-    local limit=$(echo "$output" | jq '.limit')
-    [ "$limit" = "5" ]
+    json_count=$(echo "$output" | jq 'length')
+    [ "$json_count" = "3" ]
 }
 
 @test "search --filter closed works with query and excludes open" {

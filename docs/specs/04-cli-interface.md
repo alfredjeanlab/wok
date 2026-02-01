@@ -132,15 +132,13 @@ wk tree <id>
 # └── auth-e5f6: Implement login endpoint [in_progress]
 #     └── (blocked by auth-c3d4)
 
-# JSON output for list and ready commands:
+# JSON output for list and search commands returns a plain array:
 # wk list --output json
-{
-  "issues": [
-    {"id": "prj-a3f2", "issue_type": "task", "status": "todo", "title": "Example", "labels": ["label1"]}
-  ]
-}
+[
+  {"id": "prj-a3f2", "issue_type": "task", "status": "todo", "title": "Example", "labels": ["label1"]}
+]
 
-# wk ready --output json
+# wk ready --output json (ready still uses an object with "issues" key)
 {
   "issues": [
     {"id": "prj-a3f2", "issue_type": "task", "status": "todo", "title": "Example", "labels": ["label1"]}
