@@ -127,14 +127,14 @@ load '../../helpers/common'
     run "$WK_BIN" list --output json
     assert_success
     echo "$output" | jq . >/dev/null
-    echo "$output" | jq -e '.issues[0].id' >/dev/null
-    echo "$output" | jq -e '.issues[0].issue_type' >/dev/null
-    echo "$output" | jq -e '.issues[0].status' >/dev/null
-    echo "$output" | jq -e '.issues[0].title' >/dev/null
-    echo "$output" | jq -e '.issues[0].labels' >/dev/null
+    echo "$output" | jq -e '.[0].id' >/dev/null
+    echo "$output" | jq -e '.[0].issue_type' >/dev/null
+    echo "$output" | jq -e '.[0].status' >/dev/null
+    echo "$output" | jq -e '.[0].title' >/dev/null
+    echo "$output" | jq -e '.[0].labels' >/dev/null
 
     # Labels included
-    label=$(echo "$output" | jq -r '.issues[] | select(.title == "JSONList Task") | .labels[0]')
+    label=$(echo "$output" | jq -r '.[] | select(.title == "JSONList Task") | .labels[0]')
     [ "$label" = "priority:high" ]
 
     # Short flag -f works
@@ -152,13 +152,12 @@ load '../../helpers/common'
     # Type filter
     run "$WK_BIN" list --type bug --output json
     assert_success
-    all_bugs=$(echo "$output" | jq '[.issues[].issue_type] | all(. == "bug")')
+    all_bugs=$(echo "$output" | jq '[.[].issue_type] | all(. == "bug")')
     [ "$all_bugs" = "true" ]
 
-    # No blocked_count
+    # Output is a plain array, no wrapper object
     run "$WK_BIN" list --output json
-    result=$(echo "$output" | jq '.blocked_count')
-    [ "$result" = "null" ]
+    echo "$output" | jq -e 'type == "array"' >/dev/null
 }
 
 @test "list sorts by priority" {
@@ -273,18 +272,16 @@ load '../../helpers/common'
     count=$(echo "$output" | grep -c "Limit")
     [ "$count" -eq 1 ]
 
-    # JSON includes metadata when filters/limit used
+    # JSON output is a plain array even with filters/limit
     create_issue task "JSONMeta Issue"
 
     run "$WK_BIN" list --filter "age < 1d" --output json
     assert_success
-    local filters=$(echo "$output" | jq '.filters_applied')
-    [ "$filters" != "null" ]
+    echo "$output" | jq -e 'type == "array"' >/dev/null
 
     run "$WK_BIN" list --limit 10 --output json
     assert_success
-    local limit=$(echo "$output" | jq '.limit')
-    [ "$limit" = "10" ]
+    echo "$output" | jq -e 'type == "array"' >/dev/null
 
     # --filter closed shows closed issues
     id=$(create_issue task "ClosedFilter Issue")

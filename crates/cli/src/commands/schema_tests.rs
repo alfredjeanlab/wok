@@ -12,17 +12,16 @@ fn schema_list_produces_valid_json() {
     let json = serde_json::to_string_pretty(&schema).unwrap();
 
     assert!(json.contains("\"$schema\""));
-    assert!(json.contains("\"ListOutputJson\""));
-    assert!(json.contains("\"issues\""));
+    assert!(json.contains("\"IssueJson\""));
 }
 
 #[test]
-fn schema_list_has_required_fields() {
+fn schema_list_is_array_schema() {
     let schema = schemars::schema_for!(list::ListOutputJson);
     let json = serde_json::to_string(&schema).unwrap();
 
-    // issues is always present (required)
-    assert!(json.contains("\"required\""));
+    // Should be an array type (transparent wrapper around Vec)
+    assert!(json.contains("\"array\""));
 }
 
 #[test]
@@ -52,9 +51,16 @@ fn schema_search_produces_valid_json() {
     let json = serde_json::to_string_pretty(&schema).unwrap();
 
     assert!(json.contains("\"$schema\""));
-    assert!(json.contains("\"SearchOutputJson\""));
-    assert!(json.contains("\"issues\""));
-    assert!(json.contains("\"more\""));
+    assert!(json.contains("\"IssueJson\""));
+}
+
+#[test]
+fn schema_search_is_array_schema() {
+    let schema = schemars::schema_for!(search::SearchOutputJson);
+    let json = serde_json::to_string(&schema).unwrap();
+
+    // Should be an array type (transparent wrapper around Vec)
+    assert!(json.contains("\"array\""));
 }
 
 #[test]

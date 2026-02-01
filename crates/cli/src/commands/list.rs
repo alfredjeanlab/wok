@@ -182,16 +182,7 @@ pub(crate) fn run_impl(
                     labels,
                 ));
             }
-            let filters_applied = if filter.is_empty() {
-                None
-            } else {
-                Some(filter)
-            };
-            let output = ListOutputJson {
-                issues: json_issues,
-                filters_applied,
-                limit,
-            };
+            let output = ListOutputJson(json_issues);
             println!("{}", serde_json::to_string_pretty(&output)?);
         }
         OutputFormat::Id => {

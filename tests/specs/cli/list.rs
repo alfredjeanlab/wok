@@ -405,7 +405,7 @@ fn list_output_json_valid() {
     let json: serde_json::Value =
         serde_json::from_str(&stdout).expect("Output should be valid JSON");
 
-    assert!(json.get("issues").and_then(|v| v.as_array()).is_some());
+    assert!(json.as_array().is_some(), "Output should be an array");
 }
 
 #[test]
@@ -424,7 +424,7 @@ fn list_output_json_fields() {
     let stdout = String::from_utf8_lossy(&output.stdout);
     let json: serde_json::Value = serde_json::from_str(&stdout).unwrap();
 
-    let issues = json["issues"].as_array().unwrap();
+    let issues = json.as_array().unwrap();
     let issue = issues
         .iter()
         .find(|i| i["title"] == "JSONFields Task")
@@ -459,7 +459,7 @@ fn list_output_json_labels() {
     let stdout = String::from_utf8_lossy(&output.stdout);
     let json: serde_json::Value = serde_json::from_str(&stdout).unwrap();
 
-    let issues = json["issues"].as_array().unwrap();
+    let issues = json.as_array().unwrap();
     let issue = issues
         .iter()
         .find(|i| i["title"] == "JSONLabels Task")
@@ -505,7 +505,7 @@ fn list_output_json_type_filter() {
     let stdout = String::from_utf8_lossy(&output.stdout);
     let json: serde_json::Value = serde_json::from_str(&stdout).unwrap();
 
-    let issues = json["issues"].as_array().unwrap();
+    let issues = json.as_array().unwrap();
     for issue in issues {
         assert_eq!(issue["issue_type"].as_str(), Some("bug"));
     }
@@ -536,7 +536,8 @@ fn list_output_json_no_blocked_count() {
     let stdout = String::from_utf8_lossy(&output.stdout);
     let json: serde_json::Value = serde_json::from_str(&stdout).unwrap();
 
-    assert!(json.get("blocked_count").is_none() || json["blocked_count"].is_null());
+    // Output is a plain array - no wrapper object with metadata keys
+    assert!(json.as_array().is_some(), "Output should be a plain array");
 }
 
 // =============================================================================
@@ -1443,9 +1444,11 @@ fn list_json_metadata_filters_applied() {
     let stdout = String::from_utf8_lossy(&output.stdout);
     let json: serde_json::Value = serde_json::from_str(&stdout).unwrap();
 
+    // Output is a plain array, no metadata wrapper
+    assert!(json.as_array().is_some(), "Output should be a plain array");
     assert!(
-        json.get("filters_applied").is_some(),
-        "Should have filters_applied field"
+        json.as_array().unwrap().len() == 1,
+        "Should have one issue matching filter"
     );
 }
 
@@ -1467,7 +1470,8 @@ fn list_json_metadata_limit() {
     let stdout = String::from_utf8_lossy(&output.stdout);
     let json: serde_json::Value = serde_json::from_str(&stdout).unwrap();
 
-    assert_eq!(json.get("limit").and_then(|v| v.as_i64()), Some(10));
+    // Output is a plain array, limit is applied but not in output
+    assert!(json.as_array().is_some(), "Output should be a plain array");
 }
 
 #[test]
