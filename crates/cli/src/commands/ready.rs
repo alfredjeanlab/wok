@@ -185,6 +185,7 @@ pub(crate) fn run_impl(
     });
 
     // Truncate to hard limit - ready queue shows only top priorities
+    let total_ready = ready_issues.len();
     ready_issues.truncate(MAX_READY_ISSUES);
 
     match format {
@@ -194,6 +195,10 @@ pub(crate) fn run_impl(
             } else {
                 for issue in &ready_issues {
                     println!("{}", format_issue_line(issue));
+                }
+                if total_ready > MAX_READY_ISSUES {
+                    let remaining = total_ready - MAX_READY_ISSUES;
+                    println!("\n({remaining} more — use `wk list` to see all)",);
                 }
             }
         }
