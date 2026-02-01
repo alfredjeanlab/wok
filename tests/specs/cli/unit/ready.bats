@@ -186,3 +186,28 @@ load '../../helpers/common'
     count=$(echo "$output" | jq '.issues | length')
     [ "$count" -le 5 ]
 }
+
+@test "ready shows hint when more issues exist" {
+    # Create 8 ready issues (more than the 5 limit)
+    for i in {1..8}; do
+        id=$(create_issue task "ReadyHint Issue $i")
+        "$WK_BIN" label "$id" "test:hint-more"
+    done
+
+    run "$WK_BIN" ready --label "test:hint-more"
+    assert_success
+    assert_output --partial "3 more"
+    assert_output --partial "wk list"
+}
+
+@test "ready does not show hint when all issues fit" {
+    # Create 3 ready issues (fewer than 5 limit)
+    for i in {1..3}; do
+        id=$(create_issue task "ReadyNoHint Issue $i")
+        "$WK_BIN" label "$id" "test:hint-none"
+    done
+
+    run "$WK_BIN" ready --label "test:hint-none"
+    assert_success
+    refute_output --partial "more"
+}
