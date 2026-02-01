@@ -137,7 +137,7 @@ teardown() {
     run "$WK_BIN" list --output json
     assert_success
     # High priority should appear before low priority in JSON array
-    pos_high=$(echo "$output" | jq -r '.issues | to_entries | .[] | select(.value.id == "'"$id2"'") | .key')
-    pos_low=$(echo "$output" | jq -r '.issues | to_entries | .[] | select(.value.id == "'"$id1"'") | .key')
+    pos_high=$(echo "$output" | jq -r 'to_entries | .[] | select(.value.id == "'"$id2"'") | .key')
+    pos_low=$(echo "$output" | jq -r 'to_entries | .[] | select(.value.id == "'"$id1"'") | .key')
     [ "$pos_high" -lt "$pos_low" ]
 }
