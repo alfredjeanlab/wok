@@ -4,6 +4,14 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [0.4.0]
+
+### Changed
+
+- **Simplified JSON output for `list` and `search`**: Both commands now return a plain JSON array of issue objects instead of a wrapper object with a nested `issues` key.
+
+- **`ready` hint when truncated**: When `wk ready` output is truncated to the 5-issue limit, a hint now shows how many additional issues exist and suggests using `wk list`.
+
 ## [0.3.2]
 
 ### Fixed
