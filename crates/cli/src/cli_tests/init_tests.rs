@@ -6,9 +6,7 @@
 //! These tests verify that clap correctly parses all init command options:
 //! - `--prefix` - Custom prefix for issue IDs
 //! - `--path` - Target directory for initialization
-//! - `--workspace` - Link to an existing workspace
-//! - `--remote` - Set up remote sync configuration
-//! - `--local` - Backwards compatibility flag (no-op)
+//! - `--private` - Use private mode (project-local database, no daemon)
 
 #![allow(clippy::unwrap_used)]
 #![allow(clippy::expect_used)]
@@ -25,25 +23,15 @@ fn parse(args: &[&str]) -> Result<Cli, clap::Error> {
 struct InitExpected {
     prefix: Option<&'static str>,
     path: Option<&'static str>,
-    workspace: Option<&'static str>,
-    remote: Option<&'static str>,
-    local: bool,
+    private: bool,
 }
 
 impl InitExpected {
-    const fn new(
-        prefix: Option<&'static str>,
-        path: Option<&'static str>,
-        workspace: Option<&'static str>,
-        remote: Option<&'static str>,
-        local: bool,
-    ) -> Self {
+    const fn new(prefix: Option<&'static str>, path: Option<&'static str>, private: bool) -> Self {
         Self {
             prefix,
             path,
-            workspace,
-            remote,
-            local,
+            private,
         }
     }
 }
@@ -52,47 +40,31 @@ impl InitExpected {
 #[parameterized(
     no_args = {
         &["wk", "init"],
-        InitExpected::new(None, None, None, None, false)
+        InitExpected::new(None, None, false)
     },
     prefix_only = {
         &["wk", "init", "--prefix", "prj"],
-        InitExpected::new(Some("prj"), None, None, None, false)
+        InitExpected::new(Some("prj"), None, false)
     },
     path_only = {
         &["wk", "init", "--path", "/tmp/test"],
-        InitExpected::new(None, Some("/tmp/test"), None, None, false)
-    },
-    workspace_only = {
-        &["wk", "init", "--workspace", "/some/workspace"],
-        InitExpected::new(None, None, Some("/some/workspace"), None, false)
-    },
-    remote_only = {
-        &["wk", "init", "--remote", "."],
-        InitExpected::new(None, None, None, Some("."), false)
+        InitExpected::new(None, Some("/tmp/test"), false)
     },
     prefix_and_path = {
         &["wk", "init", "--prefix", "prj", "--path", "/tmp/test"],
-        InitExpected::new(Some("prj"), Some("/tmp/test"), None, None, false)
+        InitExpected::new(Some("prj"), Some("/tmp/test"), false)
     },
-    workspace_and_prefix = {
-        &["wk", "init", "--workspace", "/some/workspace", "--prefix", "prj"],
-        InitExpected::new(Some("prj"), None, Some("/some/workspace"), None, false)
+    private_flag = {
+        &["wk", "init", "--prefix", "prj", "--private"],
+        InitExpected::new(Some("prj"), None, true)
     },
-    workspace_and_path = {
-        &["wk", "init", "--workspace", "/some/workspace", "--path", "/target"],
-        InitExpected::new(None, Some("/target"), Some("/some/workspace"), None, false)
+    private_with_path = {
+        &["wk", "init", "--private", "--path", "/tmp/test"],
+        InitExpected::new(None, Some("/tmp/test"), true)
     },
     all_options = {
-        &["wk", "init", "--prefix", "prj", "--workspace", "/ws", "--remote", "."],
-        InitExpected::new(Some("prj"), None, Some("/ws"), Some("."), false)
-    },
-    local_flag = {
-        &["wk", "init", "--prefix", "prj", "--local"],
-        InitExpected::new(Some("prj"), None, None, None, true)
-    },
-    remote_with_url = {
-        &["wk", "init", "--prefix", "prj", "--remote", "git@github.com:user/repo.git"],
-        InitExpected::new(Some("prj"), None, None, Some("git@github.com:user/repo.git"), false)
+        &["wk", "init", "--prefix", "prj", "--path", "/tmp/test", "--private"],
+        InitExpected::new(Some("prj"), Some("/tmp/test"), true)
     },
 )]
 fn should_parse_init_args(args: &[&str], expected: InitExpected) {
@@ -101,9 +73,7 @@ fn should_parse_init_args(args: &[&str], expected: InitExpected) {
         Command::Init {
             prefix,
             path,
-            workspace,
-            remote,
-            local,
+            private,
         } => {
             assert_eq!(
                 prefix.as_deref(),
@@ -118,31 +88,22 @@ fn should_parse_init_args(args: &[&str], expected: InitExpected) {
                 args
             );
             assert_eq!(
-                workspace.as_deref(),
-                expected.workspace,
-                "workspace mismatch for {:?}",
+                private, expected.private,
+                "private flag mismatch for {:?}",
                 args
             );
-            assert_eq!(
-                remote.as_deref(),
-                expected.remote,
-                "remote mismatch for {:?}",
-                args
-            );
-            assert_eq!(local, expected.local, "local flag mismatch for {:?}", args);
         }
         _ => panic!("Expected Init command"),
     }
 }
 
-// Keep individual test for backwards compatibility verification
+// Keep individual test for private mode verification
 #[test]
-fn should_accept_local_flag_for_backwards_compatibility() {
-    // --local flag should parse without error (backwards compatibility)
-    let cli = parse(&["wk", "init", "--prefix", "test", "--local"]).unwrap();
+fn should_accept_private_flag() {
+    let cli = parse(&["wk", "init", "--prefix", "test", "--private"]).unwrap();
     match cli.command {
-        Command::Init { local, .. } => {
-            assert!(local, "--local flag should be true");
+        Command::Init { private, .. } => {
+            assert!(private, "--private flag should be true");
         }
         _ => panic!("Expected Init command"),
     }

@@ -560,7 +560,7 @@ Setup & Configuration:
   init        Initialize issue tracker
   hooks       Manage Claude Code hooks
   config      Manage configuration
-  remote      Manage remote sync
+  daemon      Manage wokd daemon
   export      Export issues to JSONL
   import      Import issues from JSONL
   schema      Output JSON Schema for commands

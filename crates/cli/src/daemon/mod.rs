@@ -1,30 +1,15 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Alfred Jean LLC
 
-//! Background sync daemon for remote mode.
+//! Daemon lifecycle management for the wokd process.
 //!
-//! The daemon maintains a persistent WebSocket connection to the remote server
-//! and handles bidirectional sync. CLI commands communicate with the daemon
-//! via a Unix socket.
+//! The CLI communicates with the wokd daemon via a Unix socket for
+//! user-level mode database operations.
 
-mod cache;
-mod connection;
 mod ipc;
 mod lifecycle;
-mod runner;
-mod sync;
 
-pub use lifecycle::{
-    detect_daemon, ensure_compatible_daemon, get_daemon_status, notify_daemon_sync, request_sync,
-    spawn_daemon, stop_daemon_forcefully, wait_daemon_connected,
-};
-pub use runner::run_daemon;
-
-// Re-export for use in command tests
-#[cfg(test)]
-pub(crate) use ipc::{framing, DaemonRequest, DaemonResponse, DaemonStatus};
-#[cfg(test)]
-pub(crate) use lifecycle::{get_pid_path, get_socket_path};
+pub use lifecycle::{detect_daemon, get_daemon_status, spawn_daemon, stop_daemon_forcefully};
 
 #[cfg(test)]
 #[path = "ipc_tests.rs"]

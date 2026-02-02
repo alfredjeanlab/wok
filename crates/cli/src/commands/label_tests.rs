@@ -144,13 +144,7 @@ fn test_add_impl_success() {
     let ctx = TestContext::new();
     ctx.create_issue("test-1", IssueType::Task, "Test issue");
 
-    let result = add_impl(
-        &ctx.db,
-        &ctx.config,
-        &ctx.work_dir,
-        &["test-1".to_string()],
-        "urgent",
-    );
+    let result = add_impl(&ctx.db, &["test-1".to_string()], "urgent");
     assert!(result.is_ok());
 
     let labels = ctx.db.get_labels("test-1").unwrap();
@@ -161,13 +155,7 @@ fn test_add_impl_success() {
 fn test_add_impl_nonexistent_issue() {
     let ctx = TestContext::new();
 
-    let result = add_impl(
-        &ctx.db,
-        &ctx.config,
-        &ctx.work_dir,
-        &["nonexistent".to_string()],
-        "label",
-    );
+    let result = add_impl(&ctx.db, &["nonexistent".to_string()], "label");
     assert!(result.is_err());
 }
 
@@ -177,13 +165,7 @@ fn test_remove_impl_success() {
     ctx.create_issue("test-1", IssueType::Task, "Test issue")
         .add_label("test-1", "urgent");
 
-    let result = remove_impl(
-        &ctx.db,
-        &ctx.config,
-        &ctx.work_dir,
-        &["test-1".to_string()],
-        "urgent",
-    );
+    let result = remove_impl(&ctx.db, &["test-1".to_string()], "urgent");
     assert!(result.is_ok());
 
     let labels = ctx.db.get_labels("test-1").unwrap();
@@ -196,13 +178,7 @@ fn test_remove_impl_nonexistent_label() {
     ctx.create_issue("test-1", IssueType::Task, "Test issue");
 
     // Removing non-existent label should succeed but print a message
-    let result = remove_impl(
-        &ctx.db,
-        &ctx.config,
-        &ctx.work_dir,
-        &["test-1".to_string()],
-        "nonexistent",
-    );
+    let result = remove_impl(&ctx.db, &["test-1".to_string()], "nonexistent");
     assert!(result.is_ok());
 }
 
@@ -210,13 +186,7 @@ fn test_remove_impl_nonexistent_label() {
 fn test_remove_impl_nonexistent_issue() {
     let ctx = TestContext::new();
 
-    let result = remove_impl(
-        &ctx.db,
-        &ctx.config,
-        &ctx.work_dir,
-        &["nonexistent".to_string()],
-        "label",
-    );
+    let result = remove_impl(&ctx.db, &["nonexistent".to_string()], "label");
     assert!(result.is_err());
 }
 
@@ -230,8 +200,6 @@ fn test_add_impl_multiple_issues() {
 
     let result = add_impl(
         &ctx.db,
-        &ctx.config,
-        &ctx.work_dir,
         &["test-1".to_string(), "test-2".to_string()],
         "urgent",
     );
@@ -256,8 +224,6 @@ fn test_add_impl_fails_on_nonexistent_issue() {
 
     let result = add_impl(
         &ctx.db,
-        &ctx.config,
-        &ctx.work_dir,
         &["test-1".to_string(), "nonexistent".to_string()],
         "urgent",
     );
@@ -281,8 +247,6 @@ fn test_remove_impl_multiple_issues() {
 
     let result = remove_impl(
         &ctx.db,
-        &ctx.config,
-        &ctx.work_dir,
         &["test-1".to_string(), "test-2".to_string()],
         "urgent",
     );

@@ -38,7 +38,7 @@ pub enum OutputFormat {
 )]
 #[command(
     long_about = "A collaborative, offline-first, AI-friendly issue tracker.\n\n\
-    Track issues and dependencies using git-based or realtime sync for fleet collaboration."
+    Track issues and dependencies with a shared user-level database or private project-local storage."
 )]
 #[command(help_template = help::template())]
 #[command(before_help = help::commands())]
@@ -489,11 +489,9 @@ Examples:
     /// Initialize issue tracker in current directory (or specified path)
     #[command(after_help = colors::examples("\
 Examples:
-  wok init                          Initialize with auto-detected prefix
+  wok init                          Initialize with auto-detected prefix (user-level mode)
   wok init --prefix myproj          Initialize with custom prefix
-  wok init --remote .               Enable git sync (same repo orphan branch)
-  wok init --remote ~/tracker       Enable git sync (separate repo)
-  wok init --remote ws://host:7890  Enable WebSocket sync"))]
+  wok init --private                Initialize in private mode (local db, no daemon)"))]
     Init {
         /// ID prefix for issues (2+ lowercase alphanumeric, defaults to directory name)
         #[arg(long)]
@@ -503,18 +501,9 @@ Examples:
         #[arg(long)]
         path: Option<String>,
 
-        /// Use shared database at path (for worktrees, monorepos, or multi-project setup)
-        #[arg(long, value_name = "/path/to/shared/.work")]
-        workspace: Option<String>,
-
-        /// Remote URL for sync (git:., path, ssh URL, or ws://host:port).
-        /// If not specified, initializes in local-only mode.
-        #[arg(long, value_name = "URL")]
-        remote: Option<String>,
-
-        /// Initialize without remote [default behavior, kept for compatibility]
-        #[arg(long, hide = true)]
-        local: bool,
+        /// Use private mode (project-local database, no daemon)
+        #[arg(long)]
+        private: bool,
     },
 
     /// Export all issues to JSONL
@@ -575,9 +564,9 @@ Examples:
         shell: Shell,
     },
 
-    /// Remote sync management
+    /// Manage the wokd daemon
     #[command(subcommand)]
-    Remote(RemoteCommand),
+    Daemon(DaemonCommand),
 
     /// Manage Claude Code hooks integration
     #[command(subcommand)]
@@ -626,19 +615,6 @@ Examples:
         /// The prefix to rename to (e.g., 'new' creates 'new-XXXX' IDs)
         new_prefix: String,
     },
-    /// Configure remote sync for the issue tracker
-    #[command(
-        arg_required_else_help = true,
-        after_help = colors::examples("\
-Examples:
-  wok config remote .               Use git orphan branch in current repo
-  wok config remote git:.           Same as above (explicit)
-  wok config remote ws://host:7890  Use WebSocket server")
-    )]
-    Remote {
-        /// Remote URL: "." or "git:." for current repo, "git:<path>" for separate repo, or "ws://..." for WebSocket
-        url: String,
-    },
     /// List all prefixes in the issue tracker
     #[command(after_help = colors::examples("\
 Examples:
@@ -651,33 +627,24 @@ Examples:
     },
 }
 
-/// Remote sync management commands.
+/// Daemon management commands.
 #[derive(Subcommand)]
-pub enum RemoteCommand {
-    /// Show remote sync status
+pub enum DaemonCommand {
+    /// Show daemon status
     Status,
-    /// Sync now with remote server
-    Sync {
-        /// Force full resync (request complete snapshot)
-        #[arg(long)]
-        force: bool,
-
-        /// Suppress output when not in remote mode (for git hooks)
-        #[arg(long)]
-        quiet: bool,
-    },
-    /// Stop the sync daemon
+    /// Stop the daemon
     Stop,
-    /// Run the daemon (internal, called by spawn)
-    #[command(hide = true)]
-    Run {
-        /// Daemon directory (where socket/pid/lock files go)
+    /// Start the daemon
+    Start {
+        /// Run in foreground (for debugging)
         #[arg(long)]
-        daemon_dir: std::path::PathBuf,
-
-        /// Work directory for loading config (.work)
+        foreground: bool,
+    },
+    /// View daemon logs
+    Logs {
+        /// Follow log output (tail -f)
         #[arg(long)]
-        work_dir: std::path::PathBuf,
+        follow: bool,
     },
 }
 

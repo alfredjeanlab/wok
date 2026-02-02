@@ -2,10 +2,12 @@
 // Copyright (c) 2026 Alfred Jean LLC
 
 pub mod config;
+pub mod daemon;
 pub mod dep;
 pub mod edit;
 pub mod export;
 pub mod filtering;
+#[cfg(test)]
 pub mod hlc_persistence;
 pub mod hooks;
 pub mod import;
@@ -19,7 +21,6 @@ pub mod new;
 pub mod note;
 pub mod prime;
 pub mod ready;
-pub mod remote;
 pub mod schema;
 pub mod search;
 pub mod show;
@@ -28,18 +29,12 @@ pub mod show;
 pub mod testing;
 pub mod tree;
 
-pub use hlc_persistence::HlcPersistence;
+use std::path::PathBuf;
 
-use std::path::{Path, PathBuf};
-
-use wk_core::{Hlc, HlcClock, Op, OpPayload};
-
-use crate::config::{find_work_dir, get_daemon_dir, get_db_path, Config, RemoteType};
+use crate::config::{find_work_dir, get_db_path, Config};
 use crate::db::Database;
 use crate::error::Result;
 use crate::models::Event;
-use crate::sync::OfflineQueue;
-use crate::wal::Wal;
 
 /// Helper to open the database from the current context
 pub fn open_db() -> Result<(Database, Config, PathBuf)> {
@@ -50,98 +45,11 @@ pub fn open_db() -> Result<(Database, Config, PathBuf)> {
     Ok((db, config, work_dir))
 }
 
-/// Generate an HLC timestamp incorporating the persisted high-water mark.
+/// Apply a mutation by logging an event to the local database.
 ///
-/// This ensures that new operations get timestamps higher than any
-/// previously seen HLC, preventing clock skew issues in sync.
-pub fn generate_hlc_with_context(daemon_dir: &Path) -> Hlc {
-    let node_id = std::process::id();
-    let clock = HlcClock::new(node_id);
-
-    // Incorporate last seen HLC if available
-    if let Some(last) = HlcPersistence::last(daemon_dir).read() {
-        let _ = clock.receive(&last);
-    }
-
-    clock.now()
-}
-
-/// Write a pending operation to the sync queue if in remote mode.
-///
-/// This function handles both git and WebSocket remotes:
-/// - Git remotes: writes to `pending_ops.jsonl` (WAL)
-/// - WebSocket remotes: writes to `sync_queue.jsonl` (OfflineQueue)
-///
-/// If not in remote mode, this is a no-op.
-pub fn write_pending_op(work_dir: &Path, config: &Config, op: &Op) -> Result<()> {
-    // Only write if remote mode is configured
-    let remote = match &config.remote {
-        Some(r) => r,
-        None => return Ok(()),
-    };
-
-    let daemon_dir = get_daemon_dir(work_dir, config);
-
-    match remote.remote_type() {
-        RemoteType::Git => {
-            let wal_path = daemon_dir.join("pending_ops.jsonl");
-            let wal = Wal::open(&wal_path)?;
-            wal.append(op)?;
-        }
-        RemoteType::WebSocket => {
-            let queue_path = daemon_dir.join("sync_queue.jsonl");
-            let mut queue = OfflineQueue::open(&queue_path)
-                .map_err(|e| crate::error::Error::Io(std::io::Error::other(e.to_string())))?;
-            queue
-                .enqueue(op)
-                .map_err(|e| crate::error::Error::Io(std::io::Error::other(e.to_string())))?;
-
-            // Notify daemon to push immediately (fire-and-forget)
-            crate::daemon::notify_daemon_sync(&daemon_dir);
-        }
-    }
-
-    Ok(())
-}
-
-/// Create an operation from a payload and write it to the sync queue.
-///
-/// Convenience function that combines `generate_hlc_with_context`, `Op::new`,
-/// and `write_pending_op`. Uses context-aware HLC generation to ensure the
-/// operation's timestamp is higher than any previously seen HLC.
-pub fn queue_op(work_dir: &Path, config: &Config, payload: OpPayload) -> Result<()> {
-    let daemon_dir = get_daemon_dir(work_dir, config);
-    let hlc = generate_hlc_with_context(&daemon_dir);
-    let op = Op::new(hlc, payload);
-
-    // Persist the generated HLC so future operations are higher
-    let _ = HlcPersistence::last(&daemon_dir).update(hlc);
-
-    write_pending_op(work_dir, config, &op)
-}
-
-/// Apply a mutation by logging an event and optionally queueing a sync operation.
-///
-/// This helper unifies the common pattern of:
-/// 1. Creating an Event
-/// 2. Logging it to the local database
-/// 3. Queueing an operation for remote sync
-///
-/// Use this for all issue mutations to ensure consistent audit trail and sync behavior.
-pub fn apply_mutation(
-    db: &Database,
-    work_dir: &Path,
-    config: &Config,
-    event: Event,
-    payload: Option<OpPayload>,
-) -> Result<()> {
-    // Log event to local database first
+/// This helper handles the common pattern of logging an event for all
+/// issue mutations to ensure a consistent audit trail.
+pub fn apply_mutation(db: &Database, event: Event) -> Result<()> {
     db.log_event(&event)?;
-
-    // Queue operation for sync if provided
-    if let Some(p) = payload {
-        queue_op(work_dir, config, p)?;
-    }
-
     Ok(())
 }

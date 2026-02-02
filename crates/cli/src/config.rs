@@ -5,7 +5,7 @@
 //!
 //! Configuration is stored in `.wok/config.toml` and includes:
 //! - `prefix`: The project-specific prefix for issue IDs (e.g., "proj" → "proj-a1b2")
-//! - `workspace`: Optional path to store the database in a different location
+//! - `private`: Whether to use private mode (direct SQLite) vs user-level (daemon)
 
 use serde::{Deserialize, Serialize};
 use std::fs;
@@ -26,160 +26,10 @@ pub struct Config {
     /// Empty when linking to workspace without local prefix.
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub prefix: String,
-    /// Optional path for the database (relative to project root or absolute).
-    pub workspace: Option<String>,
-    /// Remote sync configuration (optional - if absent, runs in local-only mode).
-    pub remote: Option<RemoteConfig>,
-}
-
-/// Remote sync configuration.
-///
-/// Supports three remote types:
-/// - Git (same repo): `git:.` - orphan branch in current repo
-/// - Git (separate repo): `git:~/tracker` or `git:git@github.com:...`
-/// - WebSocket: `ws://...` or `wss://...`
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct RemoteConfig {
-    /// Remote URL. Formats:
-    /// - `git:.` - current repo orphan branch
-    /// - `git:<path>` - local path to git repo
-    /// - `git:<ssh-url>` - SSH URL to git repo (e.g., `git:git@github.com:org/repo.git`)
-    /// - `ws://...` or `wss://...` - WebSocket server
-    pub url: String,
-    /// Branch name for git remotes (default: "wok/oplog").
-    #[serde(default = "default_branch")]
-    pub branch: String,
-    /// If true, store oplog worktree in `.wok/oplog/` instead of XDG data dir.
-    /// Only relevant for git remotes.
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub worktree: Option<bool>,
-    /// Maximum reconnection attempts before giving up (default: 10).
-    /// Only relevant for WebSocket remotes.
-    #[serde(default = "default_reconnect_max_retries")]
-    pub reconnect_max_retries: u32,
-    /// Maximum delay between reconnection attempts in seconds (default: 30).
-    /// Only relevant for WebSocket remotes.
-    #[serde(default = "default_reconnect_max_delay_secs")]
-    pub reconnect_max_delay_secs: u64,
-    /// Heartbeat ping interval in milliseconds (default: 30000). 0 = disabled.
-    /// Only relevant for WebSocket remotes.
-    #[serde(default = "default_heartbeat_interval_ms")]
-    pub heartbeat_interval_ms: u64,
-    /// Max time to wait for pong response in milliseconds (default: 10000).
-    /// Only relevant for WebSocket remotes.
-    #[serde(default = "default_heartbeat_timeout_ms")]
-    pub heartbeat_timeout_ms: u64,
-    /// Max time to wait for initial connection in seconds (default: 5).
-    /// Used when starting a new daemon to wait for WebSocket connection.
-    #[serde(default = "default_connect_timeout_secs")]
-    pub connect_timeout_secs: u64,
-}
-
-fn default_branch() -> String {
-    "wok/oplog".to_string()
-}
-
-/// The type of remote backend.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum RemoteType {
-    /// Git remote (same repo or separate repo).
-    Git,
-    /// WebSocket server.
-    WebSocket,
-}
-
-impl RemoteConfig {
-    /// Determines the remote type from the URL.
-    pub fn remote_type(&self) -> RemoteType {
-        if self.url.starts_with("ws://") || self.url.starts_with("wss://") {
-            RemoteType::WebSocket
-        } else {
-            // Everything else is git (git:., git:path, git:ssh-url, or bare ssh)
-            RemoteType::Git
-        }
-    }
-
-    /// Validates that the URL is in a recognized format.
-    ///
-    /// Valid formats:
-    /// - WebSocket: `ws://...` or `wss://...`
-    /// - Git same-repo: `git:.` or `.`
-    /// - Git separate repo: `git:<path>`, `git:<ssh-url>`, `git@...`, `ssh://...`
-    ///
-    /// Returns an error message if the URL is invalid.
-    pub fn validate_url(&self) -> Option<String> {
-        let url = &self.url;
-
-        // WebSocket URLs
-        if url.starts_with("ws://") || url.starts_with("wss://") {
-            return None; // Valid
-        }
-
-        // Git same-repo
-        if url == "git:." || url == "." {
-            return None; // Valid
-        }
-
-        // Git separate repo with git: prefix
-        if let Some(path) = url.strip_prefix("git:") {
-            if path.is_empty() {
-                return Some("git: URL requires a path or SSH URL".to_string());
-            }
-            return None; // Valid (path or SSH URL after git:)
-        }
-
-        // Bare SSH URLs
-        if url.starts_with("git@") || url.starts_with("ssh://") {
-            return None; // Valid
-        }
-
-        // Anything else is invalid
-        Some(format!(
-            "invalid remote URL '{}': must be ws://, wss://, git:., git:<path>, git@..., or ssh://",
-            url
-        ))
-    }
-
-    /// Returns true if this is a same-repo git remote (git:.).
-    pub fn is_same_repo(&self) -> bool {
-        self.url == "git:." || self.url == "."
-    }
-
-    /// Returns the git URL to use for operations.
-    /// For same-repo, returns None (use current repo).
-    /// For separate repos, strips the `git:` prefix.
-    pub fn git_url(&self) -> Option<&str> {
-        if self.is_same_repo() {
-            None
-        } else if let Some(stripped) = self.url.strip_prefix("git:") {
-            Some(stripped)
-        } else if self.url.starts_with("git@") || self.url.starts_with("ssh://") {
-            Some(&self.url)
-        } else {
-            // Treat as path
-            Some(&self.url)
-        }
-    }
-}
-
-fn default_reconnect_max_retries() -> u32 {
-    10
-}
-
-fn default_reconnect_max_delay_secs() -> u64 {
-    30
-}
-
-fn default_heartbeat_interval_ms() -> u64 {
-    30_000
-}
-
-fn default_heartbeat_timeout_ms() -> u64 {
-    10_000
-}
-
-fn default_connect_timeout_secs() -> u64 {
-    2
+    /// If true, use private mode (direct SQLite at .wok/issues.db, no daemon).
+    /// If false (default), use user-level mode (daemon at ~/.local/state/wok/).
+    #[serde(default)]
+    pub private: bool,
 }
 
 impl Config {
@@ -194,26 +44,18 @@ impl Config {
         }
         Ok(Config {
             prefix,
-            workspace: None,
-            remote: None,
+            private: false,
         })
     }
 
-    /// Creates a config with workspace and optional prefix.
-    ///
-    /// # Errors
-    ///
-    /// Returns [`Error::InvalidPrefix`] if prefix is provided but invalid.
-    pub fn new_with_workspace(prefix: Option<String>, workspace: String) -> Result<Self> {
-        if let Some(ref p) = prefix {
-            if !validate_prefix(p) {
-                return Err(Error::InvalidPrefix);
-            }
+    /// Creates a config with private mode enabled.
+    pub fn new_private(prefix: String) -> Result<Self> {
+        if !validate_prefix(&prefix) {
+            return Err(Error::InvalidPrefix);
         }
         Ok(Config {
-            prefix: prefix.unwrap_or_default(),
-            workspace: Some(workspace),
-            remote: None,
+            prefix,
+            private: true,
         })
     }
 
@@ -225,16 +67,6 @@ impl Config {
         let config: Config = toml::from_str(&content)
             .map_err(|e| Error::Config(format!("failed to parse config: {}", e)))?;
         Ok(config)
-    }
-
-    /// Returns true if remote sync is configured.
-    pub fn is_remote_mode(&self) -> bool {
-        self.remote.is_some()
-    }
-
-    /// Returns the remote URL if configured.
-    pub fn remote_url(&self) -> Option<&str> {
-        self.remote.as_ref().map(|r| r.url.as_str())
     }
 
     /// Saves configuration to the given `.wok/` directory.
@@ -263,39 +95,43 @@ pub fn find_work_dir() -> Result<PathBuf> {
 
 /// Get the database path from config
 pub fn get_db_path(work_dir: &Path, config: &Config) -> PathBuf {
-    match &config.workspace {
-        Some(workspace) => {
-            let workspace_path = Path::new(workspace);
-            if workspace_path.is_absolute() {
-                workspace_path.join(DB_FILE_NAME)
-            } else {
-                // Relative to work_dir's parent (the project root)
-                work_dir
-                    .parent()
-                    .unwrap_or(work_dir)
-                    .join(workspace)
-                    .join(DB_FILE_NAME)
-            }
-        }
-        None => work_dir.join(DB_FILE_NAME),
+    if config.private {
+        // Private mode: database stored in .wok/issues.db
+        work_dir.join(DB_FILE_NAME)
+    } else {
+        // User-level mode: database stored in state directory
+        wok_state_dir().join(DB_FILE_NAME)
     }
 }
 
-/// Get the directory for daemon files (socket, pid, lock).
-/// This is the same directory where the database is stored.
-pub fn get_daemon_dir(work_dir: &Path, config: &Config) -> PathBuf {
-    match &config.workspace {
-        Some(workspace) => {
-            let workspace_path = Path::new(workspace);
-            if workspace_path.is_absolute() {
-                workspace_path.to_path_buf()
-            } else {
-                // Relative to work_dir's parent (the project root)
-                work_dir.parent().unwrap_or(work_dir).join(workspace)
-            }
-        }
-        None => work_dir.to_path_buf(),
+/// Get the directory for daemon files (socket, pid, lock, log).
+/// In user-level mode, this is the XDG state directory.
+/// In private mode, this is the .wok directory (though daemon is not used).
+pub fn get_daemon_dir(config: &Config) -> PathBuf {
+    if config.private {
+        // Private mode doesn't use a daemon, but return a sane path anyway
+        PathBuf::from(".")
+    } else {
+        wok_state_dir()
     }
+}
+
+/// Resolve the XDG state directory for wok.
+///
+/// Precedence:
+/// 1. `WOK_STATE_DIR` environment variable
+/// 2. `XDG_STATE_HOME/wok`
+/// 3. `~/.local/state/wok`
+pub fn wok_state_dir() -> PathBuf {
+    if let Ok(dir) = std::env::var("WOK_STATE_DIR") {
+        return PathBuf::from(dir);
+    }
+    if let Ok(dir) = std::env::var("XDG_STATE_HOME") {
+        return PathBuf::from(dir).join("wok");
+    }
+    dirs::home_dir()
+        .map(|h| h.join(".local/state/wok"))
+        .unwrap_or_else(|| PathBuf::from(".local/state/wok"))
 }
 
 /// Initialize a new .wok directory at the given path
@@ -314,28 +150,17 @@ pub fn init_work_dir(path: &Path, prefix: &str) -> Result<PathBuf> {
     Ok(work_dir)
 }
 
-/// Initialize a workspace-link .wok directory (no database)
-pub fn init_workspace_link(path: &Path, workspace: &str, prefix: Option<&str>) -> Result<PathBuf> {
+/// Initialize a new .wok directory in private mode
+pub fn init_work_dir_private(path: &Path, prefix: &str) -> Result<PathBuf> {
     let work_dir = path.join(WORK_DIR_NAME);
 
     if work_dir.join(CONFIG_FILE_NAME).exists() {
         return Err(Error::AlreadyInitialized(work_dir.display().to_string()));
     }
 
-    // Validate workspace path exists
-    let workspace_path = Path::new(workspace);
-    let resolved_path = if workspace_path.is_absolute() {
-        workspace_path.to_path_buf()
-    } else {
-        path.join(workspace)
-    };
-    if !resolved_path.is_dir() {
-        return Err(Error::WorkspaceNotFound(workspace.to_string()));
-    }
-
     fs::create_dir_all(&work_dir)?;
 
-    let config = Config::new_with_workspace(prefix.map(String::from), workspace.to_string())?;
+    let config = Config::new_private(prefix.to_string())?;
     config.save(&work_dir)?;
 
     Ok(work_dir)
@@ -343,15 +168,15 @@ pub fn init_workspace_link(path: &Path, workspace: &str, prefix: Option<&str>) -
 
 /// Write a .gitignore file to the work directory.
 ///
-/// Always ignores `current/` and `issues.db`.
-/// In local mode (no remote sync), also ignores `config.toml`.
-pub fn write_gitignore(work_dir: &Path, local: bool) -> Result<()> {
+/// Private mode: ignores issues.db, config.toml
+/// User-level mode: ignores config.toml only (no local db)
+pub fn write_gitignore(work_dir: &Path, private: bool) -> Result<()> {
     let gitignore_path = work_dir.join(GITIGNORE_FILE_NAME);
 
-    let content = if local {
-        "# User-specific runtime state\ncurrent/\n\n# Database (local-only mode)\nissues.db\n\n# Local configuration\nconfig.toml\n"
+    let content = if private {
+        "# Local configuration\nconfig.toml\n\n# Database (private mode)\nissues.db\n"
     } else {
-        "# User-specific runtime state\ncurrent/\n\n# Database (synced via remote)\nissues.db\n"
+        "# Local configuration\nconfig.toml\n"
     };
 
     fs::write(&gitignore_path, content)?;

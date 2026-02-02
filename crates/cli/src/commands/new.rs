@@ -1,12 +1,8 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Alfred Jean LLC
 
-use std::path::Path;
-
 use chrono::Utc;
-use wk_core::OpPayload;
 
-use crate::config::Config;
 use crate::db::Database;
 
 use super::open_db;
@@ -41,11 +37,10 @@ pub fn run(
     output: OutputFormat,
     prefix: Option<String>,
 ) -> Result<()> {
-    let (db, config, work_dir) = open_db()?;
+    let (db, config, _work_dir) = open_db()?;
     run_impl(
         &db,
-        &config,
-        &work_dir,
+        &config.prefix,
         type_or_title,
         title,
         labels,
@@ -149,8 +144,7 @@ fn is_unique_constraint_error(err: &rusqlite::Error) -> bool {
 #[allow(clippy::too_many_arguments)] // TODO(refactor): Consider using an options struct to bundle parameters
 pub(crate) fn run_impl(
     db: &Database,
-    config: &Config,
-    work_dir: &Path,
+    config_prefix: &str,
     type_or_title: String,
     title: Option<String>,
     labels: Vec<String>,
@@ -220,12 +214,12 @@ pub(crate) fn run_impl(
             // Use config prefix (existing behavior)
             // Validate that prefix is not empty - empty prefix would create IDs like "-a1b2"
             // which cause CLI issues because they look like flags
-            if config.prefix.is_empty() {
+            if config_prefix.is_empty() {
                 return Err(crate::error::Error::CannotCreateIssue {
                     reason: "project has no prefix configured\n  hint: workspace links without a prefix can only view issues, not create them".to_string(),
                 });
             }
-            config.prefix.clone()
+            config_prefix.to_string()
         }
     };
 
@@ -247,22 +241,8 @@ pub(crate) fn run_impl(
     // Increment the prefix count after successful issue creation
     db.increment_prefix_count(&effective_prefix)?;
 
-    // Log creation event and queue for sync
-    let core_issue_type = issue_type
-        .as_str()
-        .parse()
-        .unwrap_or(wk_core::IssueType::Task);
-    apply_mutation(
-        db,
-        work_dir,
-        config,
-        Event::new(id.clone(), Action::Created),
-        Some(OpPayload::create_issue(
-            id.clone(),
-            core_issue_type,
-            normalized.title.clone(),
-        )),
-    )?;
+    // Log creation event
+    apply_mutation(db, Event::new(id.clone(), Action::Created))?;
 
     // Validate and add labels
     for label in &labels {
@@ -270,10 +250,7 @@ pub(crate) fn run_impl(
         db.add_label(&id, label)?;
         apply_mutation(
             db,
-            work_dir,
-            config,
             Event::new(id.clone(), Action::Labeled).with_values(None, Some(label.clone())),
-            Some(OpPayload::add_label(id.clone(), label.clone())),
         )?;
     }
 
@@ -284,38 +261,31 @@ pub(crate) fn run_impl(
             db.add_note(&id, Status::Todo, &trimmed_note)?;
             apply_mutation(
                 db,
-                work_dir,
-                config,
-                Event::new(id.clone(), Action::Noted).with_values(None, Some(trimmed_note.clone())),
-                Some(OpPayload::add_note(
-                    id.clone(),
-                    trimmed_note,
-                    wk_core::Status::Todo,
-                )),
+                Event::new(id.clone(), Action::Noted).with_values(None, Some(trimmed_note)),
             )?;
         }
     }
 
     // Add links if provided
     for link_url in &links {
-        add_link_impl(db, work_dir, config, &id, link_url)?;
+        add_link_impl(db, &id, link_url)?;
     }
 
     // Add dependencies if provided
     for target_id in expand_ids(&blocks) {
-        dep::add_impl(db, config, work_dir, &id, "blocks", &[target_id])?;
+        dep::add_impl(db, &id, "blocks", &[target_id])?;
     }
 
     for target_id in expand_ids(&blocked_by) {
-        dep::add_impl(db, config, work_dir, &id, "blocked-by", &[target_id])?;
+        dep::add_impl(db, &id, "blocked-by", &[target_id])?;
     }
 
     for target_id in expand_ids(&tracks) {
-        dep::add_impl(db, config, work_dir, &id, "tracks", &[target_id])?;
+        dep::add_impl(db, &id, "tracks", &[target_id])?;
     }
 
     for target_id in expand_ids(&tracked_by) {
-        dep::add_impl(db, config, work_dir, &id, "tracked-by", &[target_id])?;
+        dep::add_impl(db, &id, "tracked-by", &[target_id])?;
     }
 
     match output {

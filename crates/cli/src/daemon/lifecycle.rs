@@ -3,8 +3,8 @@
 
 //! Daemon lifecycle management: spawn, detect, cleanup.
 //!
-//! The daemon is spawned as a background process and communicates via Unix socket.
-//! PID and socket files are stored in the daemon directory (same directory as the database).
+//! The daemon (wokd) is spawned as a background process and communicates via Unix socket.
+//! PID and socket files are stored in the state directory (~/.local/state/wok/).
 
 use std::fs;
 use std::io::{BufRead, BufReader};
@@ -22,6 +22,7 @@ const SOCKET_NAME: &str = "daemon.sock";
 /// PID filename within daemon directory.
 const PID_NAME: &str = "daemon.pid";
 /// Lock filename for single instance guarantee.
+#[cfg(test)]
 const LOCK_NAME: &str = "daemon.lock";
 
 /// Information about a running daemon.
@@ -42,6 +43,7 @@ pub fn get_pid_path(daemon_dir: &Path) -> PathBuf {
 }
 
 /// Get the lock file path for the given daemon directory.
+#[cfg(test)]
 pub fn get_lock_path(daemon_dir: &Path) -> PathBuf {
     daemon_dir.join(LOCK_NAME)
 }
@@ -85,7 +87,6 @@ pub fn detect_daemon(daemon_dir: &Path) -> Result<Option<DaemonInfo>> {
                         Some(pid) if pid > 0 => Ok(Some(DaemonInfo { pid })),
                         _ => {
                             // PID file missing or invalid - daemon may be starting up
-                            // or crashed. Return None to trigger retry.
                             Ok(None)
                         }
                     }
@@ -136,34 +137,8 @@ pub fn get_daemon_status(daemon_dir: &Path) -> Result<Option<DaemonStatus>> {
     }
 }
 
-/// Wait for the daemon to establish a connection to the remote server.
-///
-/// Polls the daemon status until connected, disconnected (gave up), or timeout.
-/// Returns Ok(true) if connected, Ok(false) if timed out or disconnected.
-pub fn wait_daemon_connected(daemon_dir: &Path, timeout: Duration) -> Result<bool> {
-    use std::time::Instant;
-
-    let start = Instant::now();
-    let poll_interval = Duration::from_millis(50);
-
-    while start.elapsed() < timeout {
-        if let Ok(Some(status)) = get_daemon_status(daemon_dir) {
-            if status.connected {
-                return Ok(true);
-            }
-            // If not connected and not connecting, daemon has given up - stop waiting
-            if !status.connecting {
-                return Ok(false);
-            }
-        }
-        std::thread::sleep(poll_interval);
-    }
-
-    Ok(false)
-}
-
 /// Send a shutdown request to the daemon.
-pub fn stop_daemon(daemon_dir: &Path) -> Result<()> {
+fn stop_daemon(daemon_dir: &Path) -> Result<()> {
     let socket_path = get_socket_path(daemon_dir);
 
     if !socket_path.exists() {
@@ -173,7 +148,6 @@ pub fn stop_daemon(daemon_dir: &Path) -> Result<()> {
     }
 
     let mut stream = UnixStream::connect(&socket_path)?;
-    // Short timeout for IPC - if daemon doesn't respond quickly, it's likely hung
     let _ = stream.set_read_timeout(Some(Duration::from_secs(2)));
     let _ = stream.set_write_timeout(Some(Duration::from_secs(2)));
 
@@ -188,79 +162,56 @@ pub fn stop_daemon(daemon_dir: &Path) -> Result<()> {
     }
 }
 
-/// Notify daemon that queue has changed (fire-and-forget).
-/// Best-effort: silently ignores all errors.
-pub fn notify_daemon_sync(daemon_dir: &Path) {
-    let socket_path = get_socket_path(daemon_dir);
-    if !socket_path.exists() {
-        return;
-    }
-    // Non-blocking connect, send SyncNow, ignore response
-    if let Ok(mut stream) = UnixStream::connect(&socket_path) {
-        let _ = stream.set_write_timeout(Some(Duration::from_millis(100)));
-        let _ = framing::write_request(&mut stream, &DaemonRequest::SyncNow);
-    }
-}
-
-/// Request immediate sync from the daemon.
-pub fn request_sync(daemon_dir: &Path) -> Result<usize> {
-    let socket_path = get_socket_path(daemon_dir);
-
-    if !socket_path.exists() {
-        return Err(Error::Io(std::io::Error::other(
-            "daemon is not running".to_string(),
-        )));
+/// Find the wokd binary.
+fn find_wokd_binary() -> Result<PathBuf> {
+    // 1. Check WOK_DAEMON_BINARY env var
+    if let Ok(path) = std::env::var("WOK_DAEMON_BINARY") {
+        return Ok(PathBuf::from(path));
     }
 
-    let mut stream = UnixStream::connect(&socket_path)?;
-    let _ = stream.set_read_timeout(Some(Duration::from_secs(30)));
-    let _ = stream.set_write_timeout(Some(Duration::from_secs(5)));
-
-    framing::write_request(&mut stream, &DaemonRequest::SyncNow)?;
-
-    match framing::read_response(&mut stream)? {
-        DaemonResponse::SyncComplete { ops_synced } => Ok(ops_synced),
-        DaemonResponse::Error { message } => Err(Error::Io(std::io::Error::other(message))),
-        _ => Err(Error::Io(std::io::Error::other(
-            "unexpected response".to_string(),
-        ))),
+    // 2. Look next to the current executable
+    if let Ok(exe) = std::env::current_exe() {
+        let wokd = exe.with_file_name("wokd");
+        if wokd.exists() {
+            return Ok(wokd);
+        }
     }
+
+    // 3. Fall back to PATH
+    Ok(PathBuf::from("wokd"))
 }
 
 /// Spawn a new daemon process for the given daemon directory.
 ///
 /// Returns the DaemonInfo for the spawned daemon.
 /// Uses flock to ensure only one daemon instance per daemon directory.
-///
-/// # Arguments
-/// * `daemon_dir` - Directory for daemon files (socket, pid, lock)
-/// * `work_dir` - Work directory for loading config (.work directory)
-pub fn spawn_daemon(daemon_dir: &Path, work_dir: &Path) -> Result<DaemonInfo> {
+pub fn spawn_daemon(daemon_dir: &Path) -> Result<DaemonInfo> {
     // Check if daemon is already running
     if let Some(info) = detect_daemon(daemon_dir)? {
         return Ok(info);
     }
 
-    // Get the path to the current executable
-    let exe_path = std::env::current_exe()?;
+    // Ensure daemon directory exists
+    fs::create_dir_all(daemon_dir)?;
+
+    // Find wokd binary
+    let wokd_path = find_wokd_binary()?;
 
     // Spawn daemon process
-    // The daemon will:
-    // 1. Acquire flock on lock file
-    // 2. Write PID file
-    // 3. Create Unix socket
-    // 4. Start main loop
-    let mut child = Command::new(&exe_path)
-        .arg("remote")
-        .arg("run")
-        .arg("--daemon-dir")
+    let mut child = Command::new(&wokd_path)
+        .arg("--state-dir")
         .arg(daemon_dir)
-        .arg("--work-dir")
-        .arg(work_dir)
         .stdin(Stdio::null())
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
-        .spawn()?;
+        .spawn()
+        .map_err(|e| {
+            Error::Daemon(format!(
+                "failed to start wokd ({}): {}",
+                wokd_path.display(),
+                e
+            ))
+        })?;
 
     // Wait for daemon to signal it's ready (writes "READY" to stdout)
     if let Some(stdout) = child.stdout.take() {
@@ -275,11 +226,9 @@ pub fn spawn_daemon(daemon_dir: &Path, work_dir: &Path) -> Result<DaemonInfo> {
     }
 
     // Verify daemon is running with short polling
-    // Use 10ms intervals with up to 150 attempts (1.5s total timeout)
     for _ in 0..150 {
         // Check if daemon process has exited (indicates failure)
         if let Ok(Some(status)) = child.try_wait() {
-            // Read stderr for error message
             let stderr_output = if let Some(mut stderr) = child.stderr.take() {
                 use std::io::Read;
                 let mut output = String::new();
@@ -288,10 +237,11 @@ pub fn spawn_daemon(daemon_dir: &Path, work_dir: &Path) -> Result<DaemonInfo> {
             } else {
                 String::new()
             };
-            return Err(Error::Io(std::io::Error::other(format!(
-                "daemon process exited with status: {}\nstderr: {}",
-                status, stderr_output
-            ))));
+            return Err(Error::Daemon(format!(
+                "daemon process exited with status: {}\n{}",
+                status,
+                stderr_output.trim()
+            )));
         }
 
         if let Some(info) = detect_daemon(daemon_dir)? {
@@ -300,10 +250,9 @@ pub fn spawn_daemon(daemon_dir: &Path, work_dir: &Path) -> Result<DaemonInfo> {
         std::thread::sleep(Duration::from_millis(10));
     }
 
-    // Daemon failed to start - return error instead of Ok with invalid pid
-    Err(Error::Io(std::io::Error::other(
+    Err(Error::Daemon(
         "daemon failed to start: could not connect after multiple attempts".to_string(),
-    )))
+    ))
 }
 
 /// Clean up stale socket and PID files.
@@ -323,108 +272,8 @@ fn read_pid_file(pid_path: &Path) -> Option<u32> {
 }
 
 /// CLI version for handshake.
+#[cfg(test)]
 pub const CLI_VERSION: &str = env!("CARGO_PKG_VERSION");
-
-/// Result of version handshake with daemon.
-#[derive(Debug)]
-pub enum HandshakeResult {
-    /// Versions match, daemon is compatible.
-    Compatible,
-    /// Daemon is older than CLI, should restart.
-    DaemonOlder { daemon_version: String },
-    /// CLI is older than daemon, warn but continue.
-    CliOlder { daemon_version: String },
-    /// Daemon doesn't understand Hello (old protocol).
-    OldProtocol,
-    /// Connection or communication failed.
-    Failed(String),
-}
-
-/// Perform version handshake with the daemon.
-///
-/// Returns the handshake result indicating compatibility status.
-pub fn handshake_daemon(daemon_dir: &Path) -> HandshakeResult {
-    let socket_path = get_socket_path(daemon_dir);
-
-    if !socket_path.exists() {
-        return HandshakeResult::Failed("socket does not exist".to_string());
-    }
-
-    let mut stream = match UnixStream::connect(&socket_path) {
-        Ok(s) => s,
-        Err(e) => return HandshakeResult::Failed(format!("connect failed: {}", e)),
-    };
-
-    // Set short timeout for handshake
-    let _ = stream.set_read_timeout(Some(Duration::from_secs(2)));
-    let _ = stream.set_write_timeout(Some(Duration::from_secs(2)));
-
-    // Send Hello request
-    let request = DaemonRequest::Hello {
-        version: CLI_VERSION.to_string(),
-    };
-    if let Err(e) = framing::write_request(&mut stream, &request) {
-        return HandshakeResult::Failed(format!("write failed: {}", e));
-    }
-
-    // Read response
-    match framing::read_response(&mut stream) {
-        Ok(DaemonResponse::Hello { version }) => {
-            // Compare versions
-            match compare_versions(CLI_VERSION, &version) {
-                std::cmp::Ordering::Equal => HandshakeResult::Compatible,
-                std::cmp::Ordering::Greater => HandshakeResult::DaemonOlder {
-                    daemon_version: version,
-                },
-                std::cmp::Ordering::Less => HandshakeResult::CliOlder {
-                    daemon_version: version,
-                },
-            }
-        }
-        Ok(DaemonResponse::Error { message }) => {
-            // Old daemon returns Error for unknown request types
-            if message.contains("unknown") || message.contains("deserialize") {
-                HandshakeResult::OldProtocol
-            } else {
-                HandshakeResult::Failed(message)
-            }
-        }
-        Ok(_) => {
-            // Unexpected response type - likely old daemon
-            HandshakeResult::OldProtocol
-        }
-        Err(e) => {
-            let err_str = e.to_string();
-            // Check if it's a deserialization error (old daemon can't parse Hello)
-            if err_str.contains("deserialize") {
-                HandshakeResult::OldProtocol
-            } else {
-                HandshakeResult::Failed(err_str)
-            }
-        }
-    }
-}
-
-/// Compare two semver-like version strings.
-///
-/// Returns Ordering based on version comparison.
-fn compare_versions(v1: &str, v2: &str) -> std::cmp::Ordering {
-    let parse = |v: &str| -> Vec<u32> { v.split('.').filter_map(|p| p.parse().ok()).collect() };
-
-    let parts1 = parse(v1);
-    let parts2 = parse(v2);
-
-    for i in 0..3 {
-        let p1 = parts1.get(i).copied().unwrap_or(0);
-        let p2 = parts2.get(i).copied().unwrap_or(0);
-        match p1.cmp(&p2) {
-            std::cmp::Ordering::Equal => continue,
-            other => return other,
-        }
-    }
-
-    std::cmp::Ordering::Equal
-}
 
 /// Stop the daemon forcefully if graceful shutdown fails.
 ///
@@ -438,7 +287,7 @@ pub fn stop_daemon_forcefully(daemon_dir: &Path) -> Result<()> {
     // Try graceful shutdown first
     match stop_daemon(daemon_dir) {
         Ok(()) => {
-            // Wait for daemon to actually exit (short timeout to avoid hanging)
+            // Wait for daemon to actually exit
             if let Some(pid) = pid {
                 wait_for_process_exit(pid, Duration::from_secs(1));
             }
@@ -450,10 +299,9 @@ pub fn stop_daemon_forcefully(daemon_dir: &Path) -> Result<()> {
         }
     }
 
-    // If we have a PID, send SIGKILL via external kill command
+    // If we have a PID, send SIGKILL
     if let Some(pid) = pid {
         let _ = Command::new("kill").arg("-9").arg(pid.to_string()).output();
-        // Give kernel time to clean up
         std::thread::sleep(Duration::from_millis(100));
     }
 
@@ -468,76 +316,13 @@ fn wait_for_process_exit(pid: u32, timeout: Duration) {
     let start = std::time::Instant::now();
 
     while start.elapsed() < timeout {
-        // Check if process still exists by sending signal 0 via kill command
         let result = Command::new("kill").arg("-0").arg(pid.to_string()).output();
 
         match result {
-            Ok(output) if !output.status.success() => {
-                // Process doesn't exist (kill -0 failed)
-                return;
-            }
-            Err(_) => {
-                // Command failed, assume process doesn't exist
-                return;
-            }
+            Ok(output) if !output.status.success() => return,
+            Err(_) => return,
             _ => {}
         }
         std::thread::sleep(Duration::from_millis(50));
-    }
-}
-
-/// Ensure a compatible daemon is running, restarting if necessary.
-///
-/// This function:
-/// 1. Checks if a daemon is running
-/// 2. If running, performs version handshake
-/// 3. If version mismatch or old protocol, restarts daemon
-/// 4. If no daemon running, spawns one
-///
-/// Returns DaemonInfo for the running (compatible) daemon.
-pub fn ensure_compatible_daemon(daemon_dir: &Path, work_dir: &Path) -> Result<DaemonInfo> {
-    // First check if any daemon is running
-    if detect_daemon(daemon_dir)?.is_none() {
-        // No daemon running, just spawn one
-        return spawn_daemon(daemon_dir, work_dir);
-    }
-
-    // Daemon is running, check version
-    match handshake_daemon(daemon_dir) {
-        HandshakeResult::Compatible => {
-            // Version matches, use existing daemon
-            detect_daemon(daemon_dir)?
-                .ok_or_else(|| Error::Io(std::io::Error::other("daemon disappeared")))
-        }
-        HandshakeResult::DaemonOlder { daemon_version } => {
-            // Daemon is older, restart it
-            eprintln!(
-                "Restarting daemon: version mismatch (daemon v{}, CLI v{})",
-                daemon_version, CLI_VERSION
-            );
-            stop_daemon_forcefully(daemon_dir)?;
-            spawn_daemon(daemon_dir, work_dir)
-        }
-        HandshakeResult::OldProtocol => {
-            // Old daemon doesn't understand Hello, restart it
-            eprintln!("Restarting daemon: old protocol version detected");
-            stop_daemon_forcefully(daemon_dir)?;
-            spawn_daemon(daemon_dir, work_dir)
-        }
-        HandshakeResult::CliOlder { daemon_version } => {
-            // CLI is older than daemon - warn but continue
-            eprintln!(
-                "Warning: daemon v{} is newer than CLI v{}",
-                daemon_version, CLI_VERSION
-            );
-            detect_daemon(daemon_dir)?
-                .ok_or_else(|| Error::Io(std::io::Error::other("daemon disappeared")))
-        }
-        HandshakeResult::Failed(msg) => {
-            // Communication failed, try to restart
-            eprintln!("Daemon communication failed ({}), restarting", msg);
-            stop_daemon_forcefully(daemon_dir)?;
-            spawn_daemon(daemon_dir, work_dir)
-        }
     }
 }

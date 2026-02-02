@@ -69,7 +69,7 @@ fn test_log_unblocked_when_blocker_completed() {
     ctx.db.update_issue_status("issue-a", Status::Done).unwrap();
 
     // Call log_unblocked_events
-    log_unblocked_events(&ctx.db, &ctx.work_dir, &ctx.config, "issue-a").unwrap();
+    log_unblocked_events(&ctx.db, "issue-a").unwrap();
 
     // Check that an unblocked event was logged for issue B
     let events = ctx.db.get_events("issue-b").unwrap();
@@ -95,7 +95,7 @@ fn test_no_unblocked_when_multiple_blockers() {
     ctx.db.update_issue_status("issue-a", Status::Done).unwrap();
 
     // Call log_unblocked_events
-    log_unblocked_events(&ctx.db, &ctx.work_dir, &ctx.config, "issue-a").unwrap();
+    log_unblocked_events(&ctx.db, "issue-a").unwrap();
 
     // Check that NO unblocked event was logged for issue B (still blocked by C)
     let events = ctx.db.get_events("issue-b").unwrap();
@@ -119,10 +119,10 @@ fn test_unblocked_after_all_blockers_done() {
 
     // Complete both A and C
     ctx.db.update_issue_status("issue-a", Status::Done).unwrap();
-    log_unblocked_events(&ctx.db, &ctx.work_dir, &ctx.config, "issue-a").unwrap();
+    log_unblocked_events(&ctx.db, "issue-a").unwrap();
 
     ctx.db.update_issue_status("issue-c", Status::Done).unwrap();
-    log_unblocked_events(&ctx.db, &ctx.work_dir, &ctx.config, "issue-c").unwrap();
+    log_unblocked_events(&ctx.db, "issue-c").unwrap();
 
     // Now B should have an unblocked event
     let events = ctx.db.get_events("issue-b").unwrap();
@@ -150,7 +150,7 @@ fn test_start_impl_from_todo() {
     let ctx = TestContext::new();
     ctx.create_issue("test-1", IssueType::Task, "Start test");
 
-    let result = start_impl(&ctx.db, &ctx.config, &ctx.work_dir, &["test-1".to_string()]);
+    let result = start_impl(&ctx.db, &["test-1".to_string()]);
 
     assert!(result.is_ok());
     let issue = ctx.db.get_issue("test-1").unwrap();
@@ -163,7 +163,7 @@ fn test_start_impl_from_in_progress_fails() {
     ctx.create_issue("test-1", IssueType::Task, "Already started")
         .start_issue("test-1");
 
-    let result = start_impl(&ctx.db, &ctx.config, &ctx.work_dir, &["test-1".to_string()]);
+    let result = start_impl(&ctx.db, &["test-1".to_string()]);
 
     assert!(result.is_err());
 }
@@ -173,7 +173,7 @@ fn test_start_impl_from_done_fails() {
     let ctx = TestContext::new();
     ctx.create_completed("test-1", IssueType::Task, "Completed task");
 
-    let result = start_impl(&ctx.db, &ctx.config, &ctx.work_dir, &["test-1".to_string()]);
+    let result = start_impl(&ctx.db, &["test-1".to_string()]);
 
     assert!(result.is_err());
 }
@@ -183,13 +183,7 @@ fn test_done_impl_from_in_progress() {
     let ctx = TestContext::new();
     ctx.create_and_start("test-1", IssueType::Task, "Done test");
 
-    let result = done_impl(
-        &ctx.db,
-        &ctx.config,
-        &ctx.work_dir,
-        &["test-1".to_string()],
-        None,
-    );
+    let result = done_impl(&ctx.db, &["test-1".to_string()], None);
 
     assert!(result.is_ok());
     let issue = ctx.db.get_issue("test-1").unwrap();
@@ -205,13 +199,7 @@ fn test_done_impl_from_todo_requires_reason() {
     let prev = std::env::var_os("CLAUDE_CODE");
     std::env::set_var("CLAUDE_CODE", "1");
 
-    let result = done_impl(
-        &ctx.db,
-        &ctx.config,
-        &ctx.work_dir,
-        &["test-1".to_string()],
-        None,
-    );
+    let result = done_impl(&ctx.db, &["test-1".to_string()], None);
 
     match prev {
         Some(v) => std::env::set_var("CLAUDE_CODE", v),
@@ -228,8 +216,6 @@ fn test_done_impl_from_todo_with_reason() {
 
     let result = done_impl(
         &ctx.db,
-        &ctx.config,
-        &ctx.work_dir,
         &["test-1".to_string()],
         Some("Already completed externally"),
     );
@@ -244,13 +230,7 @@ fn test_done_impl_from_done_fails() {
     let ctx = TestContext::new();
     ctx.create_completed("test-1", IssueType::Task, "Already done");
 
-    let result = done_impl(
-        &ctx.db,
-        &ctx.config,
-        &ctx.work_dir,
-        &["test-1".to_string()],
-        None,
-    );
+    let result = done_impl(&ctx.db, &["test-1".to_string()], None);
 
     assert!(result.is_err());
 }
@@ -260,13 +240,7 @@ fn test_close_impl_from_todo() {
     let ctx = TestContext::new();
     ctx.create_issue("test-1", IssueType::Task, "Close test");
 
-    let result = close_impl(
-        &ctx.db,
-        &ctx.config,
-        &ctx.work_dir,
-        &["test-1".to_string()],
-        "Won't fix",
-    );
+    let result = close_impl(&ctx.db, &["test-1".to_string()], "Won't fix");
 
     assert!(result.is_ok());
     let issue = ctx.db.get_issue("test-1").unwrap();
@@ -278,13 +252,7 @@ fn test_close_impl_from_in_progress() {
     let ctx = TestContext::new();
     ctx.create_and_start("test-1", IssueType::Task, "In progress task");
 
-    let result = close_impl(
-        &ctx.db,
-        &ctx.config,
-        &ctx.work_dir,
-        &["test-1".to_string()],
-        "Requirements changed",
-    );
+    let result = close_impl(&ctx.db, &["test-1".to_string()], "Requirements changed");
 
     assert!(result.is_ok());
     let issue = ctx.db.get_issue("test-1").unwrap();
@@ -296,13 +264,7 @@ fn test_close_impl_from_done_fails() {
     let ctx = TestContext::new();
     ctx.create_completed("test-1", IssueType::Task, "Done task");
 
-    let result = close_impl(
-        &ctx.db,
-        &ctx.config,
-        &ctx.work_dir,
-        &["test-1".to_string()],
-        "Shouldn't work",
-    );
+    let result = close_impl(&ctx.db, &["test-1".to_string()], "Shouldn't work");
 
     assert!(result.is_err());
 }
@@ -312,13 +274,7 @@ fn test_reopen_impl_from_done() {
     let ctx = TestContext::new();
     ctx.create_completed("test-1", IssueType::Task, "Completed task");
 
-    let result = reopen_impl(
-        &ctx.db,
-        &ctx.config,
-        &ctx.work_dir,
-        &["test-1".to_string()],
-        Some("Found a bug"),
-    );
+    let result = reopen_impl(&ctx.db, &["test-1".to_string()], Some("Found a bug"));
 
     assert!(result.is_ok());
     let issue = ctx.db.get_issue("test-1").unwrap();
@@ -331,13 +287,7 @@ fn test_reopen_impl_from_closed() {
     ctx.create_issue("test-1", IssueType::Task, "Closed task")
         .close_issue("test-1");
 
-    let result = reopen_impl(
-        &ctx.db,
-        &ctx.config,
-        &ctx.work_dir,
-        &["test-1".to_string()],
-        Some("Actually needed"),
-    );
+    let result = reopen_impl(&ctx.db, &["test-1".to_string()], Some("Actually needed"));
 
     assert!(result.is_ok());
     let issue = ctx.db.get_issue("test-1").unwrap();
@@ -350,13 +300,7 @@ fn test_reopen_impl_from_in_progress_succeeds() {
     let ctx = TestContext::new();
     ctx.create_and_start("test-1", IssueType::Task, "In progress task");
 
-    let result = reopen_impl(
-        &ctx.db,
-        &ctx.config,
-        &ctx.work_dir,
-        &["test-1".to_string()],
-        None,
-    );
+    let result = reopen_impl(&ctx.db, &["test-1".to_string()], None);
 
     assert!(result.is_ok());
     let issue = ctx.db.get_issue("test-1").unwrap();
@@ -369,13 +313,7 @@ fn test_reopen_impl_from_todo_fails() {
     let ctx = TestContext::new();
     ctx.create_issue("test-1", IssueType::Task, "Todo task");
 
-    let result = reopen_impl(
-        &ctx.db,
-        &ctx.config,
-        &ctx.work_dir,
-        &["test-1".to_string()],
-        None,
-    );
+    let result = reopen_impl(&ctx.db, &["test-1".to_string()], None);
 
     assert!(result.is_err());
 }
@@ -387,14 +325,7 @@ fn test_close_creates_note() {
     let ctx = TestContext::new();
     ctx.create_issue("test-1", IssueType::Task, "Test task");
 
-    close_impl(
-        &ctx.db,
-        &ctx.config,
-        &ctx.work_dir,
-        &["test-1".to_string()],
-        "duplicate of test-2",
-    )
-    .unwrap();
+    close_impl(&ctx.db, &["test-1".to_string()], "duplicate of test-2").unwrap();
 
     let notes = ctx.db.get_notes("test-1").unwrap();
     assert!(notes
@@ -409,8 +340,6 @@ fn test_done_with_reason_creates_note() {
 
     done_impl(
         &ctx.db,
-        &ctx.config,
-        &ctx.work_dir,
         &["test-1".to_string()],
         Some("already completed upstream"),
     )
@@ -427,14 +356,7 @@ fn test_done_without_reason_no_note() {
     let ctx = TestContext::new();
     ctx.create_and_start("test-1", IssueType::Task, "Test task");
 
-    done_impl(
-        &ctx.db,
-        &ctx.config,
-        &ctx.work_dir,
-        &["test-1".to_string()],
-        None,
-    )
-    .unwrap();
+    done_impl(&ctx.db, &["test-1".to_string()], None).unwrap();
 
     let notes = ctx.db.get_notes("test-1").unwrap();
     // Should have no notes created by done command (may have notes from other sources)
@@ -448,8 +370,6 @@ fn test_reopen_creates_note() {
 
     reopen_impl(
         &ctx.db,
-        &ctx.config,
-        &ctx.work_dir,
         &["test-1".to_string()],
         Some("regression found in v2"),
     )
@@ -469,12 +389,7 @@ fn test_start_impl_multiple_from_todo() {
     ctx.create_issue("test-1", IssueType::Task, "Task 1");
     ctx.create_issue("test-2", IssueType::Task, "Task 2");
 
-    let result = start_impl(
-        &ctx.db,
-        &ctx.config,
-        &ctx.work_dir,
-        &["test-1".to_string(), "test-2".to_string()],
-    );
+    let result = start_impl(&ctx.db, &["test-1".to_string(), "test-2".to_string()]);
 
     assert!(result.is_ok());
     assert_eq!(
@@ -494,12 +409,7 @@ fn test_start_impl_fails_on_invalid_status() {
     ctx.create_issue("test-2", IssueType::Task, "Task 2")
         .start_issue("test-2");
 
-    let result = start_impl(
-        &ctx.db,
-        &ctx.config,
-        &ctx.work_dir,
-        &["test-1".to_string(), "test-2".to_string()],
-    );
+    let result = start_impl(&ctx.db, &["test-1".to_string(), "test-2".to_string()]);
 
     // First succeeds, second fails
     assert!(result.is_err());
@@ -515,13 +425,7 @@ fn test_done_impl_multiple_from_in_progress() {
     ctx.create_and_start("test-1", IssueType::Task, "Task 1");
     ctx.create_and_start("test-2", IssueType::Task, "Task 2");
 
-    let result = done_impl(
-        &ctx.db,
-        &ctx.config,
-        &ctx.work_dir,
-        &["test-1".to_string(), "test-2".to_string()],
-        None,
-    );
+    let result = done_impl(&ctx.db, &["test-1".to_string(), "test-2".to_string()], None);
 
     assert!(result.is_ok());
     assert_eq!(ctx.db.get_issue("test-1").unwrap().status, Status::Done);
@@ -536,8 +440,6 @@ fn test_done_impl_multiple_with_reason() {
 
     let result = done_impl(
         &ctx.db,
-        &ctx.config,
-        &ctx.work_dir,
         &["test-1".to_string(), "test-2".to_string()],
         Some("upstream"),
     );
@@ -555,8 +457,6 @@ fn test_close_impl_multiple() {
 
     let result = close_impl(
         &ctx.db,
-        &ctx.config,
-        &ctx.work_dir,
         &["test-1".to_string(), "test-2".to_string()],
         "duplicate",
     );
@@ -575,8 +475,6 @@ fn test_reopen_impl_multiple() {
 
     let result = reopen_impl(
         &ctx.db,
-        &ctx.config,
-        &ctx.work_dir,
         &["test-1".to_string(), "test-2".to_string()],
         Some("regression"),
     );
@@ -699,12 +597,7 @@ fn test_start_partial_update_with_unknown() {
     let ctx = TestContext::new();
     ctx.create_issue("test-1", IssueType::Task, "Task 1");
 
-    let result = start_impl(
-        &ctx.db,
-        &ctx.config,
-        &ctx.work_dir,
-        &["test-1".to_string(), "unknown-123".to_string()],
-    );
+    let result = start_impl(&ctx.db, &["test-1".to_string(), "unknown-123".to_string()]);
 
     // Should fail overall but test-1 should be transitioned
     assert!(result.is_err());
@@ -737,12 +630,7 @@ fn test_start_partial_update_with_invalid_transition() {
         .start_issue("test-1"); // Already started
     ctx.create_issue("test-2", IssueType::Task, "Task 2");
 
-    let result = start_impl(
-        &ctx.db,
-        &ctx.config,
-        &ctx.work_dir,
-        &["test-1".to_string(), "test-2".to_string()],
-    );
+    let result = start_impl(&ctx.db, &["test-1".to_string(), "test-2".to_string()]);
 
     // test-1 fails (already started), test-2 succeeds
     assert!(result.is_err());
@@ -777,8 +665,6 @@ fn test_start_partial_update_mixed_failures() {
 
     let result = start_impl(
         &ctx.db,
-        &ctx.config,
-        &ctx.work_dir,
         &[
             "test-1".to_string(),
             "test-2".to_string(),
@@ -816,8 +702,6 @@ fn test_done_partial_update_with_unknown() {
 
     let result = done_impl(
         &ctx.db,
-        &ctx.config,
-        &ctx.work_dir,
         &["test-1".to_string(), "unknown-123".to_string()],
         None,
     );
@@ -843,8 +727,6 @@ fn test_close_partial_update_with_unknown() {
 
     let result = close_impl(
         &ctx.db,
-        &ctx.config,
-        &ctx.work_dir,
         &["test-1".to_string(), "unknown-123".to_string()],
         "duplicate",
     );
@@ -870,8 +752,6 @@ fn test_reopen_partial_update_with_unknown() {
 
     let result = reopen_impl(
         &ctx.db,
-        &ctx.config,
-        &ctx.work_dir,
         &["test-1".to_string(), "unknown-123".to_string()],
         Some("regression"),
     );
@@ -896,8 +776,6 @@ fn test_start_all_unknown_ids() {
 
     let result = start_impl(
         &ctx.db,
-        &ctx.config,
-        &ctx.work_dir,
         &[
             "unknown-1".to_string(),
             "unknown-2".to_string(),

@@ -15,6 +15,7 @@ fn creates_work_dir() {
     wk().arg("init")
         .arg("--prefix")
         .arg("test")
+        .arg("--private")
         .current_dir(temp.path())
         .assert()
         .success()
@@ -23,6 +24,24 @@ fn creates_work_dir() {
     assert!(temp.path().join(".wok").exists());
     assert!(temp.path().join(".wok/config.toml").exists());
     assert!(temp.path().join(".wok/issues.db").exists());
+}
+
+#[test]
+fn creates_work_dir_user_level() {
+    let temp = TempDir::new().unwrap();
+
+    wk().arg("init")
+        .arg("--prefix")
+        .arg("test")
+        .current_dir(temp.path())
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("Initialized issue tracker"));
+
+    assert!(temp.path().join(".wok").exists());
+    assert!(temp.path().join(".wok/config.toml").exists());
+    // User-level mode: no local database
+    assert!(!temp.path().join(".wok/issues.db").exists());
 }
 
 #[test]
@@ -114,94 +133,7 @@ fn valid_alphanumeric_prefix() {
 }
 
 #[test]
-fn init_with_workspace_creates_link() {
-    let temp = TempDir::new().unwrap();
-    let ws_dir = temp.path().join("workspace");
-    std::fs::create_dir_all(&ws_dir).unwrap();
-
-    wk().arg("init")
-        .arg("--workspace")
-        .arg(ws_dir.to_str().unwrap())
-        .current_dir(temp.path())
-        .assert()
-        .success()
-        .stdout(predicate::str::contains("Initialized workspace link"));
-
-    // Config should exist
-    assert!(temp.path().join(".wok/config.toml").exists());
-    // Database should NOT exist
-    assert!(!temp.path().join(".wok/issues.db").exists());
-}
-
-#[test]
-fn init_with_workspace_and_prefix() {
-    let temp = TempDir::new().unwrap();
-    let ws_dir = temp.path().join("workspace");
-    std::fs::create_dir_all(&ws_dir).unwrap();
-
-    wk().arg("init")
-        .arg("--workspace")
-        .arg(ws_dir.to_str().unwrap())
-        .arg("--prefix")
-        .arg("prj")
-        .current_dir(temp.path())
-        .assert()
-        .success()
-        .stdout(predicate::str::contains("Prefix: prj"));
-
-    let config_content = std::fs::read_to_string(temp.path().join(".wok/config.toml")).unwrap();
-    assert!(config_content.contains("prefix = \"prj\""));
-    assert!(config_content.contains("workspace = "));
-}
-
-#[test]
-fn init_with_workspace_no_prefix_in_config() {
-    let temp = TempDir::new().unwrap();
-    let ws_dir = temp.path().join("workspace");
-    std::fs::create_dir_all(&ws_dir).unwrap();
-
-    wk().arg("init")
-        .arg("--workspace")
-        .arg(ws_dir.to_str().unwrap())
-        .current_dir(temp.path())
-        .assert()
-        .success();
-
-    let config_content = std::fs::read_to_string(temp.path().join(".wok/config.toml")).unwrap();
-    // Should NOT contain prefix when not specified
-    assert!(!config_content.contains("prefix"));
-    assert!(config_content.contains("workspace = "));
-}
-
-#[test]
-fn init_with_workspace_fails_if_workspace_not_exist() {
-    let temp = TempDir::new().unwrap();
-
-    wk().arg("init")
-        .arg("--workspace")
-        .arg("/nonexistent/workspace/path")
-        .current_dir(temp.path())
-        .assert()
-        .failure()
-        .stderr(predicate::str::contains("workspace not found"));
-}
-
-#[test]
-fn init_with_workspace_rejects_invalid_prefix() {
-    let temp = TempDir::new().unwrap();
-
-    wk().arg("init")
-        .arg("--workspace")
-        .arg("/some/workspace")
-        .arg("--prefix")
-        .arg("AB") // Invalid: uppercase
-        .current_dir(temp.path())
-        .assert()
-        .failure();
-}
-
-#[test]
-fn init_defaults_to_local_mode() {
+fn init_defaults_to_user_level_mode() {
     let temp = TempDir::new().unwrap();
 
     wk().arg("init")
@@ -211,45 +143,52 @@ fn init_defaults_to_local_mode() {
         .assert()
         .success();
 
-    // Config should not have remote section
+    // Config should not have private = true
     let config_content = std::fs::read_to_string(temp.path().join(".wok/config.toml")).unwrap();
     assert!(
-        !config_content.contains("[remote]"),
-        "Default init should not create remote config"
+        !config_content.contains("private = true"),
+        "Default init should not be private mode"
     );
-    assert!(
-        !config_content.contains("url ="),
-        "Default init should not have remote url"
-    );
-
-    // Gitignore should include config.toml (local mode)
-    let gitignore = std::fs::read_to_string(temp.path().join(".wok/.gitignore")).unwrap();
-    assert!(
-        gitignore.contains("config.toml"),
-        "Local mode should ignore config.toml"
-    );
-}
-
-#[test]
-fn init_local_flag_is_no_op() {
-    let temp = TempDir::new().unwrap();
-
-    // --local flag should work (for backwards compatibility) and behave same as default
-    wk().arg("init")
-        .arg("--prefix")
-        .arg("test")
-        .arg("--local")
-        .current_dir(temp.path())
-        .assert()
-        .success();
-
-    // Config should not have remote section
-    let config_content = std::fs::read_to_string(temp.path().join(".wok/config.toml")).unwrap();
-    assert!(!config_content.contains("[remote]"));
 
     // Gitignore should include config.toml
     let gitignore = std::fs::read_to_string(temp.path().join(".wok/.gitignore")).unwrap();
+    assert!(
+        gitignore.contains("config.toml"),
+        "Should ignore config.toml"
+    );
+    // User-level mode: no local database to ignore
+    assert!(
+        !gitignore.contains("issues.db"),
+        "User-level mode should not ignore issues.db"
+    );
+}
+
+#[test]
+fn init_private_mode() {
+    let temp = TempDir::new().unwrap();
+
+    wk().arg("init")
+        .arg("--prefix")
+        .arg("test")
+        .arg("--private")
+        .current_dir(temp.path())
+        .assert()
+        .success();
+
+    // Config should have private = true
+    let config_content = std::fs::read_to_string(temp.path().join(".wok/config.toml")).unwrap();
+    assert!(
+        config_content.contains("private = true"),
+        "Private init should set private = true"
+    );
+
+    // Database should be in .wok/
+    assert!(temp.path().join(".wok/issues.db").exists());
+
+    // Gitignore should include both config.toml and issues.db
+    let gitignore = std::fs::read_to_string(temp.path().join(".wok/.gitignore")).unwrap();
     assert!(gitignore.contains("config.toml"));
+    assert!(gitignore.contains("issues.db"));
 }
 
 // ============================================================================
@@ -267,6 +206,7 @@ fn init_with_path_creates_at_specified_location() {
         .arg(target.to_str().unwrap())
         .arg("--prefix")
         .arg("sub")
+        .arg("--private")
         .current_dir(temp.path())
         .assert()
         .success();
@@ -346,7 +286,6 @@ fn init_succeeds_if_wok_dir_exists_without_config() {
         .success();
 
     assert!(temp.path().join(".wok/config.toml").exists());
-    assert!(temp.path().join(".wok/issues.db").exists());
 }
 
 // ============================================================================
@@ -395,164 +334,6 @@ fn should_fail_with_underivable_prefix(dir_name: &str) {
 }
 
 // ============================================================================
-// Workspace edge cases
-// ============================================================================
-
-#[test]
-fn init_workspace_accepts_relative_path() {
-    let temp = TempDir::new().unwrap();
-    let ws_dir = temp.path().join("external/workspace");
-    std::fs::create_dir_all(&ws_dir).unwrap();
-
-    wk().arg("init")
-        .arg("--workspace")
-        .arg("external/workspace")
-        .current_dir(temp.path())
-        .assert()
-        .success();
-
-    let config_content = std::fs::read_to_string(temp.path().join(".wok/config.toml")).unwrap();
-    assert!(config_content.contains("workspace = \"external/workspace\""));
-}
-
-#[test]
-fn init_workspace_with_path_option() {
-    let temp = TempDir::new().unwrap();
-    let target = temp.path().join("subdir");
-    let ws_dir = target.join("external/workspace");
-    std::fs::create_dir_all(&ws_dir).unwrap();
-
-    wk().arg("init")
-        .arg("--path")
-        .arg(target.to_str().unwrap())
-        .arg("--workspace")
-        .arg("external/workspace")
-        .current_dir(temp.path())
-        .assert()
-        .success();
-
-    assert!(target.join(".wok").exists());
-    assert!(target.join(".wok/config.toml").exists());
-    assert!(!target.join(".wok/issues.db").exists()); // Workspace mode has no DB
-
-    let config_content = std::fs::read_to_string(target.join(".wok/config.toml")).unwrap();
-    assert!(config_content.contains("workspace = \"external/workspace\""));
-}
-
-#[test]
-fn init_workspace_creates_gitignore_with_config() {
-    let temp = TempDir::new().unwrap();
-    let ws_dir = temp.path().join("workspace");
-    std::fs::create_dir_all(&ws_dir).unwrap();
-
-    wk().arg("init")
-        .arg("--workspace")
-        .arg(ws_dir.to_str().unwrap())
-        .current_dir(temp.path())
-        .assert()
-        .success();
-
-    let gitignore = std::fs::read_to_string(temp.path().join(".wok/.gitignore")).unwrap();
-    assert!(
-        gitignore.contains("config.toml"),
-        "Workspace mode should ignore config.toml"
-    );
-}
-
-// ============================================================================
-// Remote mode tests
-// ============================================================================
-
-#[test]
-fn init_remote_excludes_config_from_gitignore() {
-    let temp = TempDir::new().unwrap();
-
-    // Initialize git repo first (required for remote mode)
-    std::process::Command::new("git")
-        .arg("init")
-        .current_dir(temp.path())
-        .status()
-        .expect("git init failed");
-
-    wk().arg("init")
-        .arg("--prefix")
-        .arg("prj")
-        .arg("--remote")
-        .arg(".")
-        .current_dir(temp.path())
-        .assert()
-        .success();
-
-    let gitignore = std::fs::read_to_string(temp.path().join(".wok/.gitignore")).unwrap();
-    assert!(
-        !gitignore.contains("config.toml"),
-        "Remote mode should NOT ignore config.toml (it's shared via git)"
-    );
-}
-
-#[test]
-fn init_remote_creates_oplog_worktree() {
-    let temp = TempDir::new().unwrap();
-
-    // Initialize git repo first
-    std::process::Command::new("git")
-        .arg("init")
-        .current_dir(temp.path())
-        .status()
-        .expect("git init failed");
-
-    wk().arg("init")
-        .arg("--prefix")
-        .arg("prj")
-        .arg("--remote")
-        .arg(".")
-        .current_dir(temp.path())
-        .assert()
-        .success();
-
-    // Should create oplog worktree at .git/wk/oplog
-    assert!(
-        temp.path().join(".git/wk/oplog").exists(),
-        "Remote mode should create oplog worktree"
-    );
-    assert!(
-        temp.path().join(".git/wk/oplog/oplog.jsonl").exists(),
-        "Oplog worktree should contain oplog.jsonl"
-    );
-}
-
-#[test]
-fn init_remote_creates_config_with_remote_section() {
-    let temp = TempDir::new().unwrap();
-
-    // Initialize git repo first
-    std::process::Command::new("git")
-        .arg("init")
-        .current_dir(temp.path())
-        .status()
-        .expect("git init failed");
-
-    wk().arg("init")
-        .arg("--prefix")
-        .arg("prj")
-        .arg("--remote")
-        .arg(".")
-        .current_dir(temp.path())
-        .assert()
-        .success();
-
-    let config_content = std::fs::read_to_string(temp.path().join(".wok/config.toml")).unwrap();
-    assert!(
-        config_content.contains("[remote]"),
-        "Remote mode should create remote config section"
-    );
-    assert!(
-        config_content.contains("url = \"git:.\""),
-        "Remote config should have url"
-    );
-}
-
-// ============================================================================
 // Database schema validation
 // ============================================================================
 
@@ -563,6 +344,7 @@ fn init_creates_database_with_required_tables() {
     wk().arg("init")
         .arg("--prefix")
         .arg("prj")
+        .arg("--private")
         .current_dir(temp.path())
         .assert()
         .success();
@@ -589,6 +371,7 @@ fn init_allows_immediate_issue_creation() {
     wk().arg("init")
         .arg("--prefix")
         .arg("myprj")
+        .arg("--private")
         .current_dir(temp.path())
         .assert()
         .success();

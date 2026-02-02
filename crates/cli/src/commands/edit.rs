@@ -1,12 +1,8 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Alfred Jean LLC
 
-use std::path::Path;
 use std::str::FromStr;
 
-use wk_core::OpPayload;
-
-use crate::config::Config;
 use crate::db::Database;
 
 use super::{apply_mutation, open_db};
@@ -17,19 +13,12 @@ use crate::validate::{
 };
 
 pub fn run(id: &str, attr: &str, value: &str) -> Result<()> {
-    let (db, config, work_dir) = open_db()?;
-    run_impl(&db, &config, &work_dir, id, attr, value)
+    let (db, _config, _work_dir) = open_db()?;
+    run_impl(&db, id, attr, value)
 }
 
-/// Internal implementation that accepts db/config for testing.
-pub(crate) fn run_impl(
-    db: &Database,
-    config: &Config,
-    work_dir: &Path,
-    id: &str,
-    attr: &str,
-    value: &str,
-) -> Result<()> {
+/// Internal implementation that accepts db for testing.
+pub(crate) fn run_impl(db: &Database, id: &str, attr: &str, value: &str) -> Result<()> {
     let resolved_id = db.resolve_id(id)?;
     let issue = db.get_issue(&resolved_id)?;
 
@@ -42,14 +31,8 @@ pub(crate) fn run_impl(
 
             apply_mutation(
                 db,
-                work_dir,
-                config,
                 Event::new(resolved_id.clone(), Action::Edited)
                     .with_values(Some(old_title), Some(normalized.title.clone())),
-                Some(OpPayload::set_title(
-                    resolved_id.clone(),
-                    normalized.title.clone(),
-                )),
             )?;
 
             // If normalization extracted a description, add it as a note
@@ -59,11 +42,8 @@ pub(crate) fn run_impl(
 
                     apply_mutation(
                         db,
-                        work_dir,
-                        config,
                         Event::new(resolved_id.clone(), Action::Noted)
                             .with_values(None, Some(extracted)),
-                        None,
                     )?;
                 }
             }
@@ -79,13 +59,10 @@ pub(crate) fn run_impl(
 
                 apply_mutation(
                     db,
-                    work_dir,
-                    config,
                     Event::new(resolved_id.clone(), Action::Edited).with_values(
                         Some(old_type.as_str().to_string()),
                         Some(new_type.as_str().to_string()),
                     ),
-                    Some(OpPayload::set_type(resolved_id.clone(), new_type)),
                 )?;
 
                 println!("Updated type of {} to: {}", resolved_id, new_type.as_str());
@@ -98,11 +75,8 @@ pub(crate) fn run_impl(
 
             apply_mutation(
                 db,
-                work_dir,
-                config,
                 Event::new(resolved_id.clone(), Action::Edited)
-                    .with_values(old_desc, Some(trimmed_desc.clone())),
-                None, // No sync for description edits
+                    .with_values(old_desc, Some(trimmed_desc)),
             )?;
 
             println!("Updated description of {}", resolved_id);
@@ -120,11 +94,8 @@ pub(crate) fn run_impl(
 
                     apply_mutation(
                         db,
-                        work_dir,
-                        config,
                         Event::new(resolved_id.clone(), Action::Unassigned)
                             .with_values(old_assignee, None),
-                        None, // No sync for assignee changes
                     )?;
 
                     println!("Unassigned {}", resolved_id);
@@ -135,11 +106,8 @@ pub(crate) fn run_impl(
 
                 apply_mutation(
                     db,
-                    work_dir,
-                    config,
                     Event::new(resolved_id.clone(), Action::Assigned)
                         .with_values(old_assignee, Some(trimmed.to_string())),
-                    None, // No sync for assignee changes
                 )?;
 
                 println!("Assigned {} to {}", resolved_id, trimmed);

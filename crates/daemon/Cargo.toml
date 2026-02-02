@@ -1,22 +1,20 @@
 [package]
-name = "wk-remote"
+name = "wokd"
 version.workspace = true
 edition.workspace = true
 
 [[bin]]
-name = "wk-remote"
+name = "wokd"
 path = "src/main.rs"
 
 [dependencies]
 wk-core = { path = "../core" }
-tokio = { version = "1", features = ["full"] }
-tokio-tungstenite = "0.28"
-futures-util = "0.3"
-tracing = "0.1"
-tracing-subscriber = { version = "0.3", features = ["env-filter"] }
-clap = { version = "4", features = ["derive"] }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+fs2 = "0.4"
+dirs = "6"
 
 [lints.rust]
 unsafe_code = "forbid"
@@ -25,6 +23,3 @@ unsafe_code = "forbid"
 panic = "deny"
 unwrap_used = "deny"
 expect_used = "deny"
-
-[dev-dependencies]
-tempfile = "3"

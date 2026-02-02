@@ -12,7 +12,6 @@ use yare::parameterized;
 
 #[parameterized(
     status = { DaemonRequest::Status },
-    sync_now = { DaemonRequest::SyncNow },
     shutdown = { DaemonRequest::Shutdown },
     ping = { DaemonRequest::Ping },
     hello = { DaemonRequest::Hello { version: "0.1.0".to_string() } },
@@ -24,8 +23,7 @@ fn daemon_request_serialization(request: DaemonRequest) {
 }
 
 #[parameterized(
-    status = { DaemonResponse::Status(DaemonStatus::new(true, false, "ws://localhost:7890".to_string(), 5, Some(12345), 1234, 3600)) },
-    sync_complete = { DaemonResponse::SyncComplete { ops_synced: 42 } },
+    status = { DaemonResponse::Status(DaemonStatus::new(1234, 3600)) },
     shutting_down = { DaemonResponse::ShuttingDown },
     pong = { DaemonResponse::Pong },
     error = { DaemonResponse::Error { message: "test error".to_string() } },
@@ -39,28 +37,14 @@ fn daemon_response_serialization(response: DaemonResponse) {
 
 #[test]
 fn daemon_status_new() {
-    let status = DaemonStatus::new(
-        true,
-        false,
-        "ws://example.com:7890".to_string(),
-        10,
-        Some(99999),
-        5678,
-        7200,
-    );
+    let status = DaemonStatus::new(5678, 7200);
 
-    assert!(status.connected);
-    assert!(!status.connecting);
-    assert_eq!(status.remote_url, "ws://example.com:7890");
-    assert_eq!(status.pending_ops, 10);
-    assert_eq!(status.last_sync, Some(99999));
     assert_eq!(status.pid, 5678);
     assert_eq!(status.uptime_secs, 7200);
 }
 
 #[parameterized(
     status = { DaemonRequest::Status },
-    sync_now = { DaemonRequest::SyncNow },
     shutdown = { DaemonRequest::Shutdown },
     ping = { DaemonRequest::Ping },
     hello = { DaemonRequest::Hello { version: "0.1.0".to_string() } },
@@ -75,8 +59,7 @@ fn framing_roundtrip_request(request: DaemonRequest) {
 }
 
 #[parameterized(
-    status = { DaemonResponse::Status(DaemonStatus::new(true, false, "ws://test:7890".to_string(), 5, Some(12345), 1000, 100)) },
-    sync_complete = { DaemonResponse::SyncComplete { ops_synced: 42 } },
+    status = { DaemonResponse::Status(DaemonStatus::new(1000, 100)) },
     shutting_down = { DaemonResponse::ShuttingDown },
     pong = { DaemonResponse::Pong },
     error = { DaemonResponse::Error { message: "test".to_string() } },

@@ -24,49 +24,39 @@ fn test_command_init_construction() {
     let cmd = Command::Init {
         prefix: Some("test".to_string()),
         path: None,
-        workspace: None,
-        remote: None,
-        local: false,
+        private: false,
     };
     // Verify pattern matching works
     if let Command::Init {
         prefix,
         path,
-        workspace,
-        remote,
-        ..
+        private,
     } = cmd
     {
         assert_eq!(prefix, Some("test".to_string()));
         assert!(path.is_none());
-        assert!(workspace.is_none());
-        assert!(remote.is_none());
+        assert!(!private);
     } else {
         panic!("Expected Init command");
     }
 }
 
 #[test]
-fn test_command_init_with_workspace_construction() {
+fn test_command_init_private_construction() {
     let cmd = Command::Init {
         prefix: Some("test".to_string()),
         path: None,
-        workspace: Some("/path/to/ws".to_string()),
-        remote: None,
-        local: false,
+        private: true,
     };
     if let Command::Init {
         prefix,
         path,
-        workspace,
-        remote,
-        ..
+        private,
     } = cmd
     {
         assert_eq!(prefix, Some("test".to_string()));
         assert!(path.is_none());
-        assert_eq!(workspace, Some("/path/to/ws".to_string()));
-        assert!(remote.is_none());
+        assert!(private);
     } else {
         panic!("Expected Init command");
     }

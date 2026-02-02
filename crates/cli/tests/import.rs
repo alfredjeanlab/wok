@@ -17,6 +17,7 @@ fn test_import_creates_issue() {
     wk().arg("init")
         .arg("--prefix")
         .arg("test")
+        .arg("--private")
         .current_dir(temp.path())
         .assert()
         .success();
@@ -52,6 +53,7 @@ fn test_import_dry_run() {
     wk().arg("init")
         .arg("--prefix")
         .arg("test")
+        .arg("--private")
         .current_dir(temp.path())
         .assert()
         .success();
@@ -87,6 +89,7 @@ fn test_import_updates_existing() {
     wk().arg("init")
         .arg("--prefix")
         .arg("test")
+        .arg("--private")
         .current_dir(temp.path())
         .assert()
         .success();
@@ -140,6 +143,7 @@ fn test_import_beads_format() {
     wk().arg("init")
         .arg("--prefix")
         .arg("test")
+        .arg("--private")
         .current_dir(temp.path())
         .assert()
         .success();
@@ -177,6 +181,7 @@ fn test_import_with_stdin() {
     wk().arg("init")
         .arg("--prefix")
         .arg("test")
+        .arg("--private")
         .current_dir(temp.path())
         .assert()
         .success();
@@ -204,6 +209,7 @@ fn test_import_without_input_shows_error() {
     wk().arg("init")
         .arg("--prefix")
         .arg("test")
+        .arg("--private")
         .current_dir(temp.path())
         .assert()
         .success();
@@ -223,6 +229,7 @@ fn test_import_status_filter() {
     wk().arg("init")
         .arg("--prefix")
         .arg("test")
+        .arg("--private")
         .current_dir(temp.path())
         .assert()
         .success();

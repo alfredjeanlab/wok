@@ -19,34 +19,27 @@ pub fn wk() -> Command {
     Command::cargo_bin("wk").unwrap()
 }
 
-/// Helper to create an initialized temp directory (local mode, default)
+/// Helper to create an initialized temp directory in private mode.
+/// Uses --private for test isolation (each test gets its own database).
 pub fn init_temp() -> TempDir {
     let temp = TempDir::new().unwrap();
     wk().arg("init")
         .arg("--prefix")
         .arg("test")
+        .arg("--private")
         .current_dir(temp.path())
         .assert()
         .success();
     temp
 }
 
-/// Helper to create an initialized temp directory in remote mode (git:.)
-pub fn init_temp_remote() -> TempDir {
+/// Helper to create an initialized temp directory in private mode
+pub fn init_temp_private() -> TempDir {
     let temp = TempDir::new().unwrap();
-
-    // Initialize git repo first
-    std::process::Command::new("git")
-        .arg("init")
-        .current_dir(temp.path())
-        .status()
-        .expect("git init failed");
-
     wk().arg("init")
         .arg("--prefix")
         .arg("test")
-        .arg("--remote")
-        .arg(".")
+        .arg("--private")
         .current_dir(temp.path())
         .assert()
         .success();

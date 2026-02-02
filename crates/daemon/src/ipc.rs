@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Alfred Jean LLC
 
-//! IPC protocol for CLI-daemon communication.
+//! IPC protocol for daemon-CLI communication.
 //!
-//! The daemon listens on a Unix socket and accepts commands from CLI processes.
+//! This module mirrors the protocol defined in the CLI crate's daemon/ipc.rs.
 //! Messages are serialized as JSON with length-prefixed framing.
 
 use serde::{Deserialize, Serialize};
@@ -49,7 +49,6 @@ pub struct DaemonStatus {
 
 impl DaemonStatus {
     /// Create a new status with the given parameters.
-    #[cfg(test)]
     pub fn new(pid: u32, uptime_secs: u64) -> Self {
         Self { pid, uptime_secs }
     }
@@ -64,74 +63,42 @@ pub mod framing {
     use std::io::{Read, Write};
 
     use super::*;
-    use crate::error::{Error, Result};
 
     /// Maximum message size (1MB) to prevent malformed responses from causing hangs.
     const MAX_MESSAGE_SIZE: usize = 1024 * 1024;
 
-    /// Write a request to the given writer.
-    pub fn write_request<W: Write>(writer: &mut W, request: &DaemonRequest) -> Result<()> {
-        let json = serde_json::to_vec(request)
-            .map_err(|e| Error::Io(std::io::Error::other(format!("serialize error: {}", e))))?;
-        let len = u32::try_from(json.len())
-            .map_err(|_| Error::Io(std::io::Error::other("message too large".to_string())))?;
-        writer.write_all(&len.to_be_bytes())?;
-        writer.write_all(&json)?;
-        writer.flush()?;
-        Ok(())
-    }
-
     /// Read a request from the given reader.
-    #[cfg(test)]
-    pub fn read_request<R: Read>(reader: &mut R) -> Result<DaemonRequest> {
+    pub fn read_request<R: Read>(reader: &mut R) -> std::io::Result<DaemonRequest> {
         let mut len_buf = [0u8; 4];
         reader.read_exact(&mut len_buf)?;
         let len = u32::from_be_bytes(len_buf) as usize;
 
         if len > MAX_MESSAGE_SIZE {
-            return Err(Error::Io(std::io::Error::other(format!(
+            return Err(std::io::Error::other(format!(
                 "message too large: {} bytes (max {})",
                 len, MAX_MESSAGE_SIZE
-            ))));
+            )));
         }
 
         let mut buf = vec![0u8; len];
         reader.read_exact(&mut buf)?;
 
         serde_json::from_slice(&buf)
-            .map_err(|e| Error::Io(std::io::Error::other(format!("deserialize error: {}", e))))
+            .map_err(|e| std::io::Error::other(format!("deserialize error: {}", e)))
     }
 
     /// Write a response to the given writer.
-    #[cfg(test)]
-    pub fn write_response<W: Write>(writer: &mut W, response: &DaemonResponse) -> Result<()> {
+    pub fn write_response<W: Write>(
+        writer: &mut W,
+        response: &DaemonResponse,
+    ) -> std::io::Result<()> {
         let json = serde_json::to_vec(response)
-            .map_err(|e| Error::Io(std::io::Error::other(format!("serialize error: {}", e))))?;
-        let len = u32::try_from(json.len())
-            .map_err(|_| Error::Io(std::io::Error::other("message too large".to_string())))?;
+            .map_err(|e| std::io::Error::other(format!("serialize error: {}", e)))?;
+        let len =
+            u32::try_from(json.len()).map_err(|_| std::io::Error::other("message too large"))?;
         writer.write_all(&len.to_be_bytes())?;
         writer.write_all(&json)?;
         writer.flush()?;
         Ok(())
-    }
-
-    /// Read a response from the given reader.
-    pub fn read_response<R: Read>(reader: &mut R) -> Result<DaemonResponse> {
-        let mut len_buf = [0u8; 4];
-        reader.read_exact(&mut len_buf)?;
-        let len = u32::from_be_bytes(len_buf) as usize;
-
-        if len > MAX_MESSAGE_SIZE {
-            return Err(Error::Io(std::io::Error::other(format!(
-                "message too large: {} bytes (max {})",
-                len, MAX_MESSAGE_SIZE
-            ))));
-        }
-
-        let mut buf = vec![0u8; len];
-        reader.read_exact(&mut buf)?;
-
-        serde_json::from_slice(&buf)
-            .map_err(|e| Error::Io(std::io::Error::other(format!("deserialize error: {}", e))))
     }
 }

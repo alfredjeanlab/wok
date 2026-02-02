@@ -1,11 +1,6 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Alfred Jean LLC
 
-use std::path::Path;
-
-use wk_core::OpPayload;
-
-use crate::config::Config;
 use crate::db::Database;
 
 use super::{apply_mutation, open_db};
@@ -14,34 +9,22 @@ use crate::models::{Action, Event};
 use crate::validate::{validate_label, validate_label_count};
 
 pub fn add(ids: &[String], label: &str) -> Result<()> {
-    let (db, config, work_dir) = open_db()?;
-    add_impl(&db, &config, &work_dir, ids, label)
+    let (db, _config, _work_dir) = open_db()?;
+    add_impl(&db, ids, label)
 }
 
-/// Internal implementation that accepts db/config for testing.
-pub(crate) fn add_impl(
-    db: &Database,
-    config: &Config,
-    work_dir: &Path,
-    ids: &[String],
-    label: &str,
-) -> Result<()> {
+/// Internal implementation that accepts db for testing.
+pub(crate) fn add_impl(db: &Database, ids: &[String], label: &str) -> Result<()> {
     // Validate label once (applies to all)
     validate_label(label)?;
 
     for id in ids {
-        add_single(db, config, work_dir, id, label)?;
+        add_single(db, id, label)?;
     }
     Ok(())
 }
 
-fn add_single(
-    db: &Database,
-    config: &Config,
-    work_dir: &Path,
-    id: &str,
-    label: &str,
-) -> Result<()> {
+fn add_single(db: &Database, id: &str, label: &str) -> Result<()> {
     // Resolve potentially partial ID
     let resolved_id = db.resolve_id(id)?;
 
@@ -56,10 +39,7 @@ fn add_single(
 
     apply_mutation(
         db,
-        work_dir,
-        config,
         Event::new(resolved_id.clone(), Action::Labeled).with_values(None, Some(label.to_string())),
-        Some(OpPayload::add_label(resolved_id.clone(), label.to_string())),
     )?;
 
     println!("Labeled {} with {}", resolved_id, label);
@@ -68,31 +48,19 @@ fn add_single(
 }
 
 pub fn remove(ids: &[String], label: &str) -> Result<()> {
-    let (db, config, work_dir) = open_db()?;
-    remove_impl(&db, &config, &work_dir, ids, label)
+    let (db, _config, _work_dir) = open_db()?;
+    remove_impl(&db, ids, label)
 }
 
-/// Internal implementation that accepts db/config for testing.
-pub(crate) fn remove_impl(
-    db: &Database,
-    config: &Config,
-    work_dir: &Path,
-    ids: &[String],
-    label: &str,
-) -> Result<()> {
+/// Internal implementation that accepts db for testing.
+pub(crate) fn remove_impl(db: &Database, ids: &[String], label: &str) -> Result<()> {
     for id in ids {
-        remove_single(db, config, work_dir, id, label)?;
+        remove_single(db, id, label)?;
     }
     Ok(())
 }
 
-fn remove_single(
-    db: &Database,
-    config: &Config,
-    work_dir: &Path,
-    id: &str,
-    label: &str,
-) -> Result<()> {
+fn remove_single(db: &Database, id: &str, label: &str) -> Result<()> {
     // Resolve potentially partial ID
     let resolved_id = db.resolve_id(id)?;
 
@@ -104,14 +72,8 @@ fn remove_single(
     if removed {
         apply_mutation(
             db,
-            work_dir,
-            config,
             Event::new(resolved_id.clone(), Action::Unlabeled)
                 .with_values(None, Some(label.to_string())),
-            Some(OpPayload::remove_label(
-                resolved_id.clone(),
-                label.to_string(),
-            )),
         )?;
 
         println!("Removed label {} from {}", label, resolved_id);

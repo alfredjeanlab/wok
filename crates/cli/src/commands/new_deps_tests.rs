@@ -21,8 +21,7 @@ fn test_run_impl_with_blocks() {
     // Create new issue that blocks the target
     let result = run_impl(
         &ctx.db,
-        &ctx.config,
-        &ctx.work_dir,
+        &ctx.config.prefix,
         "bug".to_string(),
         Some("Blocker".to_string()),
         vec![],
@@ -62,8 +61,7 @@ fn test_run_impl_with_blocked_by() {
     // Create new issue that is blocked by the blocker
     let result = run_impl(
         &ctx.db,
-        &ctx.config,
-        &ctx.work_dir,
+        &ctx.config.prefix,
         "task".to_string(),
         Some("Blocked task".to_string()),
         vec![],
@@ -101,8 +99,7 @@ fn test_run_impl_with_tracks() {
     // Create feature that tracks the subtask
     let result = run_impl(
         &ctx.db,
-        &ctx.config,
-        &ctx.work_dir,
+        &ctx.config.prefix,
         "feature".to_string(),
         Some("Feature".to_string()),
         vec![],
@@ -147,8 +144,7 @@ fn test_run_impl_with_tracked_by() {
     // Create task that is tracked by the feature
     let result = run_impl(
         &ctx.db,
-        &ctx.config,
-        &ctx.work_dir,
+        &ctx.config.prefix,
         "task".to_string(),
         Some("Subtask".to_string()),
         vec![],
@@ -194,8 +190,7 @@ fn test_run_impl_with_comma_separated_blocks() {
     // Create new issue that blocks both
     let result = run_impl(
         &ctx.db,
-        &ctx.config,
-        &ctx.work_dir,
+        &ctx.config.prefix,
         "bug".to_string(),
         Some("Multi-blocker".to_string()),
         vec![],
@@ -235,8 +230,7 @@ fn test_run_impl_with_invalid_target_fails() {
     // Create new issue that blocks nonexistent target
     let result = run_impl(
         &ctx.db,
-        &ctx.config,
-        &ctx.work_dir,
+        &ctx.config.prefix,
         "bug".to_string(),
         Some("Bad blocker".to_string()),
         vec![],

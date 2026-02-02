@@ -3,9 +3,6 @@
 
 //! External link management command.
 
-use std::path::Path;
-
-use crate::config::Config;
 use crate::db::links::new_link;
 use crate::db::Database;
 use crate::error::{Error, Result};
@@ -15,19 +12,12 @@ use super::{apply_mutation, open_db};
 
 /// Add an external link to an issue.
 pub fn add(id: &str, url: &str, reason: Option<String>) -> Result<()> {
-    let (db, config, work_dir) = open_db()?;
-    add_impl(&db, &work_dir, &config, id, url, reason)
+    let (db, _config, _work_dir) = open_db()?;
+    add_impl_with_reason(&db, id, url, reason)
 }
 
-/// Internal implementation that accepts db for testing.
-pub(crate) fn add_impl(
-    db: &Database,
-    work_dir: &Path,
-    config: &Config,
-    id: &str,
-    url: &str,
-    reason: Option<String>,
-) -> Result<()> {
+/// Internal implementation for adding a link with optional reason.
+fn add_impl_with_reason(db: &Database, id: &str, url: &str, reason: Option<String>) -> Result<()> {
     // Resolve potentially partial ID
     let resolved_id = db.resolve_id(id)?;
 
@@ -65,13 +55,10 @@ pub(crate) fn add_impl(
 
     db.add_link(&link)?;
 
-    // Log event (links don't sync currently)
+    // Log event
     apply_mutation(
         db,
-        work_dir,
-        config,
         Event::new(resolved_id.clone(), Action::Linked).with_values(None, Some(url.to_string())),
-        None,
     )?;
 
     println!("Added link to {}", resolved_id);
@@ -80,18 +67,12 @@ pub(crate) fn add_impl(
 
 /// Remove an external link from an issue.
 pub fn remove(id: &str, url: &str) -> Result<()> {
-    let (db, config, work_dir) = open_db()?;
-    remove_impl(&db, &work_dir, &config, id, url)
+    let (db, _config, _work_dir) = open_db()?;
+    remove_impl(&db, id, url)
 }
 
-/// Internal implementation that accepts db for testing.
-pub(crate) fn remove_impl(
-    db: &Database,
-    work_dir: &Path,
-    config: &Config,
-    id: &str,
-    url: &str,
-) -> Result<()> {
+/// Internal implementation for removing a link.
+fn remove_impl(db: &Database, id: &str, url: &str) -> Result<()> {
     // Resolve potentially partial ID
     let resolved_id = db.resolve_id(id)?;
 
@@ -106,14 +87,11 @@ pub(crate) fn remove_impl(
         Some(link) => {
             db.remove_link(link.id)?;
 
-            // Log event (links don't sync currently)
+            // Log event
             apply_mutation(
                 db,
-                work_dir,
-                config,
                 Event::new(resolved_id.clone(), Action::Unlinked)
                     .with_values(Some(url.to_string()), None),
-                None,
             )?;
 
             println!("Removed link from {}", resolved_id);
@@ -130,13 +108,7 @@ pub(crate) fn remove_impl(
 ///
 /// This is a helper function used by the `new` command to add links
 /// during issue creation.
-pub(crate) fn add_link_impl(
-    db: &Database,
-    work_dir: &Path,
-    config: &Config,
-    issue_id: &str,
-    url: &str,
-) -> Result<()> {
+pub(crate) fn add_link_impl(db: &Database, issue_id: &str, url: &str) -> Result<()> {
     let (link_type, external_id) = parse_link_url(url);
 
     let mut link = new_link(issue_id);
@@ -146,13 +118,10 @@ pub(crate) fn add_link_impl(
 
     db.add_link(&link)?;
 
-    // Log event (links don't sync currently)
+    // Log event
     apply_mutation(
         db,
-        work_dir,
-        config,
         Event::new(issue_id.to_string(), Action::Linked).with_values(None, Some(url.to_string())),
-        None,
     )?;
 
     Ok(())

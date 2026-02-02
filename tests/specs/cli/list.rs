@@ -22,6 +22,7 @@ fn init_temp() -> TempDir {
     wk().arg("init")
         .arg("--prefix")
         .arg("test")
+        .arg("--private")
         .current_dir(temp.path())
         .assert()
         .success();

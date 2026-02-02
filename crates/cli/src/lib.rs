@@ -9,7 +9,7 @@
 //! # Main Components
 //!
 //! - [`Database`] - SQLite-backed storage for issues, events, notes, and dependencies
-//! - [`Config`] - Project configuration (prefix, workspace location)
+//! - [`Config`] - Project configuration (prefix, private mode)
 //! - [`models`] - Core data types ([`Issue`](models::Issue), [`Event`](models::Event), etc.)
 //! - [`Error`] - Error types for all operations
 //!
@@ -37,28 +37,24 @@ mod completions;
 mod daemon;
 mod display;
 pub mod filter;
-mod git_hooks;
 pub mod help;
 mod mode;
 mod normalize;
 mod schema;
 pub mod timings;
 mod validate;
-mod wal;
-mod worktree;
 
 pub mod config;
 pub mod db;
 pub mod error;
 pub mod id;
 pub mod models;
-pub mod sync;
 
 pub use cli::{
-    AssigneeArgs, Cli, Command, ConfigCommand, HooksCommand, LimitArgs, OutputFormat,
-    RemoteCommand, SchemaCommand, TypeLabelArgs,
+    AssigneeArgs, Cli, Command, ConfigCommand, DaemonCommand, HooksCommand, LimitArgs,
+    OutputFormat, SchemaCommand, TypeLabelArgs,
 };
-pub use config::{find_work_dir, get_db_path, init_work_dir, init_workspace_link, Config};
+pub use config::{find_work_dir, get_db_path, init_work_dir, Config};
 pub use db::Database;
 pub use error::{Error, Result};
 
@@ -88,10 +84,8 @@ pub fn run(command: Command) -> Result<()> {
         Command::Init {
             prefix,
             path,
-            workspace,
-            remote,
-            local,
-        } => commands::init::run(prefix, path, workspace, remote, local),
+            private,
+        } => commands::init::run(prefix, path, private),
         Command::New {
             type_or_title,
             title,
@@ -237,17 +231,11 @@ pub fn run(command: Command) -> Result<()> {
             Ok(())
         }
         Command::Prime => commands::prime::run(),
-        Command::Remote(cmd) => match cmd {
-            RemoteCommand::Status => commands::remote::status(),
-            RemoteCommand::Sync { force, quiet } => commands::remote::sync(force, quiet),
-            RemoteCommand::Stop => commands::remote::stop(),
-            RemoteCommand::Run {
-                daemon_dir,
-                work_dir,
-            } => {
-                let cfg = config::Config::load(&work_dir)?;
-                daemon::run_daemon(&daemon_dir, &cfg)
-            }
+        Command::Daemon(cmd) => match cmd {
+            DaemonCommand::Status => commands::daemon::status(),
+            DaemonCommand::Stop => commands::daemon::stop(),
+            DaemonCommand::Start { foreground } => commands::daemon::start(foreground),
+            DaemonCommand::Logs { follow } => commands::daemon::logs(follow),
         },
         Command::Hooks(cmd) => match cmd {
             HooksCommand::Install {

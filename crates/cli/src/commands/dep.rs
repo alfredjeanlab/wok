@@ -1,31 +1,19 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Alfred Jean LLC
 
-use std::path::Path;
-
-use wk_core::OpPayload;
-
-use crate::config::Config;
 use crate::db::Database;
 
-use super::{apply_mutation, open_db, queue_op};
+use super::{apply_mutation, open_db};
 use crate::error::Result;
 use crate::models::{Action, Event, Relation, UserRelation};
 
 pub fn add(from_id: &str, rel: &str, to_ids: &[String]) -> Result<()> {
-    let (db, config, work_dir) = open_db()?;
-    add_impl(&db, &config, &work_dir, from_id, rel, to_ids)
+    let (db, _config, _work_dir) = open_db()?;
+    add_impl(&db, from_id, rel, to_ids)
 }
 
-/// Internal implementation that accepts db/config for testing.
-pub(crate) fn add_impl(
-    db: &Database,
-    config: &Config,
-    work_dir: &Path,
-    from_id: &str,
-    rel: &str,
-    to_ids: &[String],
-) -> Result<()> {
+/// Internal implementation that accepts db for testing.
+pub(crate) fn add_impl(db: &Database, from_id: &str, rel: &str, to_ids: &[String]) -> Result<()> {
     // Resolve and verify source issue exists (fail fast on ambiguity)
     let resolved_from = db.resolve_id(from_id)?;
     db.get_issue(&resolved_from)?;
@@ -43,15 +31,8 @@ pub(crate) fn add_impl(
 
                 apply_mutation(
                     db,
-                    work_dir,
-                    config,
                     Event::new(resolved_from.clone(), Action::Related)
                         .with_values(None, Some(format!("blocks {}", resolved_to))),
-                    Some(OpPayload::add_dep(
-                        resolved_from.clone(),
-                        resolved_to.clone(),
-                        wk_core::issue::Relation::Blocks,
-                    )),
                 )?;
 
                 println!("{} blocks {}", resolved_from, resolved_to);
@@ -62,15 +43,8 @@ pub(crate) fn add_impl(
 
                 apply_mutation(
                     db,
-                    work_dir,
-                    config,
                     Event::new(resolved_from.clone(), Action::Related)
                         .with_values(None, Some(format!("blocked by {}", resolved_to))),
-                    Some(OpPayload::add_dep(
-                        resolved_to.clone(),
-                        resolved_from.clone(),
-                        wk_core::issue::Relation::Blocks,
-                    )),
                 )?;
 
                 println!("{} blocked by {}", resolved_from, resolved_to);
@@ -84,25 +58,8 @@ pub(crate) fn add_impl(
 
                 apply_mutation(
                     db,
-                    work_dir,
-                    config,
                     Event::new(resolved_from.clone(), Action::Related)
                         .with_values(None, Some(format!("tracks {}", resolved_to))),
-                    Some(OpPayload::add_dep(
-                        resolved_from.clone(),
-                        resolved_to.clone(),
-                        wk_core::issue::Relation::Tracks,
-                    )),
-                )?;
-                // Second queue_op for reverse direction
-                queue_op(
-                    work_dir,
-                    config,
-                    OpPayload::add_dep(
-                        resolved_to.clone(),
-                        resolved_from.clone(),
-                        wk_core::issue::Relation::TrackedBy,
-                    ),
                 )?;
 
                 println!("{} tracks {}", resolved_from, resolved_to);
@@ -114,25 +71,8 @@ pub(crate) fn add_impl(
 
                 apply_mutation(
                     db,
-                    work_dir,
-                    config,
                     Event::new(resolved_from.clone(), Action::Related)
                         .with_values(None, Some(format!("tracked by {}", resolved_to))),
-                    Some(OpPayload::add_dep(
-                        resolved_to.clone(),
-                        resolved_from.clone(),
-                        wk_core::issue::Relation::Tracks,
-                    )),
-                )?;
-                // Second queue_op for reverse direction
-                queue_op(
-                    work_dir,
-                    config,
-                    OpPayload::add_dep(
-                        resolved_from.clone(),
-                        resolved_to.clone(),
-                        wk_core::issue::Relation::TrackedBy,
-                    ),
                 )?;
 
                 println!("{} tracked by {}", resolved_from, resolved_to);
@@ -144,15 +84,13 @@ pub(crate) fn add_impl(
 }
 
 pub fn remove(from_id: &str, rel: &str, to_ids: &[String]) -> Result<()> {
-    let (db, config, work_dir) = open_db()?;
-    remove_impl(&db, &config, &work_dir, from_id, rel, to_ids)
+    let (db, _config, _work_dir) = open_db()?;
+    remove_impl(&db, from_id, rel, to_ids)
 }
 
-/// Internal implementation that accepts db/config for testing.
+/// Internal implementation that accepts db for testing.
 pub(crate) fn remove_impl(
     db: &Database,
-    config: &Config,
-    work_dir: &Path,
     from_id: &str,
     rel: &str,
     to_ids: &[String],
@@ -172,15 +110,8 @@ pub(crate) fn remove_impl(
 
                 apply_mutation(
                     db,
-                    work_dir,
-                    config,
                     Event::new(resolved_from.clone(), Action::Unrelated)
                         .with_values(None, Some(format!("blocks {}", resolved_to))),
-                    Some(OpPayload::remove_dep(
-                        resolved_from.clone(),
-                        resolved_to.clone(),
-                        wk_core::issue::Relation::Blocks,
-                    )),
                 )?;
 
                 println!("Removed: {} blocks {}", resolved_from, resolved_to);
@@ -191,15 +122,8 @@ pub(crate) fn remove_impl(
 
                 apply_mutation(
                     db,
-                    work_dir,
-                    config,
                     Event::new(resolved_from.clone(), Action::Unrelated)
                         .with_values(None, Some(format!("blocked by {}", resolved_to))),
-                    Some(OpPayload::remove_dep(
-                        resolved_to.clone(),
-                        resolved_from.clone(),
-                        wk_core::issue::Relation::Blocks,
-                    )),
                 )?;
 
                 println!("Removed: {} blocked by {}", resolved_from, resolved_to);
@@ -210,25 +134,8 @@ pub(crate) fn remove_impl(
 
                 apply_mutation(
                     db,
-                    work_dir,
-                    config,
                     Event::new(resolved_from.clone(), Action::Unrelated)
                         .with_values(None, Some(format!("tracks {}", resolved_to))),
-                    Some(OpPayload::remove_dep(
-                        resolved_from.clone(),
-                        resolved_to.clone(),
-                        wk_core::issue::Relation::Tracks,
-                    )),
-                )?;
-                // Second queue_op for reverse direction
-                queue_op(
-                    work_dir,
-                    config,
-                    OpPayload::remove_dep(
-                        resolved_to.clone(),
-                        resolved_from.clone(),
-                        wk_core::issue::Relation::TrackedBy,
-                    ),
                 )?;
 
                 println!("Removed: {} tracks {}", resolved_from, resolved_to);
@@ -240,25 +147,8 @@ pub(crate) fn remove_impl(
 
                 apply_mutation(
                     db,
-                    work_dir,
-                    config,
                     Event::new(resolved_from.clone(), Action::Unrelated)
                         .with_values(None, Some(format!("tracked by {}", resolved_to))),
-                    Some(OpPayload::remove_dep(
-                        resolved_to.clone(),
-                        resolved_from.clone(),
-                        wk_core::issue::Relation::Tracks,
-                    )),
-                )?;
-                // Second queue_op for reverse direction
-                queue_op(
-                    work_dir,
-                    config,
-                    OpPayload::remove_dep(
-                        resolved_from.clone(),
-                        resolved_to.clone(),
-                        wk_core::issue::Relation::TrackedBy,
-                    ),
                 )?;
 
                 println!("Removed: {} tracked by {}", resolved_from, resolved_to);

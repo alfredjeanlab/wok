@@ -49,7 +49,7 @@ impl Project {
         cargo_bin_cmd!("wk")
             .current_dir(&path)
             .env("HOME", &path)
-            .args(["init", "--prefix", prefix])
+            .args(["init", "--prefix", prefix, "--private"])
             .assert()
             .success();
 

@@ -123,14 +123,7 @@ fn test_add_impl_blocks() {
     create_issue(&ctx.db, "blocker");
     create_issue(&ctx.db, "blocked");
 
-    let result = add_impl(
-        &ctx.db,
-        &ctx.config,
-        &ctx.work_dir,
-        "blocker",
-        "blocks",
-        &["blocked".to_string()],
-    );
+    let result = add_impl(&ctx.db, "blocker", "blocks", &["blocked".to_string()]);
     assert!(result.is_ok());
 
     let deps = ctx.db.get_deps_from("blocker").unwrap();
@@ -143,14 +136,7 @@ fn test_add_impl_tracks() {
     create_issue(&ctx.db, "parent");
     create_issue(&ctx.db, "child");
 
-    let result = add_impl(
-        &ctx.db,
-        &ctx.config,
-        &ctx.work_dir,
-        "parent",
-        "tracks",
-        &["child".to_string()],
-    );
+    let result = add_impl(&ctx.db, "parent", "tracks", &["child".to_string()]);
     assert!(result.is_ok());
 
     // tracks creates tracks and tracked-by
@@ -167,8 +153,6 @@ fn test_add_impl_multiple_targets() {
 
     let result = add_impl(
         &ctx.db,
-        &ctx.config,
-        &ctx.work_dir,
         "blocker",
         "blocks",
         &["blocked1".to_string(), "blocked2".to_string()],
@@ -184,14 +168,7 @@ fn test_add_impl_nonexistent_source() {
     let ctx = setup_test_context();
     create_issue(&ctx.db, "target");
 
-    let result = add_impl(
-        &ctx.db,
-        &ctx.config,
-        &ctx.work_dir,
-        "nonexistent",
-        "blocks",
-        &["target".to_string()],
-    );
+    let result = add_impl(&ctx.db, "nonexistent", "blocks", &["target".to_string()]);
     assert!(result.is_err());
 }
 
@@ -200,14 +177,7 @@ fn test_add_impl_nonexistent_target() {
     let ctx = setup_test_context();
     create_issue(&ctx.db, "source");
 
-    let result = add_impl(
-        &ctx.db,
-        &ctx.config,
-        &ctx.work_dir,
-        "source",
-        "blocks",
-        &["nonexistent".to_string()],
-    );
+    let result = add_impl(&ctx.db, "source", "blocks", &["nonexistent".to_string()]);
     assert!(result.is_err());
 }
 
@@ -217,14 +187,7 @@ fn test_add_impl_invalid_relation() {
     create_issue(&ctx.db, "a");
     create_issue(&ctx.db, "b");
 
-    let result = add_impl(
-        &ctx.db,
-        &ctx.config,
-        &ctx.work_dir,
-        "a",
-        "invalid",
-        &["b".to_string()],
-    );
+    let result = add_impl(&ctx.db, "a", "invalid", &["b".to_string()]);
     assert!(result.is_err());
 }
 
@@ -237,14 +200,7 @@ fn test_remove_impl_blocks() {
         .add_dependency("blocker", "blocked", Relation::Blocks)
         .unwrap();
 
-    let result = remove_impl(
-        &ctx.db,
-        &ctx.config,
-        &ctx.work_dir,
-        "blocker",
-        "blocks",
-        &["blocked".to_string()],
-    );
+    let result = remove_impl(&ctx.db, "blocker", "blocks", &["blocked".to_string()]);
     assert!(result.is_ok());
 
     let deps = ctx.db.get_deps_from("blocker").unwrap();
@@ -263,14 +219,7 @@ fn test_remove_impl_tracks() {
         .add_dependency("child", "parent", Relation::TrackedBy)
         .unwrap();
 
-    let result = remove_impl(
-        &ctx.db,
-        &ctx.config,
-        &ctx.work_dir,
-        "parent",
-        "tracks",
-        &["child".to_string()],
-    );
+    let result = remove_impl(&ctx.db, "parent", "tracks", &["child".to_string()]);
     assert!(result.is_ok());
 
     // Both tracks and tracked-by should be removed
@@ -287,14 +236,7 @@ fn test_add_impl_blocked_by() {
     create_issue(&ctx.db, "blocker");
 
     // "blocked blocked-by blocker" means "blocker blocks blocked"
-    let result = add_impl(
-        &ctx.db,
-        &ctx.config,
-        &ctx.work_dir,
-        "blocked",
-        "blocked-by",
-        &["blocker".to_string()],
-    );
+    let result = add_impl(&ctx.db, "blocked", "blocked-by", &["blocker".to_string()]);
     assert!(result.is_ok());
 
     // The dependency should be stored as "blocker blocks blocked"
@@ -315,8 +257,6 @@ fn test_add_impl_blocked_by_multiple_targets() {
     // "blocked blocked-by blocker1 blocker2 blocker3"
     let result = add_impl(
         &ctx.db,
-        &ctx.config,
-        &ctx.work_dir,
         "blocked",
         "blocked-by",
         &[
@@ -343,14 +283,7 @@ fn test_add_impl_tracked_by() {
     create_issue(&ctx.db, "parent");
 
     // "child tracked-by parent" means "parent tracks child"
-    let result = add_impl(
-        &ctx.db,
-        &ctx.config,
-        &ctx.work_dir,
-        "child",
-        "tracked-by",
-        &["parent".to_string()],
-    );
+    let result = add_impl(&ctx.db, "child", "tracked-by", &["parent".to_string()]);
     assert!(result.is_ok());
 
     // Parent should have tracks dependency to child
@@ -378,14 +311,7 @@ fn test_remove_impl_blocked_by() {
         .unwrap();
 
     // Remove using blocked-by syntax
-    let result = remove_impl(
-        &ctx.db,
-        &ctx.config,
-        &ctx.work_dir,
-        "blocked",
-        "blocked-by",
-        &["blocker".to_string()],
-    );
+    let result = remove_impl(&ctx.db, "blocked", "blocked-by", &["blocker".to_string()]);
     assert!(result.is_ok());
 
     let deps = ctx.db.get_deps_from("blocker").unwrap();
@@ -407,14 +333,7 @@ fn test_remove_impl_tracked_by() {
         .unwrap();
 
     // Remove using tracked-by syntax
-    let result = remove_impl(
-        &ctx.db,
-        &ctx.config,
-        &ctx.work_dir,
-        "child",
-        "tracked-by",
-        &["parent".to_string()],
-    );
+    let result = remove_impl(&ctx.db, "child", "tracked-by", &["parent".to_string()]);
     assert!(result.is_ok());
 
     // Both tracks and tracked-by should be removed
@@ -433,25 +352,11 @@ fn test_add_impl_blocked_by_alternate_spellings() {
     create_issue(&ctx.db, "d");
 
     // Test blocked_by (underscore)
-    let result = add_impl(
-        &ctx.db,
-        &ctx.config,
-        &ctx.work_dir,
-        "a",
-        "blocked_by",
-        &["b".to_string()],
-    );
+    let result = add_impl(&ctx.db, "a", "blocked_by", &["b".to_string()]);
     assert!(result.is_ok());
 
     // Test blockedby (no separator)
-    let result = add_impl(
-        &ctx.db,
-        &ctx.config,
-        &ctx.work_dir,
-        "c",
-        "blockedby",
-        &["d".to_string()],
-    );
+    let result = add_impl(&ctx.db, "c", "blockedby", &["d".to_string()]);
     assert!(result.is_ok());
 
     // Verify both created correct dependencies

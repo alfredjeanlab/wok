@@ -253,8 +253,7 @@ fn test_run_impl_creates_task() {
 
     let result = run_impl(
         &ctx.db,
-        &ctx.config,
-        &ctx.work_dir,
+        &ctx.config.prefix,
         "task".to_string(),
         Some("My new task".to_string()),
         vec![],
@@ -286,8 +285,7 @@ fn test_run_impl_creates_bug() {
 
     let result = run_impl(
         &ctx.db,
-        &ctx.config,
-        &ctx.work_dir,
+        &ctx.config.prefix,
         "bug".to_string(),
         Some("Fix crash".to_string()),
         vec![],
@@ -316,8 +314,7 @@ fn test_run_impl_creates_feature() {
 
     let result = run_impl(
         &ctx.db,
-        &ctx.config,
-        &ctx.work_dir,
+        &ctx.config.prefix,
         "feature".to_string(),
         Some("Big feature".to_string()),
         vec![],
@@ -346,8 +343,7 @@ fn test_run_impl_creates_chore() {
 
     let result = run_impl(
         &ctx.db,
-        &ctx.config,
-        &ctx.work_dir,
+        &ctx.config.prefix,
         "chore".to_string(),
         Some("Update dependencies".to_string()),
         vec![],
@@ -377,8 +373,7 @@ fn test_run_impl_title_only_defaults_to_task() {
     // When title is None, type_or_title is treated as the title
     let result = run_impl(
         &ctx.db,
-        &ctx.config,
-        &ctx.work_dir,
+        &ctx.config.prefix,
         "Just a title".to_string(),
         None,
         vec![],
@@ -408,8 +403,7 @@ fn test_run_impl_with_labels() {
 
     let result = run_impl(
         &ctx.db,
-        &ctx.config,
-        &ctx.work_dir,
+        &ctx.config.prefix,
         "task".to_string(),
         Some("Labeled task".to_string()),
         vec!["urgent".to_string(), "backend".to_string()],
@@ -441,8 +435,7 @@ fn test_run_impl_with_note() {
 
     let result = run_impl(
         &ctx.db,
-        &ctx.config,
-        &ctx.work_dir,
+        &ctx.config.prefix,
         "task".to_string(),
         Some("Task with note".to_string()),
         vec![],
@@ -473,8 +466,7 @@ fn test_run_impl_empty_title_rejected() {
 
     let result = run_impl(
         &ctx.db,
-        &ctx.config,
-        &ctx.work_dir,
+        &ctx.config.prefix,
         "task".to_string(),
         Some("".to_string()),
         vec![],
@@ -500,8 +492,7 @@ fn test_run_impl_whitespace_title_rejected() {
 
     let result = run_impl(
         &ctx.db,
-        &ctx.config,
-        &ctx.work_dir,
+        &ctx.config.prefix,
         "task".to_string(),
         Some("   ".to_string()),
         vec![],
@@ -527,8 +518,7 @@ fn test_run_impl_invalid_type_rejected() {
 
     let result = run_impl(
         &ctx.db,
-        &ctx.config,
-        &ctx.work_dir,
+        &ctx.config.prefix,
         "invalid_type".to_string(),
         Some("Test".to_string()),
         vec![],
@@ -554,8 +544,7 @@ fn test_run_impl_logs_events() {
 
     run_impl(
         &ctx.db,
-        &ctx.config,
-        &ctx.work_dir,
+        &ctx.config.prefix,
         "task".to_string(),
         Some("Event test".to_string()),
         vec!["label1".to_string()],
@@ -590,8 +579,7 @@ fn test_run_impl_with_priority_0() {
 
     let result = run_impl(
         &ctx.db,
-        &ctx.config,
-        &ctx.work_dir,
+        &ctx.config.prefix,
         "task".to_string(),
         Some("Priority task".to_string()),
         vec![],
@@ -621,8 +609,7 @@ fn test_run_impl_with_priority_4() {
 
     let result = run_impl(
         &ctx.db,
-        &ctx.config,
-        &ctx.work_dir,
+        &ctx.config.prefix,
         "task".to_string(),
         Some("Low priority".to_string()),
         vec![],
@@ -652,8 +639,7 @@ fn test_run_impl_priority_with_existing_labels() {
 
     let result = run_impl(
         &ctx.db,
-        &ctx.config,
-        &ctx.work_dir,
+        &ctx.config.prefix,
         "task".to_string(),
         Some("Multi-labeled".to_string()),
         vec!["backend".to_string()],
@@ -684,8 +670,7 @@ fn test_run_impl_without_priority() {
 
     let result = run_impl(
         &ctx.db,
-        &ctx.config,
-        &ctx.work_dir,
+        &ctx.config.prefix,
         "task".to_string(),
         Some("No priority".to_string()),
         vec![],
@@ -718,8 +703,7 @@ fn test_run_impl_with_description() {
 
     let result = run_impl(
         &ctx.db,
-        &ctx.config,
-        &ctx.work_dir,
+        &ctx.config.prefix,
         "task".to_string(),
         Some("Described task".to_string()),
         vec![],
@@ -750,8 +734,7 @@ fn test_run_impl_note_takes_precedence_over_description() {
 
     let result = run_impl(
         &ctx.db,
-        &ctx.config,
-        &ctx.work_dir,
+        &ctx.config.prefix,
         "task".to_string(),
         Some("Task".to_string()),
         vec![],
@@ -782,8 +765,7 @@ fn test_run_impl_without_description_or_note() {
 
     let result = run_impl(
         &ctx.db,
-        &ctx.config,
-        &ctx.work_dir,
+        &ctx.config.prefix,
         "task".to_string(),
         Some("No description".to_string()),
         vec![],
@@ -813,8 +795,7 @@ fn test_run_impl_description_with_labels() {
 
     let result = run_impl(
         &ctx.db,
-        &ctx.config,
-        &ctx.work_dir,
+        &ctx.config.prefix,
         "task".to_string(),
         Some("Labeled described".to_string()),
         vec!["backend".to_string()],
@@ -850,8 +831,7 @@ fn test_run_impl_comma_separated_labels() {
 
     let result = run_impl(
         &ctx.db,
-        &ctx.config,
-        &ctx.work_dir,
+        &ctx.config.prefix,
         "task".to_string(),
         Some("Comma labels".to_string()),
         vec!["a,b,c".to_string()],
@@ -884,8 +864,7 @@ fn test_run_impl_comma_separated_and_multiple_labels() {
 
     let result = run_impl(
         &ctx.db,
-        &ctx.config,
-        &ctx.work_dir,
+        &ctx.config.prefix,
         "task".to_string(),
         Some("Mixed labels".to_string()),
         vec!["a,b".to_string(), "c".to_string()],
@@ -918,8 +897,7 @@ fn test_run_impl_comma_separated_trims_whitespace() {
 
     let result = run_impl(
         &ctx.db,
-        &ctx.config,
-        &ctx.work_dir,
+        &ctx.config.prefix,
         "task".to_string(),
         Some("Whitespace labels".to_string()),
         vec!["  x  ,  y  ".to_string()],
@@ -951,8 +929,7 @@ fn test_run_impl_comma_separated_ignores_empty() {
 
     let result = run_impl(
         &ctx.db,
-        &ctx.config,
-        &ctx.work_dir,
+        &ctx.config.prefix,
         "task".to_string(),
         Some("Empty labels".to_string()),
         vec!["a,,b".to_string(), "".to_string()],
@@ -984,8 +961,7 @@ fn test_run_impl_comma_separated_with_priority() {
 
     let result = run_impl(
         &ctx.db,
-        &ctx.config,
-        &ctx.work_dir,
+        &ctx.config.prefix,
         "task".to_string(),
         Some("Priority labels".to_string()),
         vec!["a,b".to_string()],
@@ -1016,24 +992,15 @@ fn test_run_impl_comma_separated_with_priority() {
 
 #[test]
 fn test_run_impl_rejects_empty_prefix() {
-    use crate::config::Config;
     use crate::db::Database;
-    use tempfile::TempDir;
 
     let db = Database::open_in_memory().unwrap();
     // Create config with empty prefix (simulating workspace link without local prefix)
-    let config = Config {
-        prefix: String::new(),
-        workspace: Some("/shared/workspace".to_string()),
-        remote: None,
-    };
-    let temp_dir = TempDir::new().unwrap();
-    let work_dir = temp_dir.path();
+    let config_prefix = "";
 
     let result = run_impl(
         &db,
-        &config,
-        work_dir,
+        config_prefix,
         "task".to_string(),
         Some("Test task".to_string()),
         vec![],

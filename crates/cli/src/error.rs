@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Alfred Jean LLC
 
-use crate::sync::SyncError;
 use thiserror::Error;
 
 /// All possible errors that can occur in the wkrs library.
@@ -66,9 +65,6 @@ pub enum Error {
 
     #[error("workspace not found: {0}\n  hint: the workspace directory must exist before creating a link")]
     WorkspaceNotFound(String),
-
-    #[error("config remote and workspace are incompatible\n  hint: remote sync requires a single .wok/ location, but workspace stores the database elsewhere")]
-    WorkspaceRemoteIncompatible,
 
     // Phase 1: Filter Parser Errors
     #[error("empty filter expression")]
@@ -181,8 +177,8 @@ pub enum Error {
     #[error("corrupted data in database: {0}")]
     CorruptedData(String),
 
-    #[error("sync error: {0}")]
-    Sync(String),
+    #[error("daemon error: {0}")]
+    Daemon(String),
 
     #[error("daemon version mismatch: daemon is v{daemon_version}, CLI is v{cli_version}")]
     DaemonVersionMismatch {
@@ -204,12 +200,6 @@ pub enum Error {
 
 /// A specialized Result type for wkrs operations.
 pub type Result<T> = std::result::Result<T, Error>;
-
-impl From<SyncError> for Error {
-    fn from(e: SyncError) -> Self {
-        Error::Sync(e.to_string())
-    }
-}
 
 // TODO(refactor): Remove once deprecated wk_core::Error variants are removed
 #[allow(deprecated)]
@@ -244,7 +234,7 @@ impl From<wk_core::Error> for Error {
             wk_core::Error::CorruptedData(s) => Error::CorruptedData(s),
             wk_core::Error::DuplicateOp(s) => Error::InvalidInput(format!("duplicate op: {}", s)),
             wk_core::Error::InvalidHlc(s) => Error::InvalidInput(format!("invalid HLC: {}", s)),
-            wk_core::Error::Oplog(s) => Error::Sync(format!("oplog error: {}", s)),
+            wk_core::Error::Oplog(s) => Error::Daemon(format!("oplog error: {}", s)),
         }
     }
 }

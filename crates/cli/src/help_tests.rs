@@ -349,7 +349,7 @@ mod full_help {
             "init",
             "hooks",
             "config",
-            "remote",
+            "daemon",
             "export",
             "import",
             "schema",

@@ -67,7 +67,7 @@ mod config {
     fn should_create_config_with_valid_prefix() {
         let config = Config::new("test".to_string()).unwrap();
         assert_eq!(config.prefix, "test");
-        assert!(config.workspace.is_none());
+        assert!(!config.private);
     }
 
     #[test]
@@ -93,18 +93,18 @@ prefix = "testproj"
 "#;
         let config: Config = toml::from_str(toml).unwrap();
         assert_eq!(config.prefix, "testproj");
-        assert!(config.workspace.is_none());
+        assert!(!config.private);
     }
 
     #[test]
-    fn should_deserialize_config_with_workspace() {
+    fn should_deserialize_config_with_private() {
         let toml = r#"
 prefix = "testproj"
-workspace = "/path/to/workspace"
+private = true
 "#;
         let config: Config = toml::from_str(toml).unwrap();
         assert_eq!(config.prefix, "testproj");
-        assert_eq!(config.workspace, Some("/path/to/workspace".to_string()));
+        assert!(config.private);
     }
 }
 

@@ -1,13 +1,9 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Alfred Jean LLC
 
-use std::path::Path;
-
 use wk_core::detect::is_human_interactive;
 use wk_core::identity::get_user_name;
-use wk_core::OpPayload;
 
-use crate::config::Config;
 use crate::db::Database;
 
 use super::{apply_mutation, open_db};
@@ -234,21 +230,16 @@ where
 }
 
 pub fn start(ids: &[String]) -> Result<()> {
-    let (db, config, work_dir) = open_db()?;
-    start_impl(&db, &config, &work_dir, ids)
+    let (db, _config, _work_dir) = open_db()?;
+    start_impl(&db, ids)
 }
 
-/// Internal implementation that accepts db/config for testing.
-pub(crate) fn start_impl(
-    db: &Database,
-    config: &Config,
-    work_dir: &Path,
-    ids: &[String],
-) -> Result<()> {
-    bulk_operation(ids, "started", |id| start_single(db, config, work_dir, id))
+/// Internal implementation that accepts db for testing.
+pub(crate) fn start_impl(db: &Database, ids: &[String]) -> Result<()> {
+    bulk_operation(ids, "started", |id| start_single(db, id))
 }
 
-fn start_single(db: &Database, config: &Config, work_dir: &Path, id: &str) -> Result<()> {
+fn start_single(db: &Database, id: &str) -> Result<()> {
     let resolved_id = db.resolve_id(id)?;
     let issue = db.get_issue(&resolved_id)?;
 
@@ -265,17 +256,10 @@ fn start_single(db: &Database, config: &Config, work_dir: &Path, id: &str) -> Re
 
     apply_mutation(
         db,
-        work_dir,
-        config,
         Event::new(resolved_id.clone(), Action::Started).with_values(
             Some(issue.status.to_string()),
             Some("in_progress".to_string()),
         ),
-        Some(OpPayload::set_status(
-            resolved_id.clone(),
-            wk_core::Status::InProgress,
-            None,
-        )),
     )?;
 
     println!("Started {}", resolved_id);
@@ -291,30 +275,16 @@ pub fn done(ids: &[String], reason: Option<&str>) -> Result<()> {
         None
     };
 
-    let (db, config, work_dir) = open_db()?;
-    done_impl(&db, &config, &work_dir, ids, trimmed_reason.as_deref())
+    let (db, _config, _work_dir) = open_db()?;
+    done_impl(&db, ids, trimmed_reason.as_deref())
 }
 
-/// Internal implementation that accepts db/config for testing.
-pub(crate) fn done_impl(
-    db: &Database,
-    config: &Config,
-    work_dir: &Path,
-    ids: &[String],
-    reason: Option<&str>,
-) -> Result<()> {
-    bulk_operation(ids, "completed", |id| {
-        done_single(db, config, work_dir, id, reason)
-    })
+/// Internal implementation that accepts db for testing.
+pub(crate) fn done_impl(db: &Database, ids: &[String], reason: Option<&str>) -> Result<()> {
+    bulk_operation(ids, "completed", |id| done_single(db, id, reason))
 }
 
-fn done_single(
-    db: &Database,
-    config: &Config,
-    work_dir: &Path,
-    id: &str,
-    reason: Option<&str>,
-) -> Result<()> {
+fn done_single(db: &Database, id: &str, reason: Option<&str>) -> Result<()> {
     let resolved_id = db.resolve_id(id)?;
     let issue = db.get_issue(&resolved_id)?;
 
@@ -322,14 +292,7 @@ fn done_single(
     if issue.status == Status::Todo && reason.is_none() {
         // Try to resolve a reason (auto-generate for humans, error for agents)
         let effective_reason = resolve_reason(None, "complete")?;
-        return done_single_with_reason(
-            db,
-            config,
-            work_dir,
-            &resolved_id,
-            &issue,
-            &effective_reason,
-        );
+        return done_single_with_reason(db, &resolved_id, &issue, &effective_reason);
     }
 
     if !issue.status.can_transition_to(Status::Done) {
@@ -355,19 +318,9 @@ fn done_single(
     }
 
     // Log unblocked events for issues that are now unblocked
-    log_unblocked_events(db, work_dir, config, &resolved_id)?;
+    log_unblocked_events(db, &resolved_id)?;
 
-    apply_mutation(
-        db,
-        work_dir,
-        config,
-        event,
-        Some(OpPayload::set_status(
-            resolved_id.clone(),
-            wk_core::Status::Done,
-            reason.map(String::from),
-        )),
-    )?;
+    apply_mutation(db, event)?;
 
     if let Some(r) = reason {
         println!("Completed {} ({})", resolved_id, r);
@@ -380,8 +333,6 @@ fn done_single(
 
 fn done_single_with_reason(
     db: &Database,
-    config: &Config,
-    work_dir: &Path,
     id: &str,
     issue: &crate::models::Issue,
     reason: &str,
@@ -400,20 +351,13 @@ fn done_single_with_reason(
     db.add_note(id, Status::Done, reason)?;
 
     // Log unblocked events for issues that are now unblocked
-    log_unblocked_events(db, work_dir, config, id)?;
+    log_unblocked_events(db, id)?;
 
     apply_mutation(
         db,
-        work_dir,
-        config,
         Event::new(id.to_string(), Action::Done)
             .with_values(Some(issue.status.to_string()), Some("done".to_string()))
             .with_reason(Some(reason.to_string())),
-        Some(OpPayload::set_status(
-            id.to_string(),
-            wk_core::Status::Done,
-            Some(reason.to_string()),
-        )),
     )?;
 
     println!("Completed {} ({})", id, reason);
@@ -424,30 +368,16 @@ fn done_single_with_reason(
 pub fn close(ids: &[String], reason: Option<&str>) -> Result<()> {
     let effective_reason = resolve_reason(reason, "closed")?;
 
-    let (db, config, work_dir) = open_db()?;
-    close_impl(&db, &config, &work_dir, ids, &effective_reason)
+    let (db, _config, _work_dir) = open_db()?;
+    close_impl(&db, ids, &effective_reason)
 }
 
-/// Internal implementation that accepts db/config for testing.
-pub(crate) fn close_impl(
-    db: &Database,
-    config: &Config,
-    work_dir: &Path,
-    ids: &[String],
-    reason: &str,
-) -> Result<()> {
-    bulk_operation(ids, "closed", |id| {
-        close_single(db, config, work_dir, id, reason)
-    })
+/// Internal implementation that accepts db for testing.
+pub(crate) fn close_impl(db: &Database, ids: &[String], reason: &str) -> Result<()> {
+    bulk_operation(ids, "closed", |id| close_single(db, id, reason))
 }
 
-fn close_single(
-    db: &Database,
-    config: &Config,
-    work_dir: &Path,
-    id: &str,
-    reason: &str,
-) -> Result<()> {
+fn close_single(db: &Database, id: &str, reason: &str) -> Result<()> {
     let resolved_id = db.resolve_id(id)?;
     let issue = db.get_issue(&resolved_id)?;
 
@@ -465,20 +395,13 @@ fn close_single(
     db.add_note(&resolved_id, Status::Closed, reason)?;
 
     // Log unblocked events for issues that are now unblocked
-    log_unblocked_events(db, work_dir, config, &resolved_id)?;
+    log_unblocked_events(db, &resolved_id)?;
 
     apply_mutation(
         db,
-        work_dir,
-        config,
         Event::new(resolved_id.clone(), Action::Closed)
             .with_values(Some(issue.status.to_string()), Some("closed".to_string()))
             .with_reason(Some(reason.to_string())),
-        Some(OpPayload::set_status(
-            resolved_id.clone(),
-            wk_core::Status::Closed,
-            Some(reason.to_string()),
-        )),
     )?;
 
     println!("Closed {} ({})", resolved_id, reason);
@@ -494,30 +417,16 @@ pub fn reopen(ids: &[String], reason: Option<&str>) -> Result<()> {
         None
     };
 
-    let (db, config, work_dir) = open_db()?;
-    reopen_impl(&db, &config, &work_dir, ids, trimmed_reason.as_deref())
+    let (db, _config, _work_dir) = open_db()?;
+    reopen_impl(&db, ids, trimmed_reason.as_deref())
 }
 
-/// Internal implementation that accepts db/config for testing.
-pub(crate) fn reopen_impl(
-    db: &Database,
-    config: &Config,
-    work_dir: &Path,
-    ids: &[String],
-    reason: Option<&str>,
-) -> Result<()> {
-    bulk_operation(ids, "reopened", |id| {
-        reopen_single(db, config, work_dir, id, reason)
-    })
+/// Internal implementation that accepts db for testing.
+pub(crate) fn reopen_impl(db: &Database, ids: &[String], reason: Option<&str>) -> Result<()> {
+    bulk_operation(ids, "reopened", |id| reopen_single(db, id, reason))
 }
 
-fn reopen_single(
-    db: &Database,
-    config: &Config,
-    work_dir: &Path,
-    id: &str,
-    reason: Option<&str>,
-) -> Result<()> {
+fn reopen_single(db: &Database, id: &str, reason: Option<&str>) -> Result<()> {
     let resolved_id = db.resolve_id(id)?;
     let issue = db.get_issue(&resolved_id)?;
 
@@ -526,14 +435,7 @@ fn reopen_single(
     if requires_reason && reason.is_none() {
         // Try to resolve a reason (auto-generate for humans, error for agents)
         let effective_reason = resolve_reason(None, "reopened")?;
-        return reopen_single_with_reason(
-            db,
-            config,
-            work_dir,
-            &resolved_id,
-            &issue,
-            &effective_reason,
-        );
+        return reopen_single_with_reason(db, &resolved_id, &issue, &effective_reason);
     }
 
     if !issue.status.can_transition_to(Status::Todo) {
@@ -558,25 +460,13 @@ fn reopen_single(
         println!("Reopened {}", resolved_id);
     }
 
-    apply_mutation(
-        db,
-        work_dir,
-        config,
-        event,
-        Some(OpPayload::set_status(
-            resolved_id.clone(),
-            wk_core::Status::Todo,
-            reason.map(String::from),
-        )),
-    )?;
+    apply_mutation(db, event)?;
 
     Ok(())
 }
 
 fn reopen_single_with_reason(
     db: &Database,
-    config: &Config,
-    work_dir: &Path,
     id: &str,
     issue: &crate::models::Issue,
     reason: &str,
@@ -596,16 +486,9 @@ fn reopen_single_with_reason(
 
     apply_mutation(
         db,
-        work_dir,
-        config,
         Event::new(id.to_string(), Action::Reopened)
             .with_values(Some(issue.status.to_string()), Some("todo".to_string()))
             .with_reason(Some(reason.to_string())),
-        Some(OpPayload::set_status(
-            id.to_string(),
-            wk_core::Status::Todo,
-            Some(reason.to_string()),
-        )),
     )?;
 
     println!("Reopened {} ({})", id, reason);
@@ -641,12 +524,7 @@ pub(crate) fn resolve_reason(reason: Option<&str>, action: &str) -> Result<Strin
 }
 
 /// Log unblocked events for issues that become unblocked when a blocker is completed
-fn log_unblocked_events(
-    db: &crate::db::Database,
-    work_dir: &Path,
-    config: &Config,
-    completed_id: &str,
-) -> Result<()> {
+fn log_unblocked_events(db: &crate::db::Database, completed_id: &str) -> Result<()> {
     // Get all issues that were blocked by this issue
     let blocked_issues = db.get_blocking(completed_id)?;
 
@@ -654,15 +532,12 @@ fn log_unblocked_events(
         // Check if this issue still has any open blockers
         let remaining_blockers = db.get_transitive_blockers(&blocked_id)?;
 
-        // If no more open blockers, log an unblocked event (no sync needed)
+        // If no more open blockers, log an unblocked event
         if remaining_blockers.is_empty() {
             apply_mutation(
                 db,
-                work_dir,
-                config,
                 Event::new(blocked_id, Action::Unblocked)
                     .with_values(None, Some(completed_id.to_string())),
-                None,
             )?;
         }
     }
