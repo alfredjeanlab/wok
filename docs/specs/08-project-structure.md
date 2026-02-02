@@ -1,26 +1,25 @@
 # Project Structure
 
-## Binaries (`bin/`)
+## Crates (`crates/`)
 
 ```text
-bin/
+crates/
 ├── cli/        # wk - main CLI tool (Rust)
 │   ├── src/
 │   │   ├── main.rs         # Entry point
-│   │   ├── cli.rs          # Clap argument parsing
+│   │   ├── cli/            # Clap argument parsing
 │   │   ├── lib.rs          # Library entry, command dispatch
 │   │   ├── commands/       # Subcommand implementations
 │   │   ├── db/             # SQLite database operations
 │   │   ├── models/         # Data types (Issue, Event, Note, etc.)
-│   │   ├── daemon/         # Background sync daemon
-│   │   └── sync/           # Remote sync client
+│   │   └── daemon/         # Daemon client (start, stop, status)
 │   └── tests/
-│       └── integration.rs  # CLI integration tests
-└── remote/     # wk-remote - sync server (Rust)
+├── core/       # wok-core - shared library
+│   └── src/
+└── daemon/     # wokd - IPC daemon (Rust)
     └── src/
         ├── main.rs         # Entry point
-        ├── server.rs       # WebSocket server
-        └── state.rs        # Server state management
+        └── ipc.rs          # Unix socket IPC
 ```
 
 ## Test Suites (`tests/`)
@@ -29,8 +28,7 @@ bin/
 tests/
 └── specs/          # BATS acceptance tests (validates REQUIREMENTS.md)
     ├── helpers/common.bash # Shared test utilities
-    ├── cli/                # CLI tests (unit, integration, edge_cases)
-    └── remote/             # Remote tests (unit, integration, edge_cases)
+    └── cli/                # CLI tests (unit, integration, edge_cases)
 ```
 
 ## Running Tests

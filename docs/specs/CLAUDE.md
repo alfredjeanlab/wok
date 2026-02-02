@@ -41,17 +41,8 @@ Product specifications defining wok's design, behavior, and interfaces.
    - Database location
    - Git integration options
 
-7. **[Remote Sync](07-remote-sync.md)**
-   - Configuration
-   - Architecture (client, daemon, server)
-   - Daemon lifecycle
-   - Connection states
-   - Sync behavior and offline mode
-   - Conflict resolution
-   - Error handling
-
-8. **[Project Structure](08-project-structure.md)**
-   - Project layout (bin/, tests/)
+7. **[Project Structure](08-project-structure.md)**
+   - Project layout (crates/, tests/)
    - Test suites
    - Running tests
    - CLI behavior
