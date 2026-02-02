@@ -3,27 +3,7 @@
 SHELL := /bin/bash
 SPECS_DIR := tests/specs
 
-.PHONY: help install check validate spec spec-cli spec-remote spec-todo coverage coverage-spec license
-
-help:
-	@echo "Targets:"
-	@echo "  make install     - Build and install wok to ~/.local/bin"
-	@echo "  make check       - Run fmt, clippy, check, audit, test"
-	@echo "  make validate    - Run all validation checks"
-	@echo "  make coverage    - Generate code coverage report (unit tests)"
-	@echo "  make coverage-spec - Generate coverage from unit tests + specs"
-	@echo "  make license     - Add license headers to source files"
-	@echo ""
-	@echo "Spec Targets:"
-	@echo "  make spec                            - Run all specs"
-	@echo "  make spec-cli                        - Run CLI specs"
-	@echo "  make spec-remote                     - Run remote specs"
-	@echo "  make spec-todo                       - Run unimplemented specs"
-	@echo ""
-	@echo "Spec Options (via ARGS):"
-	@echo "  make spec ARGS='--filter \"pattern\"'  - Filter tests by name"
-	@echo "  make spec ARGS='--file path.bats'    - Run specific file"
-	@echo "  make spec-cli ARGS='--filter list'   - Combine suite + filter"
+.PHONY: install check check-fast validate spec spec-cli spec-remote spec-todo coverage coverage-spec license
 
 install:
 	@scripts/install
@@ -34,6 +14,14 @@ check:
 	cargo check
 	quench check --fix
 	cargo audit
+	cargo build --workspace
+	cargo test
+
+check-fast:
+	cargo fmt
+	cargo clippy --all
+	cargo check
+	quench check --fix
 	cargo build --workspace
 	cargo test
 
