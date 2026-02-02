@@ -16,7 +16,8 @@ fn test_flag_consistency() {
     // Allowed short -> long mappings for our manually defined flags
     // Note: -h/--help is auto-managed by clap and not tracked here
     let allowed: std::collections::HashMap<char, &str> = [
-        ('v', "version"), // -v, --version (top-level only)
+        ('C', "directory"), // -C, --directory (top-level, like git -C)
+        ('v', "version"),   // -v, --version (top-level only)
         ('r', "reason"),
         ('t', "type"),
         ('l', "label"),

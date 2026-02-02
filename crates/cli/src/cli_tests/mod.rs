@@ -7,6 +7,7 @@
 use super::*;
 
 mod dep_tests;
+mod directory_tests;
 mod edit_tests;
 mod flags_tests;
 mod help_tests;

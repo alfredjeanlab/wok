@@ -47,6 +47,10 @@ pub enum OutputFormat {
 // Allow the unit type field pattern which is required for clap's ArgAction::Version/Help
 #[allow(clippy::manual_non_exhaustive)]
 pub struct Cli {
+    /// Run as if wk was started in <path>
+    #[arg(short = 'C', long = "directory", global = true, value_name = "path")]
+    pub directory: Option<String>,
+
     /// Print version
     #[arg(short = 'v', short_alias = 'V', long = "version", action = clap::ArgAction::Version)]
     version: (),

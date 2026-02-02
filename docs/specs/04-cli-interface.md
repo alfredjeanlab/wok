@@ -3,7 +3,17 @@
 ## Command Structure
 
 ```
-wk <command> [args] [options]
+wk [-C <path>] <command> [args] [options]
+```
+
+### Global Options
+
+```bash
+# Run as if wk was started in <path>
+wk -C <path> <command>
+# Examples:
+wk -C /path/to/project list
+wk -C ../other-repo show prj-a1b2
 ```
 
 ## Commands

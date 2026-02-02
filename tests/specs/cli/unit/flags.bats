@@ -289,3 +289,28 @@ load '../../helpers/common'
     run "$WK_BIN" ready --blocked
     assert_failure
 }
+
+@test "-C flag: runs command in specified directory" {
+    mkdir -p other-project
+    "$WK_BIN" init --path other-project --prefix othr
+
+    run "$WK_BIN" -C other-project new task "Remote task"
+    assert_success
+
+    run "$WK_BIN" -C other-project list
+    assert_success
+    assert_output --partial "Remote task"
+}
+
+@test "-C flag: error on nonexistent directory" {
+    run "$WK_BIN" -C /nonexistent/path list
+    assert_failure
+    assert_output --partial "cannot change to directory"
+}
+
+@test "-C flag: works with init" {
+    mkdir -p newproj
+    run "$WK_BIN" -C newproj init --prefix np
+    assert_success
+    [ -d "newproj/.wok" ]
+}

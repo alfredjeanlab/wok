@@ -15,6 +15,13 @@ fn main() {
 
     match result {
         Ok(cli) => {
+            if let Some(ref dir) = cli.directory {
+                let path = std::path::Path::new(dir);
+                if let Err(e) = std::env::set_current_dir(path) {
+                    eprintln!("error: cannot change to directory '{}': {}", dir, e);
+                    std::process::exit(1);
+                }
+            }
             if let Err(e) = wkrs::run(cli.command) {
                 eprintln!("error: {}", e);
                 std::process::exit(1);
@@ -25,9 +32,11 @@ fn main() {
             if e.kind() == clap::error::ErrorKind::DisplayHelp {
                 // User explicitly requested help (--help)
                 let args: Vec<String> = std::env::args().collect();
+                let args = strip_dash_c(&args);
                 print_formatted_help(&args, false);
             } else if e.kind() == clap::error::ErrorKind::DisplayHelpOnMissingArgumentOrSubcommand {
                 let args: Vec<String> = std::env::args().collect();
+                let args = strip_dash_c(&args);
                 // Check if this is just bare "wk" with no arguments
                 let has_subcommand = args.iter().skip(1).any(|a| !a.starts_with('-'));
                 if has_subcommand {
@@ -81,6 +90,32 @@ fn print_formatted_help(args: &[String], to_stderr: bool) {
     // Find the deepest matching subcommand
     let mut target_cmd = find_subcommand(cmd, &subcommand_names);
     print_fn(&mut target_cmd);
+}
+
+/// Strip `-C <value>`, `-C=<value>`, `--directory <value>`, and `--directory=<value>` from args.
+/// Prevents the `-C` value from being mistaken for a subcommand in help formatting.
+fn strip_dash_c(args: &[String]) -> Vec<String> {
+    let mut result = Vec::with_capacity(args.len());
+    let mut skip_next = false;
+    for arg in args {
+        if skip_next {
+            skip_next = false;
+            continue;
+        }
+        if arg == "-C" || arg == "--directory" {
+            skip_next = true;
+            continue;
+        }
+        if arg.starts_with("-C=")
+            || arg.starts_with("--directory=")
+            || (arg.starts_with("-C") && arg.len() > 2 && !arg.starts_with("-C="))
+        {
+            // -C<value> (no space/equals) or -C=<value> or --directory=<value>
+            continue;
+        }
+        result.push(arg.clone());
+    }
+    result
 }
 
 /// Recursively find a nested subcommand by name path.
