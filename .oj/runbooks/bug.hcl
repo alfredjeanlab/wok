@@ -1,6 +1,6 @@
 # Bugfix Runbook
 #
-# MVP worker pool: worker pulls bugs from wok → fix → verify → push
+# Worker pool: worker pulls bugs from wok → fix → verify → push
 #
 # Usage:
 #   oj run fix <description>        # File a bug and start the worker
@@ -27,6 +27,7 @@ worker "fix" {
 }
 
 pipeline "fix" {
+  name      = "${var.bug.title}"
   vars      = ["bug"]
   workspace = "ephemeral"
 

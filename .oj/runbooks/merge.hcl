@@ -3,7 +3,7 @@
 #
 # Usage:
 #   oj queue push merges --var branch="fix-123" --var title="fix: button color"
-#   oj worker start merge
+#   oj queue push merges '{"branch": "fix-123", "title": "fix: button color"}'
 
 queue "merges" {
   type     = "persisted"
@@ -18,6 +18,7 @@ worker "merge" {
 }
 
 pipeline "merge" {
+  name      = "${var.mr.branch}"
   vars      = ["mr"]
   workspace = "ephemeral"
 
