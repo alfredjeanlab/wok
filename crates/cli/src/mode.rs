@@ -10,7 +10,8 @@ use crate::config::Config;
 
 /// Operating mode for the CLI.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-#[allow(dead_code)] // Will be used when routing commands through daemon
+// KEEP UNTIL: routing commands through daemon
+#[allow(dead_code)]
 pub enum OperatingMode {
     /// Private mode: Direct SQLite access at .wok/issues.db, no daemon.
     Private,
@@ -20,7 +21,8 @@ pub enum OperatingMode {
 
 impl OperatingMode {
     /// Detect the operating mode from the given configuration.
-    #[allow(dead_code)] // Will be used when routing commands through daemon
+    // KEEP UNTIL: routing commands through daemon
+    #[allow(dead_code)]
     pub fn detect(config: &Config) -> Self {
         if config.private {
             OperatingMode::Private
