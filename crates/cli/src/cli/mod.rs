@@ -189,24 +189,54 @@ Examples:
 
     /// Edit an issue's description, title, type, or assignee
     #[command(
-        arg_required_else_help = true,
         after_help = colors::examples("\
 Examples:
   wok edit prj-1 description \"Updated description\"    Update description
   wok edit prj-1 title \"New title\"                    Update title
   wok edit prj-1 type bug                               Change type to bug
   wok edit prj-1 assignee alice                         Assign to alice
-  wok edit prj-1 assignee none                          Clear assignment")
+  wok edit prj-1 assignee none                          Clear assignment"),
+        group = clap::ArgGroup::new("field_flags")
+            .args(["flag_title", "flag_description", "flag_type", "flag_assignee"])
+            .multiple(false)
     )]
     Edit {
         /// Issue ID
         id: String,
 
         /// Attribute to edit (title, description, type, assignee)
-        attr: String,
+        #[arg(conflicts_with_all = ["flag_title", "flag_description", "flag_type", "flag_assignee"])]
+        attr: Option<String>,
 
         /// New value for the attribute
-        value: String,
+        #[arg(requires = "attr")]
+        value: Option<String>,
+
+        /// Set title (hidden flag)
+        #[arg(long = "title", hide = true, value_name = "VALUE", id = "flag_title")]
+        flag_title: Option<String>,
+
+        /// Set description (hidden flag)
+        #[arg(
+            long = "description",
+            hide = true,
+            value_name = "VALUE",
+            id = "flag_description"
+        )]
+        flag_description: Option<String>,
+
+        /// Set type (hidden flag)
+        #[arg(long = "type", hide = true, value_name = "VALUE", id = "flag_type")]
+        flag_type: Option<String>,
+
+        /// Set assignee (hidden flag)
+        #[arg(
+            long = "assignee",
+            hide = true,
+            value_name = "VALUE",
+            id = "flag_assignee"
+        )]
+        flag_assignee: Option<String>,
     },
 
     /// List issues

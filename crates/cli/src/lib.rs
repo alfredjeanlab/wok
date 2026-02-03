@@ -121,7 +121,32 @@ pub fn run(command: Command) -> Result<()> {
         Command::Done { ids, reason } => commands::lifecycle::done(&ids, reason.as_deref()),
         Command::Close { ids, reason } => commands::lifecycle::close(&ids, reason.as_deref()),
         Command::Reopen { ids, reason } => commands::lifecycle::reopen(&ids, reason.as_deref()),
-        Command::Edit { id, attr, value } => commands::edit::run(&id, &attr, &value),
+        Command::Edit {
+            id,
+            attr,
+            value,
+            flag_title,
+            flag_description,
+            flag_type,
+            flag_assignee,
+        } => {
+            let (resolved_attr, resolved_value) = if let Some(v) = flag_title {
+                ("title".to_string(), v)
+            } else if let Some(v) = flag_description {
+                ("description".to_string(), v)
+            } else if let Some(v) = flag_type {
+                ("type".to_string(), v)
+            } else if let Some(v) = flag_assignee {
+                ("assignee".to_string(), v)
+            } else if let (Some(a), Some(v)) = (attr, value) {
+                (a, v)
+            } else {
+                return Err(Error::FieldRequired {
+                    field: "attribute and value",
+                });
+            };
+            commands::edit::run(&id, &resolved_attr, &resolved_value)
+        }
         Command::List {
             status,
             type_label,

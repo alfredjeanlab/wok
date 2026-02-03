@@ -378,13 +378,20 @@ fn test_command_tree_construction() {
 fn test_command_edit_construction() {
     let cmd = Command::Edit {
         id: "test-1".to_string(),
-        attr: "title".to_string(),
-        value: "New title".to_string(),
+        attr: Some("title".to_string()),
+        value: Some("New title".to_string()),
+        flag_title: None,
+        flag_description: None,
+        flag_type: None,
+        flag_assignee: None,
     };
-    if let Command::Edit { id, attr, value } = cmd {
+    if let Command::Edit {
+        id, attr, value, ..
+    } = cmd
+    {
         assert_eq!(id, "test-1");
-        assert_eq!(attr, "title");
-        assert_eq!(value, "New title");
+        assert_eq!(attr, Some("title".to_string()));
+        assert_eq!(value, Some("New title".to_string()));
     } else {
         panic!("Expected Edit command");
     }

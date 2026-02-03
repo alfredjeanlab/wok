@@ -92,3 +92,37 @@ load '../../helpers/common'
     assert_output --partial "New title"
     assert_output --partial "mylabel"
 }
+
+# Hidden flag variant tests
+
+@test "edit: --title flag updates title" {
+    id=$(create_issue task "Original title")
+    run "$WK_BIN" edit "$id" --title "Updated title"
+    assert_success
+    run "$WK_BIN" show "$id"
+    assert_output --partial "Updated title"
+}
+
+@test "edit: --description flag updates description" {
+    id=$(create_issue task "Test issue")
+    run "$WK_BIN" edit "$id" --description "New description"
+    assert_success
+    run "$WK_BIN" show "$id"
+    assert_output --partial "New description"
+}
+
+@test "edit: --type flag updates type" {
+    id=$(create_issue task "Test issue")
+    run "$WK_BIN" edit "$id" --type bug
+    assert_success
+    run "$WK_BIN" show "$id"
+    assert_output --partial "[bug]"
+}
+
+@test "edit: --assignee flag updates assignee" {
+    id=$(create_issue task "Test issue")
+    run "$WK_BIN" edit "$id" --assignee alice
+    assert_success
+    run "$WK_BIN" show "$id"
+    assert_output --partial "alice"
+}
