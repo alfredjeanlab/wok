@@ -7,6 +7,38 @@ use super::*;
 use crate::models::Status;
 
 #[test]
+fn test_matches_prefix_none() {
+    assert!(matches_prefix(&None, "oj-123"));
+}
+
+#[test]
+fn test_matches_prefix_matching() {
+    let prefix = Some("oj".to_string());
+    assert!(matches_prefix(&prefix, "oj-123"));
+    assert!(matches_prefix(&prefix, "oj-abc-def"));
+}
+
+#[test]
+fn test_matches_prefix_not_matching() {
+    let prefix = Some("oj".to_string());
+    assert!(!matches_prefix(&prefix, "proj-123"));
+    assert!(!matches_prefix(&prefix, "other-456"));
+}
+
+#[test]
+fn test_matches_prefix_no_hyphen() {
+    let prefix = Some("oj".to_string());
+    assert!(!matches_prefix(&prefix, "nohyphen"));
+    assert!(matches_prefix(&Some("nohyphen".to_string()), "nohyphen"));
+}
+
+#[test]
+fn test_matches_prefix_empty_id() {
+    let prefix = Some("oj".to_string());
+    assert!(!matches_prefix(&prefix, ""));
+}
+
+#[test]
 fn test_parse_filter_groups_empty() {
     let result = parse_filter_groups::<Status, _>(&[], |s| s.parse()).unwrap();
     assert!(result.is_none());

@@ -573,10 +573,6 @@ Examples:
 
         #[command(flatten)]
         type_label: TypeLabelArgs,
-
-        /// Filter by ID prefix
-        #[arg(long)]
-        prefix: Option<String>,
     },
 
     /// Generate shell completions

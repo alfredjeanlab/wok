@@ -603,3 +603,25 @@ load '../../helpers/common'
     assert_failure
     assert_output --partial "requires operator"
 }
+
+@test "list filters by prefix" {
+    id1=$(create_issue task "PrefixFilter Alpha task")
+    # Create an issue with a different prefix
+    id2=$("$WK_BIN" new task "PrefixFilter Beta task" --prefix beta | grep -oE '[a-z]+-[a-z0-9]+(-[0-9]+)?' | head -1)
+
+    prefix1="${id1%%-*}"  # extract prefix from first issue
+
+    run "$WK_BIN" list -p "$prefix1"
+    assert_success
+    assert_output --partial "PrefixFilter Alpha task"
+    refute_output --partial "PrefixFilter Beta task"
+
+    run "$WK_BIN" list -p beta
+    assert_success
+    assert_output --partial "PrefixFilter Beta task"
+    refute_output --partial "PrefixFilter Alpha task"
+
+    run "$WK_BIN" list --prefix "$prefix1"
+    assert_success
+    assert_output --partial "PrefixFilter Alpha task"
+}

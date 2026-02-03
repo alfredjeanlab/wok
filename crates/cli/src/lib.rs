@@ -160,6 +160,7 @@ pub fn run(command: Command) -> Result<()> {
             status,
             type_label.r#type,
             type_label.label,
+            type_label.prefix,
             assignee_args.assignee,
             assignee_args.unassigned,
             filter,
@@ -205,7 +206,6 @@ pub fn run(command: Command) -> Result<()> {
             dry_run,
             status,
             type_label,
-            prefix,
         } => commands::import::run(
             file,
             input,
@@ -214,7 +214,7 @@ pub fn run(command: Command) -> Result<()> {
             status,
             type_label.r#type,
             type_label.label,
-            prefix,
+            type_label.prefix,
         ),
         Command::Ready {
             type_label,
@@ -225,6 +225,7 @@ pub fn run(command: Command) -> Result<()> {
         } => commands::ready::run(
             type_label.r#type,
             type_label.label,
+            type_label.prefix,
             assignee,
             unassigned,
             all_assignees,
@@ -243,6 +244,7 @@ pub fn run(command: Command) -> Result<()> {
             status,
             type_label.r#type,
             type_label.label,
+            type_label.prefix,
             assignee_args.assignee,
             assignee_args.unassigned,
             filter,

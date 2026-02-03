@@ -12,7 +12,9 @@ use crate::models::{IssueType, Status};
 use crate::schema::search::SearchOutputJson;
 use crate::schema::IssueJson;
 
-use super::filtering::{matches_filter_groups, matches_label_groups, parse_filter_groups};
+use super::filtering::{
+    matches_filter_groups, matches_label_groups, matches_prefix, parse_filter_groups,
+};
 use super::open_db;
 
 /// Default limit for search results in text output.
@@ -25,6 +27,7 @@ pub fn run(
     status: Vec<String>,
     issue_type: Vec<String>,
     label: Vec<String>,
+    prefix: Option<String>,
     assignee: Vec<String>,
     unassigned: bool,
     filter: Vec<String>,
@@ -40,6 +43,7 @@ pub fn run(
         status,
         issue_type,
         label,
+        prefix,
         assignee,
         unassigned,
         filter,
@@ -56,6 +60,7 @@ pub(crate) fn run_impl(
     status: Vec<String>,
     issue_type: Vec<String>,
     label: Vec<String>,
+    prefix: Option<String>,
     assignee: Vec<String>,
     unassigned: bool,
     filter: Vec<String>,
@@ -76,6 +81,11 @@ pub(crate) fn run_impl(
 
     // Search issues
     let mut issues = db.search_issues(query)?;
+
+    // Filter by prefix (cheap string comparison, apply early)
+    if prefix.is_some() {
+        issues.retain(|issue| matches_prefix(&prefix, &issue.id));
+    }
 
     // Apply filters (same logic as list)
     if status_groups.is_some() {

@@ -73,6 +73,18 @@ pub(crate) fn matches_label_groups(
     }
 }
 
+/// Check if an issue ID matches the given prefix filter.
+/// The prefix is the portion of the ID before the first hyphen.
+pub(crate) fn matches_prefix(prefix: &Option<String>, issue_id: &str) -> bool {
+    match prefix {
+        None => true,
+        Some(p) => issue_id
+            .split('-')
+            .next()
+            .is_some_and(|id_prefix| id_prefix == p),
+    }
+}
+
 #[cfg(test)]
 #[path = "filtering_tests.rs"]
 mod tests;

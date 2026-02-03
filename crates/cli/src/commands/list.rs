@@ -14,7 +14,9 @@ use crate::models::{IssueType, Status};
 use crate::schema::list::ListOutputJson;
 use crate::schema::IssueJson;
 
-use super::filtering::{matches_filter_groups, matches_label_groups, parse_filter_groups};
+use super::filtering::{
+    matches_filter_groups, matches_label_groups, matches_prefix, parse_filter_groups,
+};
 use super::open_db;
 
 /// Default limit for list output when not explicitly specified.
@@ -27,6 +29,7 @@ pub fn run(
     status: Vec<String>,
     issue_type: Vec<String>,
     label: Vec<String>,
+    prefix: Option<String>,
     assignee: Vec<String>,
     unassigned: bool,
     filter: Vec<String>,
@@ -43,6 +46,7 @@ pub fn run(
         status,
         issue_type,
         label,
+        prefix,
         assignee,
         unassigned,
         filter,
@@ -60,6 +64,7 @@ pub(crate) fn run_impl(
     status: Vec<String>,
     issue_type: Vec<String>,
     label: Vec<String>,
+    prefix: Option<String>,
     assignee: Vec<String>,
     unassigned: bool,
     filter: Vec<String>,
@@ -90,6 +95,11 @@ pub(crate) fn run_impl(
 
     // Get all issues (we'll filter in-memory for complex multi-value logic)
     let mut issues = crate::time_phase!("db::query", { db.list_issues(None, None, None)? });
+
+    // Filter by prefix (cheap string comparison, apply early)
+    if prefix.is_some() {
+        issues.retain(|issue| matches_prefix(&prefix, &issue.id));
+    }
 
     // Default: show open issues (todo + in_progress) when no status filter and not --all
     // Exception: when terminal filter is used, include closed issues (they're the target)

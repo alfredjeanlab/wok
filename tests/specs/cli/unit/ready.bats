@@ -211,3 +211,20 @@ load '../../helpers/common'
     assert_success
     refute_output --partial "more"
 }
+
+@test "ready filters by prefix" {
+    id1=$(create_issue task "PrefixReady Alpha task")
+    id2=$("$WK_BIN" new task "PrefixReady Beta task" --prefix beta | grep -oE '[a-z]+-[a-z0-9]+(-[0-9]+)?' | head -1)
+
+    prefix1="${id1%%-*}"
+
+    run "$WK_BIN" ready -p "$prefix1"
+    assert_success
+    assert_output --partial "PrefixReady Alpha task"
+    refute_output --partial "PrefixReady Beta task"
+
+    run "$WK_BIN" ready --prefix beta
+    assert_success
+    assert_output --partial "PrefixReady Beta task"
+    refute_output --partial "PrefixReady Alpha task"
+}

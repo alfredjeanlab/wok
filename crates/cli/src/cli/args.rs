@@ -8,7 +8,7 @@
 
 use clap::Args;
 
-/// Common filter arguments for type and label filtering.
+/// Common filter arguments for type, label, and prefix filtering.
 #[derive(Args, Clone, Debug, Default)]
 pub struct TypeLabelArgs {
     /// Filter by type (comma-separated for OR, repeat for AND)
@@ -18,6 +18,10 @@ pub struct TypeLabelArgs {
     /// Filter by label (comma-separated for OR, repeat for AND)
     #[arg(long, short)]
     pub label: Vec<String>,
+
+    /// Filter by ID prefix (e.g., -p oj matches oj-*)
+    #[arg(long, short)]
+    pub prefix: Option<String>,
 }
 
 /// Assignee filter arguments.

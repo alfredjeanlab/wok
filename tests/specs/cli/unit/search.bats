@@ -225,3 +225,20 @@ load '../../helpers/common'
     assert_output --partial "SearchClosed Closed"
     refute_output --partial "SearchClosed Open"
 }
+
+@test "search filters by prefix" {
+    id1=$(create_issue task "PrefixSearch Alpha task")
+    id2=$("$WK_BIN" new task "PrefixSearch Beta task" --prefix beta | grep -oE '[a-z]+-[a-z0-9]+(-[0-9]+)?' | head -1)
+
+    prefix1="${id1%%-*}"
+
+    run "$WK_BIN" search "PrefixSearch" -p "$prefix1"
+    assert_success
+    assert_output --partial "PrefixSearch Alpha task"
+    refute_output --partial "PrefixSearch Beta task"
+
+    run "$WK_BIN" search "PrefixSearch" --prefix beta
+    assert_success
+    assert_output --partial "PrefixSearch Beta task"
+    refute_output --partial "PrefixSearch Alpha task"
+}

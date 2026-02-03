@@ -99,12 +99,12 @@ fn test_import_with_file() {
         Command::Import {
             file,
             input,
-            prefix,
+            type_label,
             ..
         } => {
             assert_eq!(file, Some("issues.jsonl".to_string()));
             assert!(input.is_none());
-            assert!(prefix.is_none());
+            assert!(type_label.prefix.is_none());
         }
         _ => panic!("Expected Import command"),
     }
@@ -126,9 +126,11 @@ fn test_import_with_input_flag() {
 fn test_import_with_prefix_flag() {
     let cli = parse(&["wk", "import", "--prefix", "myproj", "issues.jsonl"]).unwrap();
     match cli.command {
-        Command::Import { file, prefix, .. } => {
+        Command::Import {
+            file, type_label, ..
+        } => {
             assert_eq!(file, Some("issues.jsonl".to_string()));
-            assert_eq!(prefix, Some("myproj".to_string()));
+            assert_eq!(type_label.prefix, Some("myproj".to_string()));
         }
         _ => panic!("Expected Import command"),
     }
@@ -142,10 +144,18 @@ fn test_import_rejects_i_shorthand() {
 }
 
 #[test]
-fn test_import_rejects_p_shorthand() {
-    // -p short flag was removed from 'import' command
-    let result = parse(&["wk", "import", "-p", "myproj", "issues.jsonl"]);
-    assert!(result.is_err());
+fn test_import_accepts_p_shorthand() {
+    // -p short flag is now available via TypeLabelArgs prefix
+    let cli = parse(&["wk", "import", "-p", "myproj", "issues.jsonl"]).unwrap();
+    match cli.command {
+        Command::Import {
+            file, type_label, ..
+        } => {
+            assert_eq!(file, Some("issues.jsonl".to_string()));
+            assert_eq!(type_label.prefix, Some("myproj".to_string()));
+        }
+        _ => panic!("Expected Import command"),
+    }
 }
 
 // Completion command

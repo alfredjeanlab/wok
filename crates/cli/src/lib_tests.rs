@@ -218,6 +218,7 @@ fn test_command_list_construction() {
         type_label: TypeLabelArgs {
             r#type: vec!["task".to_string()],
             label: vec!["urgent".to_string()],
+            prefix: None,
         },
         assignee_args: AssigneeArgs {
             assignee: vec![],
@@ -355,6 +356,7 @@ fn test_command_ready_construction() {
         type_label: TypeLabelArgs {
             r#type: vec!["bug".to_string()],
             label: vec!["backend".to_string()],
+            prefix: None,
         },
         assignee: vec![],
         unassigned: false,

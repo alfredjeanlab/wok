@@ -14,7 +14,9 @@ use crate::models::{Issue, IssueType, Status};
 use crate::schema::ready::ReadyOutputJson;
 use crate::schema::IssueJson;
 
-use super::filtering::{matches_filter_groups, matches_label_groups, parse_filter_groups};
+use super::filtering::{
+    matches_filter_groups, matches_label_groups, matches_prefix, parse_filter_groups,
+};
 use super::open_db;
 
 /// Maximum number of issues to show in ready output.
@@ -69,6 +71,7 @@ fn get_default_assignee_filter(work_dir: &Path) -> AssigneeFilter {
 pub fn run(
     issue_type: Vec<String>,
     label: Vec<String>,
+    prefix: Option<String>,
     assignee: Vec<String>,
     unassigned: bool,
     all_assignees: bool,
@@ -82,6 +85,7 @@ pub fn run(
         &work_dir,
         issue_type,
         label,
+        prefix,
         assignee,
         unassigned,
         all_assignees,
@@ -96,6 +100,7 @@ pub(crate) fn run_impl(
     work_dir: &Path,
     issue_type: Vec<String>,
     label: Vec<String>,
+    prefix: Option<String>,
     assignee: Vec<String>,
     unassigned: bool,
     all_assignees: bool,
@@ -108,6 +113,11 @@ pub(crate) fn run_impl(
 
     // Ready = unblocked todo items only
     let mut issues = db.list_issues(Some(Status::Todo), None, None)?;
+
+    // Filter by prefix (cheap string comparison, apply early)
+    if prefix.is_some() {
+        issues.retain(|issue| matches_prefix(&prefix, &issue.id));
+    }
 
     // Apply type filter first (no DB access needed)
     if type_groups.is_some() {
