@@ -15,6 +15,7 @@ use std::os::unix::net::UnixListener;
 use std::path::{Path, PathBuf};
 use std::time::Instant;
 
+mod env;
 mod ipc;
 
 use ipc::{framing, DaemonRequest, DaemonResponse, DaemonStatus};
@@ -135,11 +136,11 @@ fn parse_state_dir(args: &[String]) -> PathBuf {
         }
     }
     // Default to XDG state directory
-    if let Ok(dir) = std::env::var("WOK_STATE_DIR") {
-        return PathBuf::from(dir);
+    if let Some(dir) = env::state_dir() {
+        return dir;
     }
-    if let Ok(dir) = std::env::var("XDG_STATE_HOME") {
-        return PathBuf::from(dir).join("wok");
+    if let Some(dir) = env::xdg_state_home() {
+        return dir.join("wok");
     }
     dirs::home_dir()
         .map(|h| h.join(".local/state/wok"))
