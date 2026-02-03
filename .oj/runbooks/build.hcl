@@ -1,8 +1,8 @@
-# Build Runbook
-# Feature development workflow: init → plan-agent → implement-agent → submit
+# Plan and implement a feature, then submit to the merge queue.
 #
-# Usage:
-#   oj run build <name> <instructions>
+# Examples:
+#   oj run build edit-flags "Add hidden --title and --description flags to wok edit"
+#   oj run build sync-perf "Optimize remote sync for large repositories"
 
 command "build" {
   args = "<name> <instructions> [--base <branch>] [--rebase] [--new <folder>]"

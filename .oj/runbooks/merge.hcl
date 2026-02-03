@@ -1,9 +1,22 @@
-# Local Merge Queue
-# Merges branches into main locally, with conflict resolution and testing.
+# Queue a branch for the local merge queue.
 #
-# Usage:
-#   oj queue push merges --var branch="fix-123" --var title="fix: button color"
-#   oj queue push merges '{"branch": "fix-123", "title": "fix: button color"}'
+# Merges into main with conflict resolution, testing, and push.
+#
+# Examples:
+#   oj run merge fix/wk-abc123 "fix: search results don't include notes"
+#   oj run merge feature/edit-flags-def456 "feat: add hidden edit flags"
+
+command "merge" {
+  args = "<branch> <title> [--base <base>]"
+  run  = <<-SHELL
+    oj queue push merges --var branch="${args.branch}" --var title="${args.title}" --var base="${args.base}"
+    echo "Queued '${args.branch}' for merge"
+  SHELL
+
+  defaults = {
+    base = "main"
+  }
+}
 
 queue "merges" {
   type     = "persisted"
@@ -63,9 +76,12 @@ pipeline "merge" {
 
   step "push" {
     run = <<-SHELL
+      git -C "${local.repo}" fetch origin ${var.mr.base}
+      git rebase origin/${var.mr.base}
       git -C "${local.repo}" push origin ${local.branch}:${var.mr.base}
       git -C "${local.repo}" push origin --delete ${var.mr.branch}
     SHELL
+    on_fail = { step = "check" }
   }
 }
 

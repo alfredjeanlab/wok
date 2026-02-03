@@ -1,10 +1,10 @@
-# Bugfix Runbook
+# File a bug and dispatch it to a fix worker.
 #
-# Worker pool: worker pulls bugs from wok → fix → verify → push
+# Worker pulls bugs from wok, fixes them, and submits to the merge queue.
 #
-# Usage:
-#   oj run fix <description>        # File a bug and start the worker
-#   oj worker start fix             # Start worker
+# Examples:
+#   oj run fix "wok done on a closed issue returns an error"
+#   oj run fix "Search results don't include notes"
 
 command "fix" {
   args = "<description>"
