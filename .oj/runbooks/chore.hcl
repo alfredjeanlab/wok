@@ -16,7 +16,7 @@ command "chore" {
 
 queue "chores" {
   type = "external"
-  list = "wok list -t chore -s todo --unassigned -o json"
+  list = "wok list -t chore -s todo --unassigned -p wok -o json"
   take = "wok start ${item.id}"
 }
 
