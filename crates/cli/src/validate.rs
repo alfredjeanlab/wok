@@ -6,7 +6,7 @@ use crate::normalize::{normalize_title, trim_field, NormalizedTitle};
 
 // Input length limits
 pub const MAX_TITLE_LENGTH: usize = 500;
-pub const MAX_DESCRIPTION_LENGTH: usize = 10_000;
+pub const MAX_DESCRIPTION_LENGTH: usize = 1_000_000;
 pub const MAX_LABEL_LENGTH: usize = 100;
 pub const MAX_NOTE_LENGTH: usize = 10_000;
 pub const MAX_REASON_LENGTH: usize = 500;

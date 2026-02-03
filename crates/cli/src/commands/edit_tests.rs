@@ -7,6 +7,7 @@
 use crate::commands::edit::run_impl;
 use crate::commands::testing::TestContext;
 use crate::models::{Action, IssueType, Status};
+use crate::validate::MAX_DESCRIPTION_LENGTH;
 
 #[test]
 fn test_update_title() {
@@ -116,7 +117,7 @@ fn test_description_too_long() {
     let ctx = TestContext::new();
     ctx.create_issue("test-1", IssueType::Task, "My issue");
 
-    let long_desc = "x".repeat(10_001);
+    let long_desc = "x".repeat(MAX_DESCRIPTION_LENGTH + 1);
     let result = run_impl(&ctx.db, "test-1", "description", &long_desc);
     assert!(result.is_err());
 }

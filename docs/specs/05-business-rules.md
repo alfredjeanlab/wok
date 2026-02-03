@@ -52,9 +52,10 @@ When `--reason` is provided to lifecycle commands, the reason is stored as:
 ## Input Limits
 
 1. Issue titles: max 500 characters
-2. Note content: max 10,000 characters
-3. Label names: max 100 characters
-4. Reason text: max 500 characters
+2. Issue descriptions: max 1,000,000 characters
+3. Note content: max 10,000 characters
+4. Label names: max 100 characters
+5. Reason text: max 500 characters
 
 ## Export Path Validation
 
