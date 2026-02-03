@@ -75,7 +75,7 @@ pipeline "fix" {
 }
 
 agent "bugs" {
-  run      = "claude --model opus --dangerously-skip-permissions"
+  run      = "claude --model opus --dangerously-skip-permissions --disallowed-tools ExitPlanMode,AskUserQuestion,EnterPlanMode"
   on_idle  = { action = "nudge", message = "Keep working. Fix the bug, write tests, run make check-fast, and commit." }
   on_dead  = { action = "gate", run = "make check-fast" }
 
