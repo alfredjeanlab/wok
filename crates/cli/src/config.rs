@@ -123,11 +123,11 @@ pub fn get_daemon_dir(config: &Config) -> PathBuf {
 /// 2. `XDG_STATE_HOME/wok`
 /// 3. `~/.local/state/wok`
 pub fn wok_state_dir() -> PathBuf {
-    if let Ok(dir) = std::env::var("WOK_STATE_DIR") {
-        return PathBuf::from(dir);
+    if let Some(dir) = crate::env::state_dir() {
+        return dir;
     }
-    if let Ok(dir) = std::env::var("XDG_STATE_HOME") {
-        return PathBuf::from(dir).join("wok");
+    if let Some(dir) = crate::env::xdg_state_home() {
+        return dir.join("wok");
     }
     dirs::home_dir()
         .map(|h| h.join(".local/state/wok"))

@@ -36,6 +36,7 @@ mod commands;
 mod completions;
 mod daemon;
 mod display;
+pub mod env;
 pub mod filter;
 pub mod help;
 mod mode;

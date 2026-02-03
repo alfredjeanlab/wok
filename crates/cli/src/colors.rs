@@ -28,12 +28,12 @@ pub mod codes {
 /// Check if colors should be enabled based on TTY and environment variables.
 pub fn should_colorize() -> bool {
     // NO_COLOR=1 disables colors
-    if std::env::var("NO_COLOR").is_ok_and(|v| v == "1") {
+    if crate::env::no_color() {
         return false;
     }
 
     // COLOR=1 forces colors even without TTY
-    if std::env::var("COLOR").is_ok_and(|v| v == "1") {
+    if crate::env::force_color() {
         return true;
     }
 

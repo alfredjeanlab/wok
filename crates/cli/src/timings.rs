@@ -11,7 +11,7 @@ use std::time::Instant;
 /// Check if timings are enabled via WK_TIMINGS environment variable.
 #[inline]
 pub fn timings_enabled() -> bool {
-    std::env::var("WK_TIMINGS").is_ok()
+    crate::env::wk_timings()
 }
 
 /// Print a timing result to stderr if timings are enabled.

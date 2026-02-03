@@ -165,8 +165,8 @@ fn stop_daemon(daemon_dir: &Path) -> Result<()> {
 /// Find the wokd binary.
 fn find_wokd_binary() -> Result<PathBuf> {
     // 1. Check WOK_DAEMON_BINARY env var
-    if let Ok(path) = std::env::var("WOK_DAEMON_BINARY") {
-        return Ok(PathBuf::from(path));
+    if let Some(path) = crate::env::daemon_binary() {
+        return Ok(path);
     }
 
     // 2. Look next to the current executable
