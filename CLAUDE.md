@@ -1,4 +1,4 @@
-Wok (wk) is a collaborative, offline-first, AI-friendly issue tracker.
+Wok is a collaborative, offline-first, AI-friendly issue tracker.
 
 ## Issue Labels
 
@@ -26,7 +26,7 @@ Wok (wk) is a collaborative, offline-first, AI-friendly issue tracker.
 ```
 wok/
 ├── crates/           # Rust workspace
-│   ├── cli/          # wk - command-line interface
+│   ├── cli/          # wok - command-line interface
 │   ├── core/         # Core library
 │   └── daemon/       # wokd - IPC daemon
 ├── tests/            # Testing

@@ -7,7 +7,7 @@ use predicates::prelude::*;
 use tempfile::TempDir;
 
 fn wk() -> Command {
-    cargo_bin_cmd!("wk")
+    cargo_bin_cmd!("wok")
 }
 
 #[test]

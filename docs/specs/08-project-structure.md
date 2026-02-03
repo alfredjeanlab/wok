@@ -4,7 +4,7 @@
 
 ```text
 crates/
-├── cli/        # wk - main CLI tool (Rust)
+├── cli/        # wok - main CLI tool (Rust)
 │   ├── src/
 │   │   ├── main.rs         # Entry point
 │   │   ├── cli/            # Clap argument parsing
@@ -49,9 +49,9 @@ make spec
 Commands that require arguments show help when called without them:
 
 ```bash
-wk show       # Shows: Usage: wk show [OPTIONS] <ID>
-wk start      # Shows: Usage: wk start <ID>
-wk label      # Shows: Usage: wk label <ID> <LABEL>
+wok show       # Shows: Usage: wok show [OPTIONS] <ID>
+wok start      # Shows: Usage: wok start <ID>
+wok label      # Shows: Usage: wok label <ID> <LABEL>
 ```
 
 This provides actionable guidance instead of cryptic "missing argument" errors.

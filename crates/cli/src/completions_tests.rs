@@ -26,9 +26,9 @@ fn test_shell_exists() {
 
 #[test]
 fn test_shell_kind_script_filename() {
-    assert_eq!(ShellKind::Bash.script_filename(), "wk.bash");
-    assert_eq!(ShellKind::Zsh.script_filename(), "_wk");
-    assert_eq!(ShellKind::Fish.script_filename(), "wk.fish");
+    assert_eq!(ShellKind::Bash.script_filename(), "wok.bash");
+    assert_eq!(ShellKind::Zsh.script_filename(), "_wok");
+    assert_eq!(ShellKind::Fish.script_filename(), "wok.fish");
 }
 
 #[test]
@@ -43,7 +43,7 @@ fn test_completions_dir() {
     // Should return a path on systems with data_local_dir
     let dir = completions_dir();
     if let Some(d) = dir {
-        assert!(d.to_string_lossy().contains("wk/completions"));
+        assert!(d.to_string_lossy().contains("wok/completions"));
     }
 }
 
@@ -84,7 +84,7 @@ fn test_install_completion_source_idempotent() {
     fs::write(&rc_path, "# my bashrc\nexport FOO=bar\n").unwrap();
 
     // Create a fake completion script
-    let script_path = temp.path().join("wk.bash");
+    let script_path = temp.path().join("wok.bash");
     fs::write(&script_path, "# completions").unwrap();
 
     // Override home temporarily by testing install_completion_source directly
@@ -160,5 +160,5 @@ fn test_install_all_no_shells() {
 
 #[test]
 fn test_marker_constant() {
-    assert_eq!(WK_COMPLETION_MARKER, "# wk-shell-completion");
+    assert_eq!(WK_COMPLETION_MARKER, "# wok-shell-completion");
 }

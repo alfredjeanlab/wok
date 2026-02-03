@@ -27,10 +27,10 @@ The CLI finds `.wok/` by walking up from cwd. If not found, error with helpful m
 
 ```bash
 # Initialize in current directory
-wk init --prefix prj
+wok init --prefix prj
 
 # Initialize at shared location (e.g., monorepo root)
-wk init --path /path/to/shared --prefix prj
+wok init --path /path/to/shared --prefix prj
 ```
 
 ## Prefix Registry
@@ -47,24 +47,24 @@ CREATE TABLE prefixes (
 
 Prefixes are tracked automatically:
 - When creating an issue, the prefix is registered and its count incremented
-- When renaming a prefix via `wk config rename`, the table is updated
+- When renaming a prefix via `wok config rename`, the table is updated
 - Existing databases are backfilled on first open
 
-List all prefixes with `wk config prefixes`:
+List all prefixes with `wok config prefixes`:
 
 ```bash
-wk config prefixes
+wok config prefixes
 # proj: 5 issues (default)
 # api: 2 issues
 
-wk config prefixes -o json
+wok config prefixes -o json
 # {"default": "proj", "prefixes": [...]}
 ```
 
 Create issues with different prefixes using `--prefix`:
 
 ```bash
-wk new "API task" --prefix api
+wok new "API task" --prefix api
 # Creates api-XXXX instead of using config prefix
 ```
 

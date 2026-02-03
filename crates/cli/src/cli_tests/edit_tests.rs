@@ -15,7 +15,7 @@ fn parse(args: &[&str]) -> Result<Cli, clap::Error> {
 
 #[test]
 fn test_edit_title() {
-    let cli = parse(&["wk", "edit", "prj-1234", "title", "New title"]).unwrap();
+    let cli = parse(&["wok", "edit", "prj-1234", "title", "New title"]).unwrap();
     match cli.command {
         Command::Edit {
             id, attr, value, ..
@@ -31,7 +31,7 @@ fn test_edit_title() {
 #[test]
 fn test_edit_description() {
     let cli = parse(&[
-        "wk",
+        "wok",
         "edit",
         "prj-1234",
         "description",
@@ -52,7 +52,7 @@ fn test_edit_description() {
 
 #[test]
 fn test_edit_type() {
-    let cli = parse(&["wk", "edit", "prj-1234", "type", "bug"]).unwrap();
+    let cli = parse(&["wok", "edit", "prj-1234", "type", "bug"]).unwrap();
     match cli.command {
         Command::Edit {
             id, attr, value, ..
@@ -72,13 +72,13 @@ fn test_edit_requires_id() {
     // With only one arg, "wk edit title" parses as id="title" with no attr/value,
     // which is also accepted by the parser but fails at dispatch.
     // Verify that "wk edit" (no id at all) fails at parse level.
-    let result = parse(&["wk", "edit"]);
+    let result = parse(&["wok", "edit"]);
     assert!(result.is_err());
 }
 
 #[test]
 fn test_edit_assignee() {
-    let cli = parse(&["wk", "edit", "prj-1234", "assignee", "alice"]).unwrap();
+    let cli = parse(&["wok", "edit", "prj-1234", "assignee", "alice"]).unwrap();
     match cli.command {
         Command::Edit {
             id, attr, value, ..
@@ -93,7 +93,7 @@ fn test_edit_assignee() {
 
 #[test]
 fn test_edit_assignee_none() {
-    let cli = parse(&["wk", "edit", "prj-1234", "assignee", "none"]).unwrap();
+    let cli = parse(&["wok", "edit", "prj-1234", "assignee", "none"]).unwrap();
     match cli.command {
         Command::Edit {
             id, attr, value, ..
@@ -110,7 +110,7 @@ fn test_edit_assignee_none() {
 
 #[test]
 fn test_edit_flag_title() {
-    let cli = parse(&["wk", "edit", "prj-1", "--title", "New title"]).unwrap();
+    let cli = parse(&["wok", "edit", "prj-1", "--title", "New title"]).unwrap();
     match cli.command {
         Command::Edit {
             id,
@@ -128,7 +128,7 @@ fn test_edit_flag_title() {
 
 #[test]
 fn test_edit_flag_description() {
-    let cli = parse(&["wk", "edit", "prj-1", "--description", "Desc"]).unwrap();
+    let cli = parse(&["wok", "edit", "prj-1", "--description", "Desc"]).unwrap();
     match cli.command {
         Command::Edit {
             id,
@@ -146,7 +146,7 @@ fn test_edit_flag_description() {
 
 #[test]
 fn test_edit_flag_type() {
-    let cli = parse(&["wk", "edit", "prj-1", "--type", "bug"]).unwrap();
+    let cli = parse(&["wok", "edit", "prj-1", "--type", "bug"]).unwrap();
     match cli.command {
         Command::Edit {
             id,
@@ -164,7 +164,7 @@ fn test_edit_flag_type() {
 
 #[test]
 fn test_edit_flag_assignee() {
-    let cli = parse(&["wk", "edit", "prj-1", "--assignee", "alice"]).unwrap();
+    let cli = parse(&["wok", "edit", "prj-1", "--assignee", "alice"]).unwrap();
     match cli.command {
         Command::Edit {
             id,
@@ -182,13 +182,13 @@ fn test_edit_flag_assignee() {
 
 #[test]
 fn test_edit_flag_conflicts_with_positional() {
-    let result = parse(&["wk", "edit", "prj-1", "--title", "X", "title", "Y"]);
+    let result = parse(&["wok", "edit", "prj-1", "--title", "X", "title", "Y"]);
     assert!(result.is_err());
 }
 
 #[test]
 fn test_edit_help_hides_flags() {
-    let result = parse(&["wk", "edit", "--help"]);
+    let result = parse(&["wok", "edit", "--help"]);
     let help = match result {
         Err(e) => e.to_string(),
         Ok(_) => panic!("--help should return an error"),

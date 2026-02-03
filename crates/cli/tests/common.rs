@@ -16,7 +16,7 @@ pub use predicates::prelude::*;
 pub use tempfile::TempDir;
 
 pub fn wk() -> Command {
-    cargo_bin_cmd!("wk")
+    cargo_bin_cmd!("wok")
 }
 
 /// Helper to create an initialized temp directory in private mode.

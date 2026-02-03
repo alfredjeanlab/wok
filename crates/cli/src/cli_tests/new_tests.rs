@@ -15,7 +15,7 @@ fn parse(args: &[&str]) -> Result<Cli, clap::Error> {
 // New command tests
 #[test]
 fn test_new_with_title_only() {
-    let cli = parse(&["wk", "new", "My issue title"]).unwrap();
+    let cli = parse(&["wok", "new", "My issue title"]).unwrap();
     match cli.command {
         Command::New {
             type_or_title,
@@ -54,7 +54,7 @@ fn test_new_with_title_only() {
 
 #[test]
 fn test_new_with_type_and_title() {
-    let cli = parse(&["wk", "new", "bug", "Fix the crash"]).unwrap();
+    let cli = parse(&["wok", "new", "bug", "Fix the crash"]).unwrap();
     match cli.command {
         Command::New {
             type_or_title,
@@ -71,7 +71,7 @@ fn test_new_with_type_and_title() {
 #[test]
 fn test_new_with_labels() {
     let cli = parse(&[
-        "wk",
+        "wok",
         "new",
         "task",
         "Do something",
@@ -92,7 +92,7 @@ fn test_new_with_labels() {
 #[test]
 fn test_new_with_note() {
     let cli = parse(&[
-        "wk",
+        "wok",
         "new",
         "task",
         "Do something",
@@ -111,7 +111,7 @@ fn test_new_with_note() {
 #[test]
 fn test_new_note_rejects_n_shorthand() {
     // -n short flag was removed for --note
-    let result = parse(&["wk", "new", "task", "Do something", "-n", "Initial note"]);
+    let result = parse(&["wok", "new", "task", "Do something", "-n", "Initial note"]);
     assert!(result.is_err());
 }
 
@@ -120,7 +120,7 @@ fn test_new_note_rejects_n_shorthand() {
 #[test]
 fn test_new_with_description() {
     let cli = parse(&[
-        "wk",
+        "wok",
         "new",
         "task",
         "My task",
@@ -139,7 +139,7 @@ fn test_new_with_description() {
 #[test]
 fn test_new_with_both_note_and_description() {
     let cli = parse(&[
-        "wk",
+        "wok",
         "new",
         "task",
         "My task",
@@ -163,7 +163,7 @@ fn test_new_with_both_note_and_description() {
 #[test]
 fn test_new_description_with_label() {
     let cli = parse(&[
-        "wk",
+        "wok",
         "new",
         "task",
         "My task",
@@ -187,14 +187,14 @@ fn test_new_description_with_label() {
 #[test]
 fn test_new_description_no_short_flag() {
     // -d should not work as description (it's not defined as a short flag)
-    let result = parse(&["wk", "new", "task", "My task", "-d", "Desc"]);
+    let result = parse(&["wok", "new", "task", "My task", "-d", "Desc"]);
     assert!(result.is_err());
 }
 
 // Priority flag tests (hidden argument)
 #[test]
 fn test_new_with_priority() {
-    let cli = parse(&["wk", "new", "task", "My task", "--priority", "2"]).unwrap();
+    let cli = parse(&["wok", "new", "task", "My task", "--priority", "2"]).unwrap();
     match cli.command {
         Command::New { priority, .. } => {
             assert_eq!(priority, Some(2));
@@ -206,7 +206,7 @@ fn test_new_with_priority() {
 #[test]
 fn test_new_priority_with_label() {
     let cli = parse(&[
-        "wk",
+        "wok",
         "new",
         "task",
         "My task",
@@ -230,23 +230,23 @@ fn test_new_priority_with_label() {
 #[test]
 fn test_new_priority_bounds() {
     // Valid bounds
-    assert!(parse(&["wk", "new", "task", "Test", "--priority", "0"]).is_ok());
-    assert!(parse(&["wk", "new", "task", "Test", "--priority", "4"]).is_ok());
+    assert!(parse(&["wok", "new", "task", "Test", "--priority", "0"]).is_ok());
+    assert!(parse(&["wok", "new", "task", "Test", "--priority", "4"]).is_ok());
 
     // Invalid bounds
-    assert!(parse(&["wk", "new", "task", "Test", "--priority", "5"]).is_err());
-    assert!(parse(&["wk", "new", "task", "Test", "--priority", "-1"]).is_err());
+    assert!(parse(&["wok", "new", "task", "Test", "--priority", "5"]).is_err());
+    assert!(parse(&["wok", "new", "task", "Test", "--priority", "-1"]).is_err());
 }
 
 #[test]
 fn test_new_priority_non_numeric() {
-    assert!(parse(&["wk", "new", "task", "Test", "--priority", "high"]).is_err());
+    assert!(parse(&["wok", "new", "task", "Test", "--priority", "high"]).is_err());
 }
 
 // Empty title validation tests (at clap level)
 #[test]
 fn test_new_empty_title_rejected() {
-    let result = parse(&["wk", "new", ""]);
+    let result = parse(&["wok", "new", ""]);
     match result {
         Err(e) => {
             let err = e.to_string();
@@ -262,7 +262,7 @@ fn test_new_empty_title_rejected() {
 
 #[test]
 fn test_new_whitespace_only_title_rejected() {
-    let result = parse(&["wk", "new", "   "]);
+    let result = parse(&["wok", "new", "   "]);
     match result {
         Err(e) => {
             let err = e.to_string();
@@ -278,7 +278,7 @@ fn test_new_whitespace_only_title_rejected() {
 
 #[test]
 fn test_new_type_and_empty_title_rejected() {
-    let result = parse(&["wk", "new", "task", ""]);
+    let result = parse(&["wok", "new", "task", ""]);
     match result {
         Err(e) => {
             let err = e.to_string();
@@ -294,7 +294,7 @@ fn test_new_type_and_empty_title_rejected() {
 
 #[test]
 fn test_new_type_and_whitespace_only_title_rejected() {
-    let result = parse(&["wk", "new", "task", "   "]);
+    let result = parse(&["wok", "new", "task", "   "]);
     match result {
         Err(e) => {
             let err = e.to_string();
@@ -311,7 +311,7 @@ fn test_new_type_and_whitespace_only_title_rejected() {
 // Dependency flag tests
 #[test]
 fn test_new_with_blocks() {
-    let cli = parse(&["wk", "new", "bug", "Fix crash", "--blocks", "task-1"]).unwrap();
+    let cli = parse(&["wok", "new", "bug", "Fix crash", "--blocks", "task-1"]).unwrap();
     match cli.command {
         Command::New { blocks, .. } => {
             assert_eq!(blocks, vec!["task-1"]);
@@ -323,7 +323,7 @@ fn test_new_with_blocks() {
 #[test]
 fn test_new_with_multiple_blocks() {
     let cli = parse(&[
-        "wk",
+        "wok",
         "new",
         "bug",
         "Fix crash",
@@ -343,7 +343,7 @@ fn test_new_with_multiple_blocks() {
 
 #[test]
 fn test_new_with_blocked_by() {
-    let cli = parse(&["wk", "new", "task", "Test", "--blocked-by", "blocker-1"]).unwrap();
+    let cli = parse(&["wok", "new", "task", "Test", "--blocked-by", "blocker-1"]).unwrap();
     match cli.command {
         Command::New { blocked_by, .. } => {
             assert_eq!(blocked_by, vec!["blocker-1"]);
@@ -354,7 +354,7 @@ fn test_new_with_blocked_by() {
 
 #[test]
 fn test_new_with_tracks() {
-    let cli = parse(&["wk", "new", "feature", "Epic", "--tracks", "subtask-1"]).unwrap();
+    let cli = parse(&["wok", "new", "feature", "Epic", "--tracks", "subtask-1"]).unwrap();
     match cli.command {
         Command::New { tracks, .. } => {
             assert_eq!(tracks, vec!["subtask-1"]);
@@ -365,7 +365,7 @@ fn test_new_with_tracks() {
 
 #[test]
 fn test_new_with_tracked_by() {
-    let cli = parse(&["wk", "new", "task", "Subtask", "--tracked-by", "feature-1"]).unwrap();
+    let cli = parse(&["wok", "new", "task", "Subtask", "--tracked-by", "feature-1"]).unwrap();
     match cli.command {
         Command::New { tracked_by, .. } => {
             assert_eq!(tracked_by, vec!["feature-1"]);
@@ -377,7 +377,7 @@ fn test_new_with_tracked_by() {
 #[test]
 fn test_new_with_all_dependency_flags() {
     let cli = parse(&[
-        "wk",
+        "wok",
         "new",
         "task",
         "Complex task",
@@ -428,7 +428,7 @@ fn test_new_with_all_dependency_flags() {
     idea_mixed = { "Idea", "Idea title" },
 )]
 fn test_new_type_parsing(type_str: &str, title: &str) {
-    let cli = parse(&["wk", "new", type_str, title]).unwrap();
+    let cli = parse(&["wok", "new", type_str, title]).unwrap();
     match cli.command {
         Command::New {
             type_or_title,
@@ -449,7 +449,7 @@ fn test_new_type_parsing(type_str: &str, title: &str) {
 )]
 fn test_new_invalid_type_passes_cli_parsing(type_str: &str) {
     // Invalid types pass CLI parsing (validation happens in run_impl)
-    let cli = parse(&["wk", "new", type_str, "Title"]);
+    let cli = parse(&["wok", "new", type_str, "Title"]);
     assert!(
         cli.is_ok(),
         "CLI parsing should succeed for any non-empty type"
@@ -459,14 +459,14 @@ fn test_new_invalid_type_passes_cli_parsing(type_str: &str) {
 #[test]
 fn test_new_empty_type_rejected_at_cli() {
     // Empty type is rejected by clap's non_empty_string validator
-    let cli = parse(&["wk", "new", "", "Title"]);
+    let cli = parse(&["wok", "new", "", "Title"]);
     assert!(cli.is_err());
 }
 
 // Parameterized tests for output format
 
 #[parameterized(
-    text_default = { &["wk", "new", "task", "Test"] as &[&str] },
+    text_default = { &["wok", "new", "task", "Test"] as &[&str] },
 )]
 fn test_new_output_format_default_text(args: &[&str]) {
     let cli = parse(args).unwrap();
@@ -479,8 +479,8 @@ fn test_new_output_format_default_text(args: &[&str]) {
 }
 
 #[parameterized(
-    id_short = { &["wk", "new", "task", "Test", "-o", "id"] as &[&str] },
-    id_long = { &["wk", "new", "task", "Test", "--output", "id"] as &[&str] },
+    id_short = { &["wok", "new", "task", "Test", "-o", "id"] as &[&str] },
+    id_long = { &["wok", "new", "task", "Test", "--output", "id"] as &[&str] },
 )]
 fn test_new_output_format_id(args: &[&str]) {
     let cli = parse(args).unwrap();
@@ -493,8 +493,8 @@ fn test_new_output_format_id(args: &[&str]) {
 }
 
 #[parameterized(
-    ids_short = { &["wk", "new", "task", "Test", "-o", "ids"] as &[&str] },
-    ids_long = { &["wk", "new", "task", "Test", "--output", "ids"] as &[&str] },
+    ids_short = { &["wok", "new", "task", "Test", "-o", "ids"] as &[&str] },
+    ids_long = { &["wok", "new", "task", "Test", "--output", "ids"] as &[&str] },
 )]
 fn test_new_output_format_ids_alias(args: &[&str]) {
     // "ids" is an alias for "id" for backwards compatibility
@@ -508,8 +508,8 @@ fn test_new_output_format_ids_alias(args: &[&str]) {
 }
 
 #[parameterized(
-    json_short = { &["wk", "new", "task", "Test", "-o", "json"] as &[&str] },
-    json_long = { &["wk", "new", "task", "Test", "--output", "json"] as &[&str] },
+    json_short = { &["wok", "new", "task", "Test", "-o", "json"] as &[&str] },
+    json_long = { &["wok", "new", "task", "Test", "--output", "json"] as &[&str] },
 )]
 fn test_new_output_format_json(args: &[&str]) {
     let cli = parse(args).unwrap();
@@ -525,7 +525,7 @@ fn test_new_output_format_json(args: &[&str]) {
 
 #[test]
 fn test_new_with_prefix_long() {
-    let cli = parse(&["wk", "new", "task", "Test", "--prefix", "custom"]).unwrap();
+    let cli = parse(&["wok", "new", "task", "Test", "--prefix", "custom"]).unwrap();
     match cli.command {
         Command::New { prefix, .. } => {
             assert_eq!(prefix, Some("custom".to_string()));
@@ -536,7 +536,7 @@ fn test_new_with_prefix_long() {
 
 #[test]
 fn test_new_with_prefix_short() {
-    let cli = parse(&["wk", "new", "task", "Test", "-p", "short"]).unwrap();
+    let cli = parse(&["wok", "new", "task", "Test", "-p", "short"]).unwrap();
     match cli.command {
         Command::New { prefix, .. } => {
             assert_eq!(prefix, Some("short".to_string()));
@@ -547,7 +547,7 @@ fn test_new_with_prefix_short() {
 
 #[test]
 fn test_new_prefix_default_none() {
-    let cli = parse(&["wk", "new", "task", "Test"]).unwrap();
+    let cli = parse(&["wok", "new", "task", "Test"]).unwrap();
     match cli.command {
         Command::New { prefix, .. } => {
             assert!(prefix.is_none());
@@ -559,7 +559,7 @@ fn test_new_prefix_default_none() {
 #[test]
 fn test_new_prefix_with_other_flags() {
     let cli = parse(&[
-        "wk",
+        "wok",
         "new",
         "bug",
         "Fix crash",

@@ -48,7 +48,7 @@ Current hidden flags on `new` command:
 
 ### Priority Tag System
 
-Priority is an internal-only attribute derived from issue labels. It is used for sorting in `wk ready` and `wk list` commands but is not displayed in output.
+Priority is an internal-only attribute derived from issue labels. It is used for sorting in `wok ready` and `wok list` commands but is not displayed in output.
 
 **Tag format:**
 - `priority:N` or `p:N` where N is 0-4

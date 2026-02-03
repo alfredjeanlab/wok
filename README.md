@@ -1,4 +1,4 @@
-# Wok (wk)
+# Wok
 
 A collaborative, offline-first, AI-friendly issue tracker.
 
@@ -21,15 +21,15 @@ curl -fsSL https://github.com/alfredjeanlab/wok/releases/latest/download/install
 Initialize a tracker in your project:
 
 ```bash
-wk init                                  # Initialize with auto-detected prefix
-wk init --prefix myproj                  # Initialize with custom prefix
-wk init --remote .                       # Enable git sync (orphan branch)
+wok init                                  # Initialize with auto-detected prefix
+wok init --prefix myproj                  # Initialize with custom prefix
+wok init --remote .                       # Enable git sync (orphan branch)
 ```
 
 Install Claude Code hooks for AI integration:
 
 ```bash
-wk hooks install
+wok hooks install
 ```
 
 ## Issue Tracking
@@ -37,18 +37,18 @@ wk hooks install
 Create, track, and manage work:
 
 ```bash
-wk new task "My task"                    # Create a new task
-wk new feature "New auth"                # Create a feature
-wk list                                  # List all open issues
-wk ready                                 # Show unblocked todo items
-wk start <id>                            # Start working on an issue
-wk done <id>                             # Mark issue as complete
-wk show <id>                             # View full issue details
-wk dep <id1> blocks <id2>                # Add dependency
-wk label <id> priority:1                 # Add labels
+wok new task "My task"                    # Create a new task
+wok new feature "New auth"                # Create a feature
+wok list                                  # List all open issues
+wok ready                                 # Show unblocked todo items
+wok start <id>                            # Start working on an issue
+wok done <id>                             # Mark issue as complete
+wok show <id>                             # View full issue details
+wok dep <id1> blocks <id2>                # Add dependency
+wok label <id> priority:1                 # Add labels
 ```
 
-For more details, run `wk help` or `wk help <command>`.
+For more details, run `wok help` or `wok help <command>`.
 
 ## Remotes
 
@@ -56,22 +56,22 @@ Choose a sync strategy when initializing:
 
 **Local** - Solo work, issues stay on your machine:
 ```bash
-wk init
+wok init
 ```
 
 **Single Project** - Track issues in your repo (git branch):
 ```bash
-wk init --remote .
+wok init --remote .
 ```
 
 **Multiple Projects** - Track issues across multiple projects (separate git repo):
 ```bash
-wk init --remote ~/tracker
+wok init --remote ~/tracker
 ```
 
 **Fleet** - Central coordination for agents and automation:
 ```bash
-wk init --remote ws://host:port
+wok init --remote ws://host:port
 ```
 
 Data is stored in `.wok/issues.db` by default.
@@ -92,7 +92,7 @@ brew install bats      # BATS test framework
 Run `make` to see all available targets:
 
 ```bash
-make install   # Build and install the wk binary
+make install   # Build and install the wok binary
 make check     # Run fmt, clippy, check, audit, test
 make spec      # Run BATS specs
 ```

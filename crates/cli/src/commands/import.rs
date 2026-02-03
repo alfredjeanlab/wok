@@ -178,7 +178,7 @@ struct ImportResult {
 
 // Format detection
 fn detect_format<'a>(path: &str, explicit_format: &'a str) -> &'a str {
-    if explicit_format != "wk" {
+    if explicit_format != "wok" {
         return explicit_format;
     }
     // Auto-detect beads format from path

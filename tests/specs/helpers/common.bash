@@ -99,7 +99,7 @@ test_setup() {
 init_project_once() {
     local prefix="${1:-test}"
     if [ ! -d ".wok" ]; then
-        "$WK_BIN" init --prefix "$prefix" >/dev/null
+        "$WK_BIN" init --prefix "$prefix" --private >/dev/null
     fi
 }
 
@@ -107,7 +107,7 @@ init_project_once() {
 # Usage: init_project [prefix]
 init_project() {
     local prefix="${1:-test}"
-    run "$WK_BIN" init --prefix "$prefix"
+    run "$WK_BIN" init --prefix "$prefix" --private
     assert_success
 }
 

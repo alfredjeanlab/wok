@@ -254,7 +254,7 @@ pub fn run(command: Command) -> Result<()> {
         ),
         Command::Completion { shell } => {
             let mut cmd = Cli::command();
-            generate(shell, &mut cmd, "wk", &mut std::io::stdout());
+            generate(shell, &mut cmd, "wok", &mut std::io::stdout());
             Ok(())
         }
         Command::Prime => commands::prime::run(),

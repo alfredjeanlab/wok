@@ -16,7 +16,7 @@ setup() {
 
 @test "config rename requires both old and new prefix" {
     mkdir -p rename_args && cd rename_args
-    run "$WK_BIN" init --prefix test --local
+    run "$WK_BIN" init --prefix test --private
     assert_success
 
     # Requires both prefixes
@@ -30,7 +30,7 @@ setup() {
 
 @test "config rename changes issue IDs and updates config prefix" {
     mkdir -p rename_main && cd rename_main
-    run "$WK_BIN" init --prefix old --local
+    run "$WK_BIN" init --prefix old --private
     assert_success
     id=$(create_issue task "ConfigRename Test issue")
 
@@ -55,7 +55,7 @@ setup() {
 @test "config rename preserves dependencies and labels" {
     # Preserves dependencies
     mkdir -p rename_deps && cd rename_deps
-    run "$WK_BIN" init --prefix old --local
+    run "$WK_BIN" init --prefix old --private
     assert_success
     id1=$(create_issue task "ConfigRenameDeps Blocker")
     id2=$(create_issue task "ConfigRenameDeps Blocked")
@@ -72,7 +72,7 @@ setup() {
     # Preserves labels
     cd ..
     mkdir -p rename_labels && cd rename_labels
-    run "$WK_BIN" init --prefix old --local
+    run "$WK_BIN" init --prefix old --private
     assert_success
     id=$(create_issue task "ConfigRenameLabels Test issue" --label urgent)
 
@@ -88,7 +88,7 @@ setup() {
 @test "config rename only affects matching prefix and same prefix is noop" {
     # Only affects matching prefix
     mkdir -p rename_match && cd rename_match
-    run "$WK_BIN" init --prefix main --local
+    run "$WK_BIN" init --prefix main --private
     assert_success
     main_id=$(create_issue task "ConfigRenameMatch Main issue")
 
@@ -102,7 +102,7 @@ setup() {
     # Same prefix is noop
     cd ..
     mkdir -p rename_same && cd rename_same
-    run "$WK_BIN" init --prefix same --local
+    run "$WK_BIN" init --prefix same --private
     assert_success
     id=$(create_issue task "ConfigRenameSame Test issue")
 
@@ -116,7 +116,7 @@ setup() {
     # Does not update config for non-matching prefix
     cd ..
     mkdir -p rename_nomatch && cd rename_nomatch
-    run "$WK_BIN" init --prefix current --local
+    run "$WK_BIN" init --prefix current --private
     assert_success
 
     run "$WK_BIN" config rename other new
@@ -128,7 +128,7 @@ setup() {
 
 @test "config rename rejects invalid prefixes" {
     mkdir -p rename_invalid && cd rename_invalid
-    run "$WK_BIN" init --prefix old --local
+    run "$WK_BIN" init --prefix old --private
     assert_success
 
     # New prefix too short
@@ -155,7 +155,7 @@ setup() {
 @test "config remote configures git and websocket remotes" {
     # Git remote on local tracker
     mkdir -p remote_git && cd remote_git
-    run "$WK_BIN" init --prefix test --local
+    run "$WK_BIN" init --prefix test --private
     assert_success
 
     run "$WK_BIN" config remote .
@@ -169,7 +169,7 @@ setup() {
     # Explicit git:. format
     cd ..
     mkdir -p remote_gitexplicit && cd remote_gitexplicit
-    run "$WK_BIN" init --prefix test --local
+    run "$WK_BIN" init --prefix test --private
     assert_success
 
     run "$WK_BIN" config remote "git:."
@@ -179,7 +179,7 @@ setup() {
     # Websocket URL
     cd ..
     mkdir -p remote_ws && cd remote_ws
-    run "$WK_BIN" init --prefix test --local
+    run "$WK_BIN" init --prefix test --private
     assert_success
 
     run "$WK_BIN" config remote "ws://localhost:7890"
@@ -189,7 +189,7 @@ setup() {
     # Updates gitignore for remote mode
     cd ..
     mkdir -p remote_gitignore && cd remote_gitignore
-    run "$WK_BIN" init --prefix test --local
+    run "$WK_BIN" init --prefix test --private
     assert_success
 
     # Verify local mode gitignore includes config.toml
@@ -224,7 +224,7 @@ setup() {
     # Fails with workspace
     mkdir -p remote_workspace && cd remote_workspace
     mkdir -p shared_wok
-    run "$WK_BIN" init --prefix test --local --workspace shared_wok
+    run "$WK_BIN" init --prefix test --private --workspace shared_wok
     assert_success
 
     run "$WK_BIN" config remote .
@@ -236,7 +236,7 @@ setup() {
     cd ..
     mkdir -p remote_workspace2 && cd remote_workspace2
     mkdir -p shared_wok
-    run "$WK_BIN" init --prefix test --local --workspace shared_wok
+    run "$WK_BIN" init --prefix test --private --workspace shared_wok
     assert_success
 
     run "$WK_BIN" config remote "ws://localhost:7890"

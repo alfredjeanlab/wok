@@ -3,17 +3,17 @@
 ## Command Structure
 
 ```
-wk [-C <path>] <command> [args] [options]
+wok [-C <path>] <command> [args] [options]
 ```
 
 ### Global Options
 
 ```bash
-# Run as if wk was started in <path>
-wk -C <path> <command>
+# Run as if wok was started in <path>
+wok -C <path> <command>
 # Examples:
-wk -C /path/to/project list
-wk -C ../other-repo show prj-a1b2
+wok -C /path/to/project list
+wok -C ../other-repo show prj-a1b2
 ```
 
 ## Commands
@@ -22,20 +22,20 @@ wk -C ../other-repo show prj-a1b2
 
 ```bash
 # General help
-wk help
-wk -h / wk --help          # (hidden aliases)
+wok help
+wok -h / wok --help          # (hidden aliases)
 
 # Subcommand help
-wk help <command>
-wk <command> -h/--help     # (hidden aliases)
-# Example: wk help dep
+wok help <command>
+wok <command> -h/--help     # (hidden aliases)
+# Example: wok help dep
 ```
 
 ### Onboarding
 
 ```bash
 # Output issue tracker workflow template (useful for AI agents)
-wk prime
+wok prime
 ```
 
 The `prime` command outputs a markdown template with common commands and workflows.
@@ -48,20 +48,20 @@ It works without initialization (no `.wok/` directory required) and is useful fo
 
 ```bash
 # Initialize issue tracker (prefix defaults to directory name)
-wk init
+wok init
 
 # Initialize with explicit prefix
-wk init --prefix prj
+wok init --prefix prj
 
 # Initialize at specific path
-wk init --path /path/to/shared --prefix prj
+wok init --path /path/to/shared --prefix prj
 
 # Initialize with workspace link only (no local database)
 # Note: workspace directory must exist
-wk init --workspace /path/to/workspace
+wok init --workspace /path/to/workspace
 
 # Initialize with workspace and explicit prefix
-wk init --workspace /path/to/workspace --prefix prj
+wok init --workspace /path/to/workspace --prefix prj
 ```
 
 **Workspace validation**: When `--workspace` is specified, the workspace directory must exist. The command fails with a clear error if the path does not exist.
@@ -70,40 +70,40 @@ wk init --workspace /path/to/workspace --prefix prj
 
 ```bash
 # Create issue (type defaults to "task")
-wk new [type] <title> [--label <label>[,<label>...]]... [--note "..."] [--link <url>]...
+wok new [type] <title> [--label <label>[,<label>...]]... [--note "..."] [--link <url>]...
 # Examples:
-wk new "Fix login bug"                              # task (default)
-wk new task "Fix login bug" --label auth --note "Check session handling"
-wk new bug "Memory leak in worker"
-wk new feature "User authentication"
-wk new task "Port feature" --link "https://github.com/org/repo/issues/123"
-wk new task "Multi-labeled" --label a,b,c           # comma-separated labels
+wok new "Fix login bug"                              # task (default)
+wok new task "Fix login bug" --label auth --note "Check session handling"
+wok new bug "Memory leak in worker"
+wok new feature "User authentication"
+wok new task "Port feature" --link "https://github.com/org/repo/issues/123"
+wok new task "Multi-labeled" --label a,b,c           # comma-separated labels
 
 # Start work (todo → in_progress)
-wk start <id>...
+wok start <id>...
 
 # Complete work (in_progress → done, or todo → done with --reason)
-wk done <id>...
-wk done <id>... --reason "already fixed"   # prior: todo directly to done
+wok done <id>...
+wok done <id>... --reason "already fixed"   # prior: todo directly to done
 
 # Close without completing (any → closed, requires reason)
-wk close <id>... --reason "duplicate of prj-a3f2"
+wok close <id>... --reason "duplicate of prj-a3f2"
 
 # Return to todo (in_progress/done/closed → todo)
-wk reopen <id>...                            # from in_progress: no reason needed
-wk reopen <id>... --reason "regression found" # from done/closed: reason required
+wok reopen <id>...                            # from in_progress: no reason needed
+wok reopen <id>... --reason "regression found" # from done/closed: reason required
 
 # Edit issue description, title, or type
-wk edit <id> description "new description"   # Update description
-wk edit <id> title "new title"               # Update title
-wk edit <id> type <type>                     # Change type (feature|task|bug|chore)
+wok edit <id> description "new description"   # Update description
+wok edit <id> title "new title"               # Update title
+wok edit <id> type <type>                     # Change type (feature|task|bug|chore)
 ```
 
 ### Viewing Issues
 
 ```bash
 # List issues (default: open issues - todo + in_progress)
-wk list [--status/-s <status>[,<status>...]]   # todo|in_progress|done|closed
+wok list [--status/-s <status>[,<status>...]]   # todo|in_progress|done|closed
         [--type/-t <type>[,<type>...]]         # feature|task|bug|chore
         [--label/-l <label>[,<label>...]]...   # repeatable
         [--blocked]         # show only blocked issues
@@ -111,7 +111,7 @@ wk list [--status/-s <status>[,<status>...]]   # todo|in_progress|done|closed
 # Sort order: priority ASC (0=highest first), then created_at DESC (newest first)
 
 # Show ready issues (unblocked todo items only)
-wk ready [--type/-t <type>[,<type>...]]        # feature|task|bug|chore
+wok ready [--type/-t <type>[,<type>...]]        # feature|task|bug|chore
          [--label/-l <label>[,<label>...]]...  # repeatable
          [--output/-o text|json]            # output format (default: text)
 # Note: ready = unblocked todo by definition (no --status, --all, or --blocked flags)
@@ -126,16 +126,16 @@ wk ready [--type/-t <type>[,<type>...]]        # feature|task|bug|chore
 #   Cross-filter = AND:                --status todo --label auth
 #
 # Examples:
-wk list --status todo,in_progress              # todo OR in_progress
-wk list --label mod:wkrs,mod:wkgo              # wkrs OR wkgo module
-wk list --label mod:wkrs,mod:wkgo --label urgent   # (wkrs OR wkgo) AND urgent
-wk list --type task,bug --status todo          # (task OR bug) AND todo
+wok list --status todo,in_progress              # todo OR in_progress
+wok list --label mod:wkrs,mod:wkgo              # wkrs OR wkgo module
+wok list --label mod:wkrs,mod:wkgo --label urgent   # (wkrs OR wkgo) AND urgent
+wok list --type task,bug --status todo          # (task OR bug) AND todo
 
 # Show single issue with full details (includes deps, notes, events)
-wk show <id> [--output json]
+wok show <id> [--output json]
 
 # Show dependency tree rooted at an issue
-wk tree <id>
+wok tree <id>
 # Example output:
 # auth-a1b2: Build auth system
 # ├── auth-c3d4: Design database schema [done]
@@ -143,12 +143,12 @@ wk tree <id>
 #     └── (blocked by auth-c3d4)
 
 # JSON output for list and search commands returns a plain array:
-# wk list --output json
+# wok list --output json
 [
   {"id": "prj-a3f2", "issue_type": "task", "status": "todo", "title": "Example", "labels": ["label1"]}
 ]
 
-# wk ready --output json (ready still uses an object with "issues" key)
+# wok ready --output json (ready still uses an object with "issues" key)
 {
   "issues": [
     {"id": "prj-a3f2", "issue_type": "task", "status": "todo", "title": "Example", "labels": ["label1"]}
@@ -160,28 +160,28 @@ wk tree <id>
 
 ```bash
 # Add dependencies (one or more targets)
-wk dep <from-id> <rel> <to-id>...
+wok dep <from-id> <rel> <to-id>...
 # Relationships: blocks, contains
 # Examples:
-wk dep prj-a3f2 blocks prj-b4c1              # a3f2 blocks b4c1
-wk dep prj-a3f2 blocks prj-b4c1 prj-c5d2     # a3f2 blocks both
-wk dep prj-feat contains prj-t1 prj-t2 prj-t3  # feature contains multiple tasks
+wok dep prj-a3f2 blocks prj-b4c1              # a3f2 blocks b4c1
+wok dep prj-a3f2 blocks prj-b4c1 prj-c5d2     # a3f2 blocks both
+wok dep prj-feat contains prj-t1 prj-t2 prj-t3  # feature contains multiple tasks
 
 # Remove dependency
-wk undep <from-id> <rel> <to-id>...
+wok undep <from-id> <rel> <to-id>...
 ```
 
 ### External Links
 
 ```bash
 # Add external link to an issue
-wk link <id> <url> [--reason <rel>]
+wok link <id> <url> [--reason <rel>]
 # Relationships: import, blocks, tracks, tracked-by
 
 # Examples:
-wk link prj-a3f2 https://github.com/org/repo/issues/123
-wk link prj-a3f2 jira://PE-5555                      # Jira shorthand
-wk link prj-a3f2 https://company.atlassian.net/browse/PE-5555 --reason import
+wok link prj-a3f2 https://github.com/org/repo/issues/123
+wok link prj-a3f2 jira://PE-5555                      # Jira shorthand
+wok link prj-a3f2 https://company.atlassian.net/browse/PE-5555 --reason import
 
 # Link types are auto-detected from URL:
 # - GitHub: https://github.com/{owner}/{repo}/issues/{id}
@@ -190,11 +190,11 @@ wk link prj-a3f2 https://company.atlassian.net/browse/PE-5555 --reason import
 # - Confluence: https://*.atlassian.net/wiki/... (has /wiki in path)
 
 # Remove external link from an issue
-wk unlink <id> <url>
+wok unlink <id> <url>
 
 # Examples:
-wk unlink prj-a3f2 https://github.com/org/repo/issues/123
-wk unlink prj-a3f2 jira://PE-5555
+wok unlink prj-a3f2 https://github.com/org/repo/issues/123
+wok unlink prj-a3f2 jira://PE-5555
 ```
 
 **Import validation**: When using `--reason import`, the URL must be a known provider (github, jira, gitlab) with a detectable issue ID.
@@ -203,22 +203,22 @@ wk unlink prj-a3f2 jira://PE-5555
 
 ```bash
 # Add label to one or more issues
-wk label <id>... <label>
+wok label <id>... <label>
 # Examples:
-wk label prj-a3f2 project:auth
-wk label prj-a3f2 prj-b4c1 prj-c5d2 urgent
+wok label prj-a3f2 project:auth
+wok label prj-a3f2 prj-b4c1 prj-c5d2 urgent
 
 # Remove label from one or more issues
-wk unlabel <id>... <label>
+wok unlabel <id>... <label>
 ```
 
 ### Notes
 
 ```bash
 # Add note (status recorded automatically)
-wk note <id> "note content"
+wok note <id> "note content"
 
-# View notes (included in `wk show`)
+# View notes (included in `wok show`)
 # Note: Cannot add notes to closed issues
 ```
 
@@ -226,45 +226,45 @@ wk note <id> "note content"
 
 ```bash
 # View recent activity across all issues
-wk log [--[no-]limit N]
+wok log [--[no-]limit N]
 
 # View history for a specific issue
-wk log <id>
+wok log <id>
 ```
 
 ### Export
 
 ```bash
 # Export all issues to JSONL
-wk export <filepath>
+wok export <filepath>
 ```
 
 ### Import
 
 ```bash
 # Import issues from file
-wk import <filepath>
-wk import -i <filepath>
+wok import <filepath>
+wok import -i <filepath>
 
 # Import from stdin
-cat issues.jsonl | wk import -
-wk import < issues.jsonl
+cat issues.jsonl | wok import -
+wok import < issues.jsonl
 
 # Specify format explicitly
-wk import --format wk issues.jsonl      # wk native format (default)
-wk import --format bd .beads/issues.jsonl  # beads format
+wok import --format wok issues.jsonl      # wok native format (default)
+wok import --format bd .beads/issues.jsonl  # beads format
 
 # Preview changes without applying
-wk import --dry-run issues.jsonl
+wok import --dry-run issues.jsonl
 
 # Filter imported issues (same syntax as list)
-wk import issues.jsonl --status todo,in_progress
-wk import issues.jsonl --type task,bug
-wk import issues.jsonl --label urgent
-wk import issues.jsonl --prefix myproj    # Only import issues with prefix
+wok import issues.jsonl --status todo,in_progress
+wok import issues.jsonl --type task,bug
+wok import issues.jsonl --label urgent
+wok import issues.jsonl --prefix myproj    # Only import issues with prefix
 
 # Auto-detect beads format from path
-wk import path/to/.beads/issues.jsonl   # auto-detects bd format
+wok import path/to/.beads/issues.jsonl   # auto-detects bd format
 ```
 
 **Behavior:**
@@ -281,7 +281,7 @@ wk import path/to/.beads/issues.jsonl   # auto-detects bd format
 
 #### bd Format Field Mapping
 
-| bd Field | wk Mapping |
+| bd Field | wok Mapping |
 |----------|------------|
 | `id` | `id` (preserved) |
 | `title` | `title` |
@@ -312,7 +312,7 @@ abandoned, blocked, error, timeout, aborted
 
 #### bd Dependency Type Mapping
 
-| bd `type` | wk `relation` |
+| bd `type` | wok `relation` |
 |-----------|---------------|
 | `blocks` | `blocks` |
 | `parent` | `tracks` |
@@ -321,7 +321,7 @@ abandoned, blocked, error, timeout, aborted
 
 #### bd Comment Mapping
 
-| bd Comment Field | wk Note Field |
+| bd Comment Field | wok Note Field |
 |------------------|---------------|
 | `text` | `content` |
 | `created_at` | `created_at` (preserved) |
@@ -331,29 +331,29 @@ abandoned, blocked, error, timeout, aborted
 
 ```bash
 # Generate shell completion script
-wk completion <shell>
+wok completion <shell>
 # Supported shells: bash, zsh, fish, powershell
 
 # Examples:
-wk completion bash > /etc/bash_completion.d/wk
-wk completion zsh > ~/.zsh/completions/_wk
-wk completion fish > ~/.config/fish/completions/wk.fish
+wok completion bash > /etc/bash_completion.d/wok
+wok completion zsh > ~/.zsh/completions/_wok
+wok completion fish > ~/.config/fish/completions/wok.fish
 ```
 
 ### Configuration Management
 
 ```bash
 # List all prefixes in the database
-wk config prefixes
-wk config prefixes -o json       # Output as JSON
-wk config prefixes -o id         # Output prefix names only
+wok config prefixes
+wok config prefixes -o json       # Output as JSON
+wok config prefixes -o id         # Output prefix names only
 
 # Rename issue ID prefix (updates all existing issues in database)
-wk config rename <old-prefix> <new-prefix>
+wok config rename <old-prefix> <new-prefix>
 
 # Examples:
-wk config rename proj newproj    # Rename prefix from 'proj' to 'newproj'
-wk config rename old new         # Rename prefix from 'old' to 'new'
+wok config rename proj newproj    # Rename prefix from 'proj' to 'newproj'
+wok config rename old new         # Rename prefix from 'old' to 'new'
 ```
 
 **Behavior (`config prefixes`):**
@@ -373,13 +373,13 @@ wk config rename old new         # Rename prefix from 'old' to 'new'
 
 ```bash
 # Show remote sync status (daemon state, connection, pending ops)
-wk remote status
+wok remote status
 
 # Force immediate sync with remote server
-wk remote sync
+wok remote sync
 
 # Stop the background sync daemon
-wk remote stop
+wok remote stop
 ```
 
 **Behavior when remote is not configured:**
@@ -406,11 +406,11 @@ wk remote stop
 Concise AI-focused format (not tabular):
 
 ```
-$ wk list
+$ wok list
 - [task] (todo) prj-a3f2: Implement user auth
 - [bug] (todo, @alice) prj-9bc1: Fix memory leak
 
-$ wk show prj-a3f2
+$ wok show prj-a3f2
 [task] prj-a3f2
 Title: Implement user auth
 Status: todo
@@ -447,24 +447,24 @@ Log:
 
 ```bash
 # Install hooks (default: local, auto-detect interactive mode)
-wk hooks install
+wok hooks install
 
 # Install to specific scope
-wk hooks install local     # ./.claude/settings.local.json (default)
-wk hooks install project   # ./.claude/settings.json
-wk hooks install user      # ~/.claude/settings.json
+wok hooks install local     # ./.claude/settings.local.json (default)
+wok hooks install project   # ./.claude/settings.json
+wok hooks install user      # ~/.claude/settings.json
 
 # Force non-interactive mode (for scripts/AI agents)
-wk hooks install -y [scope]
+wok hooks install -y [scope]
 
 # Force interactive mode (TUI picker)
-wk hooks install -i [scope]
+wok hooks install -i [scope]
 
 # Uninstall hooks
-wk hooks uninstall [scope]
+wok hooks uninstall [scope]
 
 # Show current hooks status
-wk hooks status
+wok hooks status
 ```
 
 **Mode detection:**
@@ -486,24 +486,24 @@ Simple inline radio-button prompt for selecting scope when no positional argumen
 **Hook installation behavior:**
 The command uses smart merging to install hooks:
 - Parses existing hooks configuration in the target file
-- Preserves all non-wk hooks (hooks not containing "wk prime")
-- Adds wk hooks only if not already present (idempotent)
-- Maintains existing hook order, appends wk hooks at end of each event array
+- Preserves all non-wok hooks (hooks not containing "wok prime")
+- Adds wok hooks only if not already present (idempotent)
+- Maintains existing hook order, appends wok hooks at end of each event array
 
 **Duplicate detection:**
-A hook entry is considered a wk hook if any command in its hooks array contains "wk prime":
-- Matches `wk prime` (plain command)
-- Matches `/path/to/wk prime` (full path)
-- Matches `wk prime --args` (with arguments)
+A hook entry is considered a wok hook if any command in its hooks array contains "wok prime":
+- Matches `wok prime` (plain command)
+- Matches `/path/to/wok prime` (full path)
+- Matches `wok prime --args` (with arguments)
 
 **Uninstall behavior:**
 The uninstall command also uses smart merging:
-- Only removes hooks containing "wk prime"
+- Only removes hooks containing "wok prime"
 - Preserves other hooks in the same event array
 - Removes event key only if array becomes empty
 - Removes `hooks` key only if object becomes empty
 
 **Hook configuration installed:**
-The command installs Claude Code hooks that integrate wk with the AI assistant's workflow:
-- PreCompact: Runs `wk prime` before context compaction to preserve issue tracker context
-- SessionStart: Runs `wk prime` at session start to inject issue tracker context
+The command installs Claude Code hooks that integrate wok with the AI assistant's workflow:
+- PreCompact: Runs `wok prime` before context compaction to preserve issue tracker context
+- SessionStart: Runs `wok prime` at session start to inject issue tracker context

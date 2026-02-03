@@ -23,7 +23,7 @@ teardown() {
 }
 
 @test "remote sync in local mode is silent" {
-    run "$WK_BIN" init --prefix test --local
+    run "$WK_BIN" init --prefix test --private
     assert_success
     run "$WK_BIN" remote sync
     assert_success
@@ -31,7 +31,7 @@ teardown() {
 }
 
 @test "remote status provides configuration hint" {
-    run "$WK_BIN" init --prefix test --local
+    run "$WK_BIN" init --prefix test --private
     assert_success
     run "$WK_BIN" remote status
     assert_success

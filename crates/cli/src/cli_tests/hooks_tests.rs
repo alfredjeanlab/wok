@@ -13,7 +13,7 @@ fn parse(args: &[&str]) -> Result<Cli, clap::Error> {
 
 #[test]
 fn test_hooks_install_with_y_flag() {
-    let cli = parse(&["wk", "hooks", "install", "-y"]).unwrap();
+    let cli = parse(&["wok", "hooks", "install", "-y"]).unwrap();
     match cli.command {
         Command::Hooks(HooksCommand::Install {
             scope,
@@ -30,7 +30,7 @@ fn test_hooks_install_with_y_flag() {
 
 #[test]
 fn test_hooks_install_with_y_flag_and_scope() {
-    let cli = parse(&["wk", "hooks", "install", "-y", "local"]).unwrap();
+    let cli = parse(&["wok", "hooks", "install", "-y", "local"]).unwrap();
     match cli.command {
         Command::Hooks(HooksCommand::Install {
             scope,
@@ -47,7 +47,7 @@ fn test_hooks_install_with_y_flag_and_scope() {
 
 #[test]
 fn test_hooks_install_with_yes_long_flag() {
-    let cli = parse(&["wk", "hooks", "install", "--yes"]).unwrap();
+    let cli = parse(&["wok", "hooks", "install", "--yes"]).unwrap();
     match cli.command {
         Command::Hooks(HooksCommand::Install {
             scope,
@@ -65,20 +65,20 @@ fn test_hooks_install_with_yes_long_flag() {
 #[test]
 fn test_hooks_install_rejects_q_shorthand() {
     // -q short flag was renamed to -y
-    let result = parse(&["wk", "hooks", "install", "-q"]);
+    let result = parse(&["wok", "hooks", "install", "-q"]);
     assert!(result.is_err());
 }
 
 #[test]
 fn test_hooks_install_rejects_quiet_long_flag() {
     // --quiet was renamed to --yes
-    let result = parse(&["wk", "hooks", "install", "--quiet"]);
+    let result = parse(&["wok", "hooks", "install", "--quiet"]);
     assert!(result.is_err());
 }
 
 #[test]
 fn test_hooks_install_i_and_y_conflict() {
     // -i and -y should conflict
-    let result = parse(&["wk", "hooks", "install", "-i", "-y"]);
+    let result = parse(&["wok", "hooks", "install", "-i", "-y"]);
     assert!(result.is_err());
 }

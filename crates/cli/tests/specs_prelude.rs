@@ -46,7 +46,7 @@ impl Project {
         let path = temp.path().to_path_buf();
 
         // Initialize the project
-        cargo_bin_cmd!("wk")
+        cargo_bin_cmd!("wok")
             .current_dir(&path)
             .env("HOME", &path)
             .args(["init", "--prefix", prefix, "--private"])
@@ -101,13 +101,13 @@ pub struct Wk {
 impl Wk {
     /// Create a new wk command (uses current directory).
     pub fn new() -> Self {
-        let cmd = cargo_bin_cmd!("wk");
+        let cmd = cargo_bin_cmd!("wok");
         Self { cmd }
     }
 
     /// Create a wk command that runs in the specified directory.
     pub fn in_dir(path: &PathBuf) -> Self {
-        let mut cmd = cargo_bin_cmd!("wk");
+        let mut cmd = cargo_bin_cmd!("wok");
         cmd.current_dir(path);
         cmd.env("HOME", path);
         Self { cmd }

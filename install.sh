@@ -115,7 +115,7 @@ tar -xzf "${TARBALL}"
 # Install binaries
 mkdir -p "$WOK_INSTALL"
 info "Installing to ${WOK_INSTALL}..."
-cp wk "$WOK_INSTALL/wok"
+cp wok "$WOK_INSTALL/wok"
 cp wk-remote "$WOK_INSTALL/wk-remote"
 chmod +x "$WOK_INSTALL/wok" "$WOK_INSTALL/wk-remote"
 
@@ -136,9 +136,9 @@ fi
 
 # Install shell completions (idempotent)
 install_completions() {
-    local wk="${WOK_INSTALL}/wk"
-    local marker="# wk-shell-completion"
-    local data_dir="${XDG_DATA_HOME:-$HOME/.local/share}/wk/completions"
+    local wok="${WOK_INSTALL}/wok"
+    local marker="# wok-shell-completion"
+    local data_dir="${XDG_DATA_HOME:-$HOME/.local/share}/wok/completions"
 
     # Bash
     if command -v bash &> /dev/null; then
@@ -150,9 +150,9 @@ install_completions() {
         fi
         if [ -n "$rc" ] && ! grep -q "$marker" "$rc"; then
             mkdir -p "$data_dir"
-            "$wk" completion bash > "$data_dir/wk.bash"
+            "$wok" completion bash > "$data_dir/wok.bash"
             printf '\n%s\n[ -f "%s" ] && source "%s"\n' \
-                "$marker" "$data_dir/wk.bash" "$data_dir/wk.bash" >> "$rc"
+                "$marker" "$data_dir/wok.bash" "$data_dir/wok.bash" >> "$rc"
             info "Installed bash completions (source: $rc)"
         fi
     fi
@@ -161,9 +161,9 @@ install_completions() {
     if command -v zsh &> /dev/null; then
         if [ -f "$HOME/.zshrc" ] && ! grep -q "$marker" "$HOME/.zshrc"; then
             mkdir -p "$data_dir"
-            "$wk" completion zsh > "$data_dir/_wk"
+            "$wok" completion zsh > "$data_dir/_wok"
             printf '\n%s\n[ -f "%s" ] && source "%s"\n' \
-                "$marker" "$data_dir/_wk" "$data_dir/_wk" >> "$HOME/.zshrc"
+                "$marker" "$data_dir/_wok" "$data_dir/_wok" >> "$HOME/.zshrc"
             info "Installed zsh completions (source: ~/.zshrc)"
         fi
     fi
@@ -171,9 +171,9 @@ install_completions() {
     # Fish
     if command -v fish &> /dev/null; then
         local fish_dir="${XDG_CONFIG_HOME:-$HOME/.config}/fish/completions"
-        if [ ! -f "$fish_dir/wk.fish" ]; then
+        if [ ! -f "$fish_dir/wok.fish" ]; then
             mkdir -p "$fish_dir"
-            "$wk" completion fish > "$fish_dir/wk.fish"
+            "$wok" completion fish > "$fish_dir/wok.fish"
             info "Installed fish completions"
         fi
     fi

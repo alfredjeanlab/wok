@@ -21,14 +21,14 @@ fn dummy_config() -> Config {
 #[test]
 fn test_detect_format_explicit() {
     assert_eq!(detect_format("foo.jsonl", "bd"), "bd");
-    assert_eq!(detect_format("foo.jsonl", "wk"), "wk");
+    assert_eq!(detect_format("foo.jsonl", "wok"), "wok");
 }
 
 #[test]
 fn test_detect_format_auto() {
-    assert_eq!(detect_format(".beads/issues.jsonl", "wk"), "bd");
-    assert_eq!(detect_format("path/to/.beads/issues.jsonl", "wk"), "bd");
-    assert_eq!(detect_format("beads.jsonl", "wk"), "wk");
+    assert_eq!(detect_format(".beads/issues.jsonl", "wok"), "bd");
+    assert_eq!(detect_format("path/to/.beads/issues.jsonl", "wok"), "bd");
+    assert_eq!(detect_format("beads.jsonl", "wok"), "wok");
 }
 
 #[test]
@@ -189,7 +189,7 @@ fn test_import_creates_issue() {
         &db,
         &config,
         import_file.to_str().unwrap(),
-        "wk",
+        "wok",
         false,
         vec![],
         vec![],
@@ -218,7 +218,7 @@ fn test_import_with_labels() {
         &db,
         &config,
         import_file.to_str().unwrap(),
-        "wk",
+        "wok",
         false,
         vec![],
         vec![],
@@ -248,7 +248,7 @@ fn test_import_dry_run() {
         &db,
         &config,
         import_file.to_str().unwrap(),
-        "wk",
+        "wok",
         true, // dry_run
         vec![],
         vec![],
@@ -278,7 +278,7 @@ fn test_import_status_filter() {
         &db,
         &config,
         import_file.to_str().unwrap(),
-        "wk",
+        "wok",
         false,
         vec!["todo".to_string()],
         vec![],
@@ -309,7 +309,7 @@ fn test_import_prefix_filter() {
         &db,
         &config,
         import_file.to_str().unwrap(),
-        "wk",
+        "wok",
         false,
         vec![],
         vec![],
@@ -354,7 +354,7 @@ fn test_import_updates_existing() {
         &db,
         &config,
         import_file.to_str().unwrap(),
-        "wk",
+        "wok",
         false,
         vec![],
         vec![],
@@ -398,7 +398,7 @@ fn test_import_updates_existing_status() {
         &db,
         &config,
         import_file.to_str().unwrap(),
-        "wk",
+        "wok",
         false,
         vec![],
         vec![],
@@ -457,7 +457,7 @@ fn test_import_empty_file() {
         &db,
         &config,
         import_file.to_str().unwrap(),
-        "wk",
+        "wok",
         false,
         vec![],
         vec![],
@@ -486,7 +486,7 @@ fn test_import_skips_empty_lines() {
         &db,
         &config,
         import_file.to_str().unwrap(),
-        "wk",
+        "wok",
         false,
         vec![],
         vec![],
@@ -511,7 +511,7 @@ fn test_import_invalid_json_fails() {
         &db,
         &config,
         import_file.to_str().unwrap(),
-        "wk",
+        "wok",
         false,
         vec![],
         vec![],
@@ -538,7 +538,7 @@ fn test_import_chore_type() {
         &db,
         &config,
         import_file.to_str().unwrap(),
-        "wk",
+        "wok",
         false,
         vec![],
         vec![],

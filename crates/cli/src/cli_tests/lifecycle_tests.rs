@@ -14,7 +14,7 @@ fn parse(args: &[&str]) -> Result<Cli, clap::Error> {
 // Lifecycle commands
 #[test]
 fn test_start_command() {
-    let cli = parse(&["wk", "start", "prj-1234"]).unwrap();
+    let cli = parse(&["wok", "start", "prj-1234"]).unwrap();
     match cli.command {
         Command::Start { ids } => assert_eq!(ids, vec!["prj-1234"]),
         _ => panic!("Expected Start command"),
@@ -23,7 +23,7 @@ fn test_start_command() {
 
 #[test]
 fn test_start_command_multiple() {
-    let cli = parse(&["wk", "start", "prj-1", "prj-2", "prj-3"]).unwrap();
+    let cli = parse(&["wok", "start", "prj-1", "prj-2", "prj-3"]).unwrap();
     match cli.command {
         Command::Start { ids } => assert_eq!(ids, vec!["prj-1", "prj-2", "prj-3"]),
         _ => panic!("Expected Start command"),
@@ -32,7 +32,7 @@ fn test_start_command_multiple() {
 
 #[test]
 fn test_done_command() {
-    let cli = parse(&["wk", "done", "prj-1234"]).unwrap();
+    let cli = parse(&["wok", "done", "prj-1234"]).unwrap();
     match cli.command {
         Command::Done { ids, reason } => {
             assert_eq!(ids, vec!["prj-1234"]);
@@ -44,7 +44,7 @@ fn test_done_command() {
 
 #[test]
 fn test_done_command_multiple() {
-    let cli = parse(&["wk", "done", "prj-1", "prj-2"]).unwrap();
+    let cli = parse(&["wok", "done", "prj-1", "prj-2"]).unwrap();
     match cli.command {
         Command::Done { ids, reason } => {
             assert_eq!(ids, vec!["prj-1", "prj-2"]);
@@ -56,7 +56,7 @@ fn test_done_command_multiple() {
 
 #[test]
 fn test_done_with_reason() {
-    let cli = parse(&["wk", "done", "prj-1234", "-r", "Already complete"]).unwrap();
+    let cli = parse(&["wok", "done", "prj-1234", "-r", "Already complete"]).unwrap();
     match cli.command {
         Command::Done { ids, reason } => {
             assert_eq!(ids, vec!["prj-1234"]);
@@ -68,7 +68,7 @@ fn test_done_with_reason() {
 
 #[test]
 fn test_done_multiple_with_reason() {
-    let cli = parse(&["wk", "done", "prj-1", "prj-2", "-r", "upstream"]).unwrap();
+    let cli = parse(&["wok", "done", "prj-1", "prj-2", "-r", "upstream"]).unwrap();
     match cli.command {
         Command::Done { ids, reason } => {
             assert_eq!(ids, vec!["prj-1", "prj-2"]);
@@ -80,7 +80,7 @@ fn test_done_multiple_with_reason() {
 
 #[test]
 fn test_close_command() {
-    let cli = parse(&["wk", "close", "prj-1234", "-r", "wontfix"]).unwrap();
+    let cli = parse(&["wok", "close", "prj-1234", "-r", "wontfix"]).unwrap();
     match cli.command {
         Command::Close { ids, reason } => {
             assert_eq!(ids, vec!["prj-1234"]);
@@ -92,7 +92,7 @@ fn test_close_command() {
 
 #[test]
 fn test_close_command_multiple() {
-    let cli = parse(&["wk", "close", "prj-1", "prj-2", "-r", "duplicate"]).unwrap();
+    let cli = parse(&["wok", "close", "prj-1", "prj-2", "-r", "duplicate"]).unwrap();
     match cli.command {
         Command::Close { ids, reason } => {
             assert_eq!(ids, vec!["prj-1", "prj-2"]);
@@ -105,7 +105,7 @@ fn test_close_command_multiple() {
 #[test]
 fn test_close_without_reason() {
     // Reason is now optional (auto-populated for human interactive sessions)
-    let cli = parse(&["wk", "close", "prj-1234"]).unwrap();
+    let cli = parse(&["wok", "close", "prj-1234"]).unwrap();
     match cli.command {
         Command::Close { ids, reason } => {
             assert_eq!(ids, vec!["prj-1234"]);
@@ -117,7 +117,7 @@ fn test_close_without_reason() {
 
 #[test]
 fn test_reopen_command() {
-    let cli = parse(&["wk", "reopen", "prj-1234", "--reason", "regression"]).unwrap();
+    let cli = parse(&["wok", "reopen", "prj-1234", "--reason", "regression"]).unwrap();
     match cli.command {
         Command::Reopen { ids, reason } => {
             assert_eq!(ids, vec!["prj-1234"]);
@@ -129,7 +129,7 @@ fn test_reopen_command() {
 
 #[test]
 fn test_reopen_command_multiple() {
-    let cli = parse(&["wk", "reopen", "prj-1", "prj-2", "--reason", "regression"]).unwrap();
+    let cli = parse(&["wok", "reopen", "prj-1", "prj-2", "--reason", "regression"]).unwrap();
     match cli.command {
         Command::Reopen { ids, reason } => {
             assert_eq!(ids, vec!["prj-1", "prj-2"]);
@@ -142,7 +142,7 @@ fn test_reopen_command_multiple() {
 #[test]
 fn test_reopen_without_reason() {
     // Reason is now optional (auto-populated for human interactive sessions)
-    let cli = parse(&["wk", "reopen", "prj-1234"]).unwrap();
+    let cli = parse(&["wok", "reopen", "prj-1234"]).unwrap();
     match cli.command {
         Command::Reopen { ids, reason } => {
             assert_eq!(ids, vec!["prj-1234"]);

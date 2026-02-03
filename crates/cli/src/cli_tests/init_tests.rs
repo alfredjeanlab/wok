@@ -39,31 +39,31 @@ impl InitExpected {
 // Parameterized init argument parsing tests
 #[parameterized(
     no_args = {
-        &["wk", "init"],
+        &["wok", "init"],
         InitExpected::new(None, None, false)
     },
     prefix_only = {
-        &["wk", "init", "--prefix", "prj"],
+        &["wok", "init", "--prefix", "prj"],
         InitExpected::new(Some("prj"), None, false)
     },
     path_only = {
-        &["wk", "init", "--path", "/tmp/test"],
+        &["wok", "init", "--path", "/tmp/test"],
         InitExpected::new(None, Some("/tmp/test"), false)
     },
     prefix_and_path = {
-        &["wk", "init", "--prefix", "prj", "--path", "/tmp/test"],
+        &["wok", "init", "--prefix", "prj", "--path", "/tmp/test"],
         InitExpected::new(Some("prj"), Some("/tmp/test"), false)
     },
     private_flag = {
-        &["wk", "init", "--prefix", "prj", "--private"],
+        &["wok", "init", "--prefix", "prj", "--private"],
         InitExpected::new(Some("prj"), None, true)
     },
     private_with_path = {
-        &["wk", "init", "--private", "--path", "/tmp/test"],
+        &["wok", "init", "--private", "--path", "/tmp/test"],
         InitExpected::new(None, Some("/tmp/test"), true)
     },
     all_options = {
-        &["wk", "init", "--prefix", "prj", "--path", "/tmp/test", "--private"],
+        &["wok", "init", "--prefix", "prj", "--path", "/tmp/test", "--private"],
         InitExpected::new(Some("prj"), Some("/tmp/test"), true)
     },
 )]
@@ -100,7 +100,7 @@ fn should_parse_init_args(args: &[&str], expected: InitExpected) {
 // Keep individual test for private mode verification
 #[test]
 fn should_accept_private_flag() {
-    let cli = parse(&["wk", "init", "--prefix", "test", "--private"]).unwrap();
+    let cli = parse(&["wok", "init", "--prefix", "test", "--private"]).unwrap();
     match cli.command {
         Command::Init { private, .. } => {
             assert!(private, "--private flag should be true");

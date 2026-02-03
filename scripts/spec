@@ -93,12 +93,12 @@ ensure_bats_installed
 
 # Default binary paths - auto-detect from build output or fall back to PATH
 if [ -z "${WK_BIN:-}" ]; then
-    if [ -x "$ROOT_DIR/target/release/wk" ]; then
-        export WK_BIN="$ROOT_DIR/target/release/wk"
-    elif [ -x "$ROOT_DIR/target/debug/wk" ]; then
-        export WK_BIN="$ROOT_DIR/target/debug/wk"
+    if [ -x "$ROOT_DIR/target/release/wok" ]; then
+        export WK_BIN="$ROOT_DIR/target/release/wok"
+    elif [ -x "$ROOT_DIR/target/debug/wok" ]; then
+        export WK_BIN="$ROOT_DIR/target/debug/wok"
     else
-        export WK_BIN="wk"
+        export WK_BIN="wok"
     fi
 fi
 

@@ -200,7 +200,7 @@ fn completion_bash() {
         .arg("bash")
         .assert()
         .success()
-        .stdout(predicate::str::contains("_wk"));
+        .stdout(predicate::str::contains("_wok"));
 }
 
 #[test]

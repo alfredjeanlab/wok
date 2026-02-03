@@ -559,8 +559,8 @@ Examples:
         #[arg(long)]
         input: Option<String>,
 
-        /// Input format: wk (default) or bd (beads)
-        #[arg(long = "format", short = 'f', default_value = "wk")]
+        /// Input format: wok (default) or bd (beads)
+        #[arg(long = "format", short = 'f', default_value = "wok")]
         format: String,
 
         /// Preview changes without applying
@@ -580,9 +580,9 @@ Examples:
         arg_required_else_help = true,
         after_help = colors::examples("\
 Examples:
-  wok completion bash > ~/.local/share/bash-completion/completions/wk
-  wok completion zsh > ~/.zfunc/_wk
-  wok completion fish > ~/.config/fish/completions/wk.fish")
+  wok completion bash > ~/.local/share/bash-completion/completions/wok
+  wok completion zsh > ~/.zfunc/_wok
+  wok completion fish > ~/.config/fish/completions/wok.fish")
     )]
     Completion {
         /// Shell to generate completions for

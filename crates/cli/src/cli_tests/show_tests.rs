@@ -14,7 +14,7 @@ fn parse(args: &[&str]) -> Result<Cli, clap::Error> {
 // Show and Tree commands
 #[test]
 fn test_show_command() {
-    let cli = parse(&["wk", "show", "prj-1234"]).unwrap();
+    let cli = parse(&["wok", "show", "prj-1234"]).unwrap();
     match cli.command {
         Command::Show { ids, output } => {
             assert_eq!(ids, vec!["prj-1234"]);
@@ -26,7 +26,7 @@ fn test_show_command() {
 
 #[test]
 fn test_show_command_with_json_output() {
-    let cli = parse(&["wk", "show", "prj-1234", "--output", "json"]).unwrap();
+    let cli = parse(&["wok", "show", "prj-1234", "--output", "json"]).unwrap();
     match cli.command {
         Command::Show { ids, output } => {
             assert_eq!(ids, vec!["prj-1234"]);
@@ -38,7 +38,7 @@ fn test_show_command_with_json_output() {
 
 #[test]
 fn test_show_command_with_output_short() {
-    let cli = parse(&["wk", "show", "prj-1234", "-o", "json"]).unwrap();
+    let cli = parse(&["wok", "show", "prj-1234", "-o", "json"]).unwrap();
     match cli.command {
         Command::Show { ids, output } => {
             assert_eq!(ids, vec!["prj-1234"]);
@@ -50,7 +50,7 @@ fn test_show_command_with_output_short() {
 
 #[test]
 fn test_show_command_multiple_ids() {
-    let cli = parse(&["wk", "show", "prj-1", "prj-2", "prj-3"]).unwrap();
+    let cli = parse(&["wok", "show", "prj-1", "prj-2", "prj-3"]).unwrap();
     match cli.command {
         Command::Show { ids, output } => {
             assert_eq!(ids, vec!["prj-1", "prj-2", "prj-3"]);
@@ -62,7 +62,7 @@ fn test_show_command_multiple_ids() {
 
 #[test]
 fn test_show_command_multiple_ids_with_json() {
-    let cli = parse(&["wk", "show", "prj-1", "prj-2", "-o", "json"]).unwrap();
+    let cli = parse(&["wok", "show", "prj-1", "prj-2", "-o", "json"]).unwrap();
     match cli.command {
         Command::Show { ids, output } => {
             assert_eq!(ids, vec!["prj-1", "prj-2"]);
@@ -74,7 +74,7 @@ fn test_show_command_multiple_ids_with_json() {
 
 #[test]
 fn test_tree_command() {
-    let cli = parse(&["wk", "tree", "prj-1234"]).unwrap();
+    let cli = parse(&["wok", "tree", "prj-1234"]).unwrap();
     match cli.command {
         Command::Tree { id } => assert_eq!(id, "prj-1234"),
         _ => panic!("Expected Tree command"),

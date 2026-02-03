@@ -37,14 +37,14 @@ fn main() {
             } else if e.kind() == clap::error::ErrorKind::DisplayHelpOnMissingArgumentOrSubcommand {
                 let args: Vec<String> = std::env::args().collect();
                 let args = strip_dash_c(&args);
-                // Check if this is just bare "wk" with no arguments
+                // Check if this is just bare "wok" with no arguments
                 let has_subcommand = args.iter().skip(1).any(|a| !a.starts_with('-'));
                 if has_subcommand {
                     // Missing required arguments for a subcommand - show help to stderr, exit with error
                     print_formatted_help(&args, true);
                     std::process::exit(2);
                 } else {
-                    // No subcommand at all (bare "wk") - show help to stdout, exit success
+                    // No subcommand at all (bare "wok") - show help to stdout, exit success
                     print_formatted_help(&args, false);
                 }
             } else if e.kind() == clap::error::ErrorKind::DisplayVersion {
@@ -63,7 +63,7 @@ fn print_formatted_help(args: &[String], to_stderr: bool) {
     use wkrs::help;
 
     // Find the subcommand being requested help for
-    // Args could be: ["wk", "--help"], ["wk", "list", "--help"], ["wk", "help", "list"], etc.
+    // Args could be: ["wok", "--help"], ["wok", "list", "--help"], ["wok", "help", "list"], etc.
     let cmd = Cli::command();
 
     // Look for subcommand names in the args (skip binary name and flags)

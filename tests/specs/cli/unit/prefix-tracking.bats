@@ -15,7 +15,7 @@ setup() {
 
 @test "config prefixes shows all prefixes with counts" {
     mkdir -p prefixes_list && cd prefixes_list
-    run "$WK_BIN" init --prefix proj --local
+    run "$WK_BIN" init --prefix proj --private
     assert_success
 
     create_issue task "Proj task 1"
@@ -31,7 +31,7 @@ setup() {
 
 @test "config prefixes with empty database shows no prefixes" {
     mkdir -p prefixes_empty && cd prefixes_empty
-    run "$WK_BIN" init --prefix test --local
+    run "$WK_BIN" init --prefix test --private
     assert_success
 
     run "$WK_BIN" config prefixes
@@ -41,7 +41,7 @@ setup() {
 
 @test "config prefixes -o json outputs valid JSON" {
     mkdir -p prefixes_json && cd prefixes_json
-    run "$WK_BIN" init --prefix main --local
+    run "$WK_BIN" init --prefix main --private
     assert_success
 
     create_issue task "Test task"
@@ -62,7 +62,7 @@ setup() {
 
 @test "config prefixes -o id outputs only prefix names" {
     mkdir -p prefixes_id && cd prefixes_id
-    run "$WK_BIN" init --prefix main --local
+    run "$WK_BIN" init --prefix main --private
     assert_success
 
     create_issue task "Main task"
@@ -79,7 +79,7 @@ setup() {
 
 @test "new --prefix creates issue with different prefix" {
     mkdir -p prefix_new && cd prefix_new
-    run "$WK_BIN" init --prefix main --local
+    run "$WK_BIN" init --prefix main --private
     assert_success
 
     run "$WK_BIN" new "Other project task" --prefix other -o id
@@ -94,7 +94,7 @@ setup() {
 
 @test "new -p short form works for prefix" {
     mkdir -p prefix_short && cd prefix_short
-    run "$WK_BIN" init --prefix main --local
+    run "$WK_BIN" init --prefix main --private
     assert_success
 
     run "$WK_BIN" new "Short prefix" -p short -o id
@@ -104,7 +104,7 @@ setup() {
 
 @test "new --prefix rejects invalid prefix" {
     mkdir -p prefix_invalid && cd prefix_invalid
-    run "$WK_BIN" init --prefix main --local
+    run "$WK_BIN" init --prefix main --private
     assert_success
 
     # Too short
@@ -122,7 +122,7 @@ setup() {
 
 @test "new --prefix updates prefix table" {
     mkdir -p prefix_table && cd prefix_table
-    run "$WK_BIN" init --prefix main --local
+    run "$WK_BIN" init --prefix main --private
     assert_success
 
     create_issue task "Main task"
@@ -136,7 +136,7 @@ setup() {
 
 @test "new --prefix works with all flags" {
     mkdir -p prefix_flags && cd prefix_flags
-    run "$WK_BIN" init --prefix main --local
+    run "$WK_BIN" init --prefix main --private
     assert_success
 
     # Combine with --label, --note, type
@@ -158,7 +158,7 @@ setup() {
 
 @test "config rename updates prefixes table" {
     mkdir -p prefix_rename && cd prefix_rename
-    run "$WK_BIN" init --prefix old --local
+    run "$WK_BIN" init --prefix old --private
     assert_success
 
     create_issue task "Test"
@@ -178,7 +178,7 @@ setup() {
 
 @test "existing databases backfill prefixes table" {
     mkdir -p prefix_backfill && cd prefix_backfill
-    run "$WK_BIN" init --prefix proj --local
+    run "$WK_BIN" init --prefix proj --private
     assert_success
 
     # Create issues first

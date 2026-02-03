@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Alfred Jean LLC
 
-//! Shell completion installation for wk.
+//! Shell completion installation for wok.
 //!
 //! Installs shell completion scripts and adds sourcing lines to shell RC files.
 //! Follows the marker-based pattern from `git_hooks.rs` for safe, idempotent installation.
@@ -17,8 +17,8 @@ use clap_complete::generate;
 use crate::cli::Cli;
 use crate::error::{Error, Result};
 
-/// Marker comment to identify wk completion blocks.
-const WK_COMPLETION_MARKER: &str = "# wk-shell-completion";
+/// Marker comment to identify wok completion blocks.
+const WK_COMPLETION_MARKER: &str = "# wok-shell-completion";
 
 /// Supported shells for completion installation.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -77,9 +77,9 @@ impl ShellKind {
     /// Get the completion script filename.
     fn script_filename(&self) -> &'static str {
         match self {
-            ShellKind::Bash => "wk.bash",
-            ShellKind::Zsh => "_wk",
-            ShellKind::Fish => "wk.fish",
+            ShellKind::Bash => "wok.bash",
+            ShellKind::Zsh => "_wok",
+            ShellKind::Fish => "wok.fish",
         }
     }
 }
@@ -112,8 +112,8 @@ fn shell_exists(name: &str) -> bool {
 
 /// Get the directory for storing completion scripts.
 fn completions_dir() -> Option<PathBuf> {
-    // Use ~/.local/share/wk/completions/
-    dirs::data_local_dir().map(|d| d.join("wk/completions"))
+    // Use ~/.local/share/wok/completions/
+    dirs::data_local_dir().map(|d| d.join("wok/completions"))
 }
 
 /// Generate and write completion script for a shell.
@@ -127,7 +127,7 @@ fn write_completion_script(shell: ShellKind) -> Result<PathBuf> {
     let mut file = fs::File::create(&path)?;
 
     let mut cmd = Cli::command();
-    generate(shell.clap_shell(), &mut cmd, "wk", &mut file);
+    generate(shell.clap_shell(), &mut cmd, "wok", &mut file);
 
     Ok(path)
 }
@@ -189,11 +189,11 @@ fn install_fish_completions() -> Result<()> {
 
     fs::create_dir_all(&fish_completions)?;
 
-    let path = fish_completions.join("wk.fish");
+    let path = fish_completions.join("wok.fish");
     let mut file = fs::File::create(&path)?;
 
     let mut cmd = Cli::command();
-    generate(clap_complete::Shell::Fish, &mut cmd, "wk", &mut file);
+    generate(clap_complete::Shell::Fish, &mut cmd, "wok", &mut file);
 
     Ok(())
 }

@@ -15,7 +15,7 @@ fn parse(args: &[&str]) -> Result<Cli, clap::Error> {
 // List command tests
 #[test]
 fn test_list_default() {
-    let cli = parse(&["wk", "list"]).unwrap();
+    let cli = parse(&["wok", "list"]).unwrap();
     match cli.command {
         Command::List {
             status,
@@ -34,7 +34,7 @@ fn test_list_default() {
 
 #[test]
 fn test_list_with_status() {
-    let cli = parse(&["wk", "list", "-s", "in_progress"]).unwrap();
+    let cli = parse(&["wok", "list", "-s", "in_progress"]).unwrap();
     match cli.command {
         Command::List { status, .. } => {
             assert_eq!(status, vec!["in_progress".to_string()]);
@@ -45,7 +45,7 @@ fn test_list_with_status() {
 
 #[test]
 fn test_list_with_type() {
-    let cli = parse(&["wk", "list", "-t", "bug"]).unwrap();
+    let cli = parse(&["wok", "list", "-t", "bug"]).unwrap();
     match cli.command {
         Command::List { type_label, .. } => {
             assert_eq!(type_label.r#type, vec!["bug".to_string()]);
@@ -56,7 +56,7 @@ fn test_list_with_type() {
 
 #[test]
 fn test_list_with_type_long_flag() {
-    let cli = parse(&["wk", "list", "--type", "bug"]).unwrap();
+    let cli = parse(&["wok", "list", "--type", "bug"]).unwrap();
     match cli.command {
         Command::List { type_label, .. } => {
             assert_eq!(type_label.r#type, vec!["bug".to_string()]);
@@ -68,13 +68,13 @@ fn test_list_with_type_long_flag() {
 #[test]
 fn test_list_old_type_flag_fails() {
     // -T should no longer work (changed to -t)
-    let result = parse(&["wk", "list", "-T", "bug"]);
+    let result = parse(&["wok", "list", "-T", "bug"]);
     assert!(result.is_err());
 }
 
 #[test]
 fn test_list_with_label() {
-    let cli = parse(&["wk", "list", "-l", "urgent"]).unwrap();
+    let cli = parse(&["wok", "list", "-l", "urgent"]).unwrap();
     match cli.command {
         Command::List { type_label, .. } => {
             assert_eq!(type_label.label, vec!["urgent".to_string()]);
@@ -85,7 +85,7 @@ fn test_list_with_label() {
 
 #[test]
 fn test_list_blocked_flag() {
-    let cli = parse(&["wk", "list", "--blocked"]).unwrap();
+    let cli = parse(&["wok", "list", "--blocked"]).unwrap();
     match cli.command {
         Command::List { blocked, .. } => {
             assert!(blocked);
@@ -97,13 +97,13 @@ fn test_list_blocked_flag() {
 #[test]
 fn test_list_blocked_short_flag_fails() {
     // -b short flag was removed for --blocked
-    let result = parse(&["wk", "list", "-b"]);
+    let result = parse(&["wok", "list", "-b"]);
     assert!(result.is_err());
 }
 
 #[test]
 fn test_list_with_comma_separated_status() {
-    let cli = parse(&["wk", "list", "-s", "todo,in_progress"]).unwrap();
+    let cli = parse(&["wok", "list", "-s", "todo,in_progress"]).unwrap();
     match cli.command {
         Command::List { status, .. } => {
             assert_eq!(status, vec!["todo,in_progress".to_string()]);
@@ -114,7 +114,7 @@ fn test_list_with_comma_separated_status() {
 
 #[test]
 fn test_list_with_repeated_labels() {
-    let cli = parse(&["wk", "list", "-l", "a", "-l", "b"]).unwrap();
+    let cli = parse(&["wok", "list", "-l", "a", "-l", "b"]).unwrap();
     match cli.command {
         Command::List { type_label, .. } => {
             assert_eq!(type_label.label, vec!["a".to_string(), "b".to_string()]);
@@ -126,7 +126,7 @@ fn test_list_with_repeated_labels() {
 #[test]
 fn test_list_with_mixed_filters() {
     let cli = parse(&[
-        "wk",
+        "wok",
         "list",
         "-s",
         "todo",
@@ -153,7 +153,7 @@ fn test_list_with_mixed_filters() {
 // Ready command tests
 #[test]
 fn test_ready_default() {
-    let cli = parse(&["wk", "ready"]).unwrap();
+    let cli = parse(&["wok", "ready"]).unwrap();
     match cli.command {
         Command::Ready {
             type_label,
@@ -175,7 +175,7 @@ fn test_ready_default() {
 
 #[test]
 fn test_ready_with_type_filter() {
-    let cli = parse(&["wk", "ready", "-t", "bug"]).unwrap();
+    let cli = parse(&["wok", "ready", "-t", "bug"]).unwrap();
     match cli.command {
         Command::Ready { type_label, .. } => {
             assert_eq!(type_label.r#type, vec!["bug".to_string()]);
@@ -186,7 +186,7 @@ fn test_ready_with_type_filter() {
 
 #[test]
 fn test_ready_with_label_filter() {
-    let cli = parse(&["wk", "ready", "-l", "urgent"]).unwrap();
+    let cli = parse(&["wok", "ready", "-l", "urgent"]).unwrap();
     match cli.command {
         Command::Ready { type_label, .. } => {
             assert_eq!(type_label.label, vec!["urgent".to_string()]);
@@ -197,7 +197,7 @@ fn test_ready_with_label_filter() {
 
 #[test]
 fn test_ready_with_combined_filters() {
-    let cli = parse(&["wk", "ready", "-t", "bug", "-l", "urgent"]).unwrap();
+    let cli = parse(&["wok", "ready", "-t", "bug", "-l", "urgent"]).unwrap();
     match cli.command {
         Command::Ready { type_label, .. } => {
             assert_eq!(type_label.r#type, vec!["bug".to_string()]);
@@ -209,20 +209,20 @@ fn test_ready_with_combined_filters() {
 
 #[test]
 fn test_ready_does_not_accept_all_flag() {
-    let result = parse(&["wk", "ready", "--all"]);
+    let result = parse(&["wok", "ready", "--all"]);
     assert!(result.is_err());
 }
 
 #[test]
 fn test_ready_does_not_accept_blocked_flag() {
-    let result = parse(&["wk", "ready", "--blocked"]);
+    let result = parse(&["wok", "ready", "--blocked"]);
     assert!(result.is_err());
 }
 
 #[test]
 fn test_ready_accepts_label_flag() {
     // --label is now the correct flag (--tag was renamed to --label)
-    let cli = parse(&["wk", "ready", "--label", "foo"]).unwrap();
+    let cli = parse(&["wok", "ready", "--label", "foo"]).unwrap();
     match cli.command {
         Command::Ready { type_label, .. } => {
             assert_eq!(type_label.label, vec!["foo".to_string()]);
@@ -237,7 +237,7 @@ fn test_ready_accepts_label_flag() {
 
 #[test]
 fn test_list_output_format_text_default() {
-    let cli = parse(&["wk", "list"]).unwrap();
+    let cli = parse(&["wok", "list"]).unwrap();
     match cli.command {
         Command::List { output, .. } => {
             assert!(matches!(output, OutputFormat::Text));
@@ -248,7 +248,7 @@ fn test_list_output_format_text_default() {
 
 #[test]
 fn test_list_output_format_json_long() {
-    let cli = parse(&["wk", "list", "--output", "json"]).unwrap();
+    let cli = parse(&["wok", "list", "--output", "json"]).unwrap();
     match cli.command {
         Command::List { output, .. } => {
             assert!(matches!(output, OutputFormat::Json));
@@ -259,7 +259,7 @@ fn test_list_output_format_json_long() {
 
 #[test]
 fn test_list_output_format_json_short() {
-    let cli = parse(&["wk", "list", "-o", "json"]).unwrap();
+    let cli = parse(&["wok", "list", "-o", "json"]).unwrap();
     match cli.command {
         Command::List { output, .. } => {
             assert!(matches!(output, OutputFormat::Json));
@@ -270,7 +270,7 @@ fn test_list_output_format_json_short() {
 
 #[test]
 fn test_list_output_format_ids_long() {
-    let cli = parse(&["wk", "list", "--output", "ids"]).unwrap();
+    let cli = parse(&["wok", "list", "--output", "ids"]).unwrap();
     match cli.command {
         Command::List { output, .. } => {
             assert!(matches!(output, OutputFormat::Id));
@@ -281,7 +281,7 @@ fn test_list_output_format_ids_long() {
 
 #[test]
 fn test_list_output_format_ids_short() {
-    let cli = parse(&["wk", "list", "-o", "ids"]).unwrap();
+    let cli = parse(&["wok", "list", "-o", "ids"]).unwrap();
     match cli.command {
         Command::List { output, .. } => {
             assert!(matches!(output, OutputFormat::Id));
@@ -292,7 +292,7 @@ fn test_list_output_format_ids_short() {
 
 #[test]
 fn test_list_output_format_id_alias() {
-    let cli = parse(&["wk", "list", "-o", "id"]).unwrap();
+    let cli = parse(&["wok", "list", "-o", "id"]).unwrap();
     match cli.command {
         Command::List { output, .. } => {
             assert!(matches!(output, OutputFormat::Id));
@@ -303,7 +303,7 @@ fn test_list_output_format_id_alias() {
 
 #[test]
 fn test_list_output_format_text_explicit() {
-    let cli = parse(&["wk", "list", "-o", "text"]).unwrap();
+    let cli = parse(&["wok", "list", "-o", "text"]).unwrap();
     match cli.command {
         Command::List { output, .. } => {
             assert!(matches!(output, OutputFormat::Text));
@@ -317,9 +317,9 @@ fn test_list_output_format_text_explicit() {
 // ─────────────────────────────────────────────────────────────────────────────
 
 #[parameterized(
-    single_filter_short = { &["wk", "list", "-q", "age < 1d"], vec!["age < 1d"] },
-    single_filter_long = { &["wk", "list", "--filter", "closed < 1w"], vec!["closed < 1w"] },
-    multiple_filters = { &["wk", "list", "-q", "age < 1d", "-q", "updated < 1h"], vec!["age < 1d", "updated < 1h"] },
+    single_filter_short = { &["wok", "list", "-q", "age < 1d"], vec!["age < 1d"] },
+    single_filter_long = { &["wok", "list", "--filter", "closed < 1w"], vec!["closed < 1w"] },
+    multiple_filters = { &["wok", "list", "-q", "age < 1d", "-q", "updated < 1h"], vec!["age < 1d", "updated < 1h"] },
 )]
 fn test_list_filter_parsing(args: &[&str], expected: Vec<&str>) {
     let cli = parse(args).unwrap();
@@ -333,9 +333,9 @@ fn test_list_filter_parsing(args: &[&str], expected: Vec<&str>) {
 }
 
 #[parameterized(
-    limit_short = { &["wk", "list", "-n", "50"], Some(50) },
-    limit_long = { &["wk", "list", "--limit", "100"], Some(100) },
-    no_limit_flag = { &["wk", "list", "--no-limit"], None },
+    limit_short = { &["wok", "list", "-n", "50"], Some(50) },
+    limit_long = { &["wok", "list", "--limit", "100"], Some(100) },
+    no_limit_flag = { &["wok", "list", "--no-limit"], None },
 )]
 fn test_list_limit_parsing(args: &[&str], expected_limit: Option<usize>) {
     let cli = parse(args).unwrap();

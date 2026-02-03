@@ -13,11 +13,11 @@ mkdir -p "$INSTALL_DIR"
 # Build wok CLI
 echo "Building wok..."
 cd "$ROOT_DIR"
-cargo build --release -p wk
+cargo build --release -p wok
 
 # Install to ~/.local/bin/
 echo "Installing to $INSTALL_DIR/wok..."
-/bin/cp "$ROOT_DIR/target/release/wk" "$INSTALL_DIR/wok"
+/bin/cp "$ROOT_DIR/target/release/wok" "$INSTALL_DIR/wok"
 
 # Re-sign the binary after copying (required on macOS for adhoc-signed binaries)
 if [[ "$(uname)" == "Darwin" ]]; then
@@ -30,9 +30,9 @@ ln -sf wok "$INSTALL_DIR/wk"
 
 # Install shell completions (idempotent)
 install_completions() {
-    local wk="${INSTALL_DIR}/wk"
-    local marker="# wk-shell-completion"
-    local data_dir="${XDG_DATA_HOME:-$HOME/.local/share}/wk/completions"
+    local wok="${INSTALL_DIR}/wok"
+    local marker="# wok-shell-completion"
+    local data_dir="${XDG_DATA_HOME:-$HOME/.local/share}/wok/completions"
 
     # Bash
     if command -v bash &> /dev/null; then
@@ -44,9 +44,9 @@ install_completions() {
         fi
         if [[ -n "$rc" ]] && ! grep -q "$marker" "$rc"; then
             mkdir -p "$data_dir"
-            "$wk" completion bash > "$data_dir/wk.bash"
+            "$wok" completion bash > "$data_dir/wok.bash"
             printf '\n%s\n[ -f "%s" ] && source "%s"\n' \
-                "$marker" "$data_dir/wk.bash" "$data_dir/wk.bash" >> "$rc"
+                "$marker" "$data_dir/wok.bash" "$data_dir/wok.bash" >> "$rc"
             echo "Installed bash completions (source: $rc)"
         fi
     fi
@@ -55,9 +55,9 @@ install_completions() {
     if command -v zsh &> /dev/null; then
         if [[ -f "$HOME/.zshrc" ]] && ! grep -q "$marker" "$HOME/.zshrc"; then
             mkdir -p "$data_dir"
-            "$wk" completion zsh > "$data_dir/_wk"
+            "$wok" completion zsh > "$data_dir/_wok"
             printf '\n%s\n[ -f "%s" ] && source "%s"\n' \
-                "$marker" "$data_dir/_wk" "$data_dir/_wk" >> "$HOME/.zshrc"
+                "$marker" "$data_dir/_wok" "$data_dir/_wok" >> "$HOME/.zshrc"
             echo "Installed zsh completions (source: ~/.zshrc)"
         fi
     fi
@@ -65,9 +65,9 @@ install_completions() {
     # Fish
     if command -v fish &> /dev/null; then
         local fish_dir="${XDG_CONFIG_HOME:-$HOME/.config}/fish/completions"
-        if [[ ! -f "$fish_dir/wk.fish" ]]; then
+        if [[ ! -f "$fish_dir/wok.fish" ]]; then
             mkdir -p "$fish_dir"
-            "$wk" completion fish > "$fish_dir/wk.fish"
+            "$wok" completion fish > "$fish_dir/wok.fish"
             echo "Installed fish completions"
         fi
     fi

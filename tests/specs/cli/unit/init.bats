@@ -219,8 +219,8 @@ teardown() {
     grep -q "config.toml" .wok/.gitignore
     rm -rf .wok
 
-    # --local mode also ignores config.toml (same as default, kept for compatibility)
-    run "$WK_BIN" init --prefix prj --local
+    # --private mode also ignores config.toml (same as default, kept for compatibility)
+    run "$WK_BIN" init --prefix prj --private
     assert_success
     grep -q "config.toml" .wok/.gitignore
     rm -rf .wok

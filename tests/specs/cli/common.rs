@@ -16,7 +16,7 @@ pub use tempfile::TempDir;
 
 pub fn wk() -> Command {
     #[allow(deprecated)]
-    Command::cargo_bin("wk").unwrap()
+    Command::cargo_bin("wok").unwrap()
 }
 
 /// Helper to create an initialized temp directory in private mode.

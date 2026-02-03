@@ -77,12 +77,12 @@ Output: 'Error: "line1\nline2"' (newline escaped in quotes)
 Input:  '  Fix\n\n  "error\nmsg"  in   module  '
 Output: 'Fix "error\nmsg" in module'
 
-# wk search - Full-Text Search Command
+# wok search - Full-Text Search Command
 
 ## CLI Interface
 
 ```bash
-wk search <query> [options]
+wok search <query> [options]
 ```
 
 Performs full-text search across issue titles, descriptions, notes, labels, and external links.
@@ -97,7 +97,7 @@ Performs full-text search across issue titles, descriptions, notes, labels, and 
 
 ### Output Format
 
-**Text format** (default): Same as `wk list` output - one line per matching issue with ID, type, status, and title.
+**Text format** (default): Same as `wok list` output - one line per matching issue with ID, type, status, and title.
 
 **JSON format**: Structured output with array of issues containing:
 ```json
@@ -132,39 +132,39 @@ Results are sorted by:
 1. Priority (ascending: 0=highest first)
 2. Created date (descending: newest first)
 
-Same as `wk list` sorting.
+Same as `wok list` sorting.
 
 ### Examples
 
 ```bash
 # Search for 'login' in all fields
-wk search "login"
+wok search "login"
 
 # Search with case-insensitive matching
-wk search "AUTHENTICATION"
+wok search "AUTHENTICATION"
 
 # Search only in todo issues
-wk search "auth" --status todo
+wok search "auth" --status todo
 
 # Search only bugs with specific label
-wk search "crash" --type bug --label urgent
+wok search "crash" --type bug --label urgent
 
 # Search with multiple label filters (AND logic)
-wk search "task" --label backend --label urgent
+wok search "task" --label backend --label urgent
 
 # Search with label OR logic
-wk search "task" --label "backend,frontend"
+wok search "task" --label "backend,frontend"
 
 # Search with output in JSON format
-wk search "oauth" --output json
+wok search "oauth" --output json
 
 # Search with no matches (returns empty)
-wk search "nonexistent"
+wok search "nonexistent"
 ```
 
 ### Filtering Logic
 
-Filters use the same grouping logic as `wk list`:
+Filters use the same grouping logic as `wok list`:
 - **Status / Type / Label filters**: Comma-separated values within a single flag are OR'd
 - **Multiple flags**: Each separate flag argument creates an AND condition
 - **No filters**: Returns all matching issues (respects default behavior to show only open issues? No - search shows all matching issues regardless of status unless explicitly filtered)
@@ -174,4 +174,4 @@ Filters use the same grouping logic as `wk list`:
 - Uses SQLite LIKE matching with COLLATE NOCASE for substring matching
 - No full-text search index required (FTS5) - LIKE is sufficient for typical scale
 - Query results are returned in memory and filtered to avoid complex SQL
-- Reuses filter parsing logic from `wk list` command
+- Reuses filter parsing logic from `wok list` command
