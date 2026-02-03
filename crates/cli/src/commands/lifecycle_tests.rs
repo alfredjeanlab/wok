@@ -11,46 +11,23 @@ use crate::models::{IssueType, Relation};
 
 // Test status transition validation logic (via Status methods)
 #[test]
-fn test_transitions_to_in_progress() {
-    // Start: todo -> in_progress
-    assert!(Status::Todo.can_transition_to(Status::InProgress));
-    // Self-transition not allowed
-    assert!(!Status::InProgress.can_transition_to(Status::InProgress));
-    // Done/closed cannot go directly to in_progress (must use reopen to todo first)
-    assert!(!Status::Done.can_transition_to(Status::InProgress));
-    assert!(!Status::Closed.can_transition_to(Status::InProgress));
-}
-
-#[test]
-fn test_reopen_transitions_to_todo() {
-    // Reopen: in_progress/done/closed -> todo
-    assert!(Status::InProgress.can_transition_to(Status::Todo));
-    assert!(Status::Done.can_transition_to(Status::Todo));
-    assert!(Status::Closed.can_transition_to(Status::Todo));
-    // Self-transition not allowed
-    assert!(!Status::Todo.can_transition_to(Status::Todo));
-}
-
-#[test]
-fn test_done_valid_from_in_progress_and_todo() {
-    assert!(Status::InProgress.can_transition_to(Status::Done));
-    assert!(Status::Todo.can_transition_to(Status::Done)); // With reason
-    assert!(!Status::Done.can_transition_to(Status::Done));
-    assert!(!Status::Closed.can_transition_to(Status::Done));
-}
-
-#[test]
-fn test_close_valid_from_todo_and_in_progress() {
-    assert!(Status::Todo.can_transition_to(Status::Closed));
-    assert!(Status::InProgress.can_transition_to(Status::Closed));
-    assert!(!Status::Done.can_transition_to(Status::Closed));
-    assert!(!Status::Closed.can_transition_to(Status::Closed));
-}
-
-#[test]
-fn test_reopen_valid_from_done_and_closed() {
-    assert!(Status::Done.can_transition_to(Status::Todo));
-    assert!(Status::Closed.can_transition_to(Status::Todo));
+fn test_all_non_self_transitions_valid() {
+    // All non-self transitions are valid with lenient transitions
+    let statuses = [
+        Status::Todo,
+        Status::InProgress,
+        Status::Done,
+        Status::Closed,
+    ];
+    for from in &statuses {
+        for to in &statuses {
+            if from == to {
+                assert!(!from.can_transition_to(*to));
+            } else {
+                assert!(from.can_transition_to(*to));
+            }
+        }
+    }
 }
 
 // Test log_unblocked_events logic
@@ -158,24 +135,47 @@ fn test_start_impl_from_todo() {
 }
 
 #[test]
-fn test_start_impl_from_in_progress_fails() {
+fn test_start_impl_from_in_progress_idempotent() {
     let ctx = TestContext::new();
     ctx.create_issue("test-1", IssueType::Task, "Already started")
         .start_issue("test-1");
 
     let result = start_impl(&ctx.db, &["test-1".to_string()]);
 
-    assert!(result.is_err());
+    assert!(result.is_ok());
+    assert_eq!(
+        ctx.db.get_issue("test-1").unwrap().status,
+        Status::InProgress
+    );
 }
 
 #[test]
-fn test_start_impl_from_done_fails() {
+fn test_start_impl_from_done() {
     let ctx = TestContext::new();
     ctx.create_completed("test-1", IssueType::Task, "Completed task");
 
     let result = start_impl(&ctx.db, &["test-1".to_string()]);
 
-    assert!(result.is_err());
+    assert!(result.is_ok());
+    assert_eq!(
+        ctx.db.get_issue("test-1").unwrap().status,
+        Status::InProgress
+    );
+}
+
+#[test]
+fn test_start_impl_from_closed() {
+    let ctx = TestContext::new();
+    ctx.create_issue("test-1", IssueType::Task, "Closed task")
+        .close_issue("test-1");
+
+    let result = start_impl(&ctx.db, &["test-1".to_string()]);
+
+    assert!(result.is_ok());
+    assert_eq!(
+        ctx.db.get_issue("test-1").unwrap().status,
+        Status::InProgress
+    );
 }
 
 #[test]
@@ -226,13 +226,26 @@ fn test_done_impl_from_todo_with_reason() {
 }
 
 #[test]
-fn test_done_impl_from_done_fails() {
+fn test_done_impl_from_done_idempotent() {
     let ctx = TestContext::new();
     ctx.create_completed("test-1", IssueType::Task, "Already done");
 
     let result = done_impl(&ctx.db, &["test-1".to_string()], None);
 
-    assert!(result.is_err());
+    assert!(result.is_ok());
+    assert_eq!(ctx.db.get_issue("test-1").unwrap().status, Status::Done);
+}
+
+#[test]
+fn test_done_impl_from_closed_with_reason() {
+    let ctx = TestContext::new();
+    ctx.create_issue("test-1", IssueType::Task, "Closed task")
+        .close_issue("test-1");
+
+    let result = done_impl(&ctx.db, &["test-1".to_string()], Some("Actually completed"));
+
+    assert!(result.is_ok());
+    assert_eq!(ctx.db.get_issue("test-1").unwrap().status, Status::Done);
 }
 
 #[test]
@@ -260,13 +273,26 @@ fn test_close_impl_from_in_progress() {
 }
 
 #[test]
-fn test_close_impl_from_done_fails() {
+fn test_close_impl_from_done() {
     let ctx = TestContext::new();
     ctx.create_completed("test-1", IssueType::Task, "Done task");
 
-    let result = close_impl(&ctx.db, &["test-1".to_string()], "Shouldn't work");
+    let result = close_impl(&ctx.db, &["test-1".to_string()], "Actually not needed");
 
-    assert!(result.is_err());
+    assert!(result.is_ok());
+    assert_eq!(ctx.db.get_issue("test-1").unwrap().status, Status::Closed);
+}
+
+#[test]
+fn test_close_impl_from_closed_idempotent() {
+    let ctx = TestContext::new();
+    ctx.create_issue("test-1", IssueType::Task, "Closed task")
+        .close_issue("test-1");
+
+    let result = close_impl(&ctx.db, &["test-1".to_string()], "duplicate");
+
+    assert!(result.is_ok());
+    assert_eq!(ctx.db.get_issue("test-1").unwrap().status, Status::Closed);
 }
 
 #[test]
@@ -308,14 +334,15 @@ fn test_reopen_impl_from_in_progress_succeeds() {
 }
 
 #[test]
-fn test_reopen_impl_from_todo_fails() {
-    // Cannot reopen from todo - it's already in todo state
+fn test_reopen_impl_from_todo_idempotent() {
+    // Reopen from todo is idempotent - already in todo state
     let ctx = TestContext::new();
     ctx.create_issue("test-1", IssueType::Task, "Todo task");
 
     let result = reopen_impl(&ctx.db, &["test-1".to_string()], None);
 
-    assert!(result.is_err());
+    assert!(result.is_ok());
+    assert_eq!(ctx.db.get_issue("test-1").unwrap().status, Status::Todo);
 }
 
 // === Reason Notes Tests ===
@@ -403,7 +430,7 @@ fn test_start_impl_multiple_from_todo() {
 }
 
 #[test]
-fn test_start_impl_fails_on_invalid_status() {
+fn test_start_impl_idempotent_on_already_started() {
     let ctx = TestContext::new();
     ctx.create_issue("test-1", IssueType::Task, "Task 1");
     ctx.create_issue("test-2", IssueType::Task, "Task 2")
@@ -411,10 +438,14 @@ fn test_start_impl_fails_on_invalid_status() {
 
     let result = start_impl(&ctx.db, &["test-1".to_string(), "test-2".to_string()]);
 
-    // First succeeds, second fails
-    assert!(result.is_err());
+    // Both succeed (test-2 is idempotent)
+    assert!(result.is_ok());
     assert_eq!(
         ctx.db.get_issue("test-1").unwrap().status,
+        Status::InProgress
+    );
+    assert_eq!(
+        ctx.db.get_issue("test-2").unwrap().status,
         Status::InProgress
     );
 }
@@ -624,43 +655,31 @@ fn test_start_partial_update_with_unknown() {
 }
 
 #[test]
-fn test_start_partial_update_with_invalid_transition() {
+fn test_start_batch_with_already_started_succeeds() {
     let ctx = TestContext::new();
     ctx.create_issue("test-1", IssueType::Task, "Task 1")
-        .start_issue("test-1"); // Already started
+        .start_issue("test-1"); // Already started - idempotent
     ctx.create_issue("test-2", IssueType::Task, "Task 2");
 
     let result = start_impl(&ctx.db, &["test-1".to_string(), "test-2".to_string()]);
 
-    // test-1 fails (already started), test-2 succeeds
-    assert!(result.is_err());
+    // Both succeed (test-1 is idempotent)
+    assert!(result.is_ok());
+    assert_eq!(
+        ctx.db.get_issue("test-1").unwrap().status,
+        Status::InProgress
+    );
     assert_eq!(
         ctx.db.get_issue("test-2").unwrap().status,
         Status::InProgress
     );
-
-    match result.unwrap_err() {
-        Error::PartialBulkFailure {
-            succeeded,
-            failed,
-            unknown_ids,
-            transition_failures,
-        } => {
-            assert_eq!(succeeded, 1);
-            assert_eq!(failed, 1);
-            assert!(unknown_ids.is_empty());
-            assert_eq!(transition_failures.len(), 1);
-            assert_eq!(transition_failures[0].0, "test-1");
-        }
-        _ => panic!("Expected PartialBulkFailure"),
-    }
 }
 
 #[test]
-fn test_start_partial_update_mixed_failures() {
+fn test_start_partial_update_mixed_idempotent_and_unknown() {
     let ctx = TestContext::new();
     ctx.create_issue("test-1", IssueType::Task, "Task 1")
-        .start_issue("test-1"); // Already started
+        .start_issue("test-1"); // Already started - idempotent
     ctx.create_issue("test-2", IssueType::Task, "Task 2");
 
     let result = start_impl(
@@ -672,7 +691,7 @@ fn test_start_partial_update_mixed_failures() {
         ],
     );
 
-    // test-1 fails (invalid), test-2 succeeds, unknown-999 not found
+    // test-1 idempotent (counts as success), test-2 succeeds, unknown-999 not found
     assert!(result.is_err());
     assert_eq!(
         ctx.db.get_issue("test-2").unwrap().status,
@@ -686,10 +705,10 @@ fn test_start_partial_update_mixed_failures() {
             unknown_ids,
             transition_failures,
         } => {
-            assert_eq!(succeeded, 1);
-            assert_eq!(failed, 2);
+            assert_eq!(succeeded, 2);
+            assert_eq!(failed, 1);
             assert_eq!(unknown_ids, vec!["unknown-999"]);
-            assert_eq!(transition_failures.len(), 1);
+            assert!(transition_failures.is_empty());
         }
         _ => panic!("Expected PartialBulkFailure"),
     }

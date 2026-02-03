@@ -63,30 +63,61 @@ load '../../helpers/common'
     assert_output --partial "Status: todo"
 }
 
-@test "invalid transitions fail" {
-    # cannot reopen from todo
-    id=$(create_issue task "LifeInvalid Test task")
-    run "$WK_BIN" reopen "$id"
-    assert_failure
-
-    # cannot done from todo without reason
-    run "$WK_BIN" done "$id"
-    assert_failure
-
-    # done with --reason succeeds from todo (prior)
-    run "$WK_BIN" done "$id" --reason "already completed"
+@test "lenient transitions succeed from any state" {
+    # start on a done issue → in_progress
+    id=$(create_issue task "LifeLenient done-start")
+    "$WK_BIN" start "$id"
+    "$WK_BIN" done "$id"
+    run "$WK_BIN" start "$id"
     assert_success
     run "$WK_BIN" show "$id"
-    assert_output --partial "Status: done"
+    assert_output --partial "Status: in_progress"
 
-    # cannot start from done
-    run "$WK_BIN" start "$id"
-    assert_failure
-
-    # cannot start from closed
-    id2=$(create_issue task "LifeInvalid Test closed")
+    # start on a closed issue → in_progress
+    id2=$(create_issue task "LifeLenient closed-start")
     "$WK_BIN" close "$id2" --reason "duplicate"
     run "$WK_BIN" start "$id2"
+    assert_success
+    run "$WK_BIN" show "$id2"
+    assert_output --partial "Status: in_progress"
+
+    # start on an in_progress issue → idempotent
+    run "$WK_BIN" start "$id"
+    assert_success
+
+    # done on a closed issue → done (with reason)
+    id3=$(create_issue task "LifeLenient closed-done")
+    "$WK_BIN" close "$id3" --reason "mistake"
+    run "$WK_BIN" done "$id3" --reason "actually completed"
+    assert_success
+    run "$WK_BIN" show "$id3"
+    assert_output --partial "Status: done"
+
+    # done on a done issue → idempotent
+    run "$WK_BIN" done "$id3"
+    assert_success
+
+    # close on a done issue → closed
+    id4=$(create_issue task "LifeLenient done-close")
+    "$WK_BIN" start "$id4"
+    "$WK_BIN" done "$id4"
+    run "$WK_BIN" close "$id4" --reason "actually not needed"
+    assert_success
+    run "$WK_BIN" show "$id4"
+    assert_output --partial "Status: closed"
+
+    # close on a closed issue → idempotent
+    run "$WK_BIN" close "$id4" --reason "still not needed"
+    assert_success
+
+    # reopen on a todo issue → idempotent
+    id5=$(create_issue task "LifeLenient todo-reopen")
+    run "$WK_BIN" reopen "$id5"
+    assert_success
+
+    # done from todo without reason still fails (for agents)
+    id6=$(create_issue task "LifeLenient todo-done-noreason")
+    run "$WK_BIN" done "$id6"
     assert_failure
 }
 
@@ -192,14 +223,16 @@ load '../../helpers/common'
     assert_output --partial "Status: todo"
 }
 
-@test "batch start with invalid status performs partial update" {
+@test "batch start with already-started is idempotent" {
     id1=$(create_issue task "LifeBatchFail Task 1")
     id2=$(create_issue task "LifeBatchFail Task 2")
     "$WK_BIN" start "$id1"
     run "$WK_BIN" start "$id1" "$id2"
-    assert_failure
-    assert_output --partial "Started 1 of 2"
-    # id2 should still be transitioned
+    assert_success
+    assert_output --partial "Started 2 of 2"
+    # both should be in_progress
+    run "$WK_BIN" show "$id1"
+    assert_output --partial "Status: in_progress"
     run "$WK_BIN" show "$id2"
     assert_output --partial "Status: in_progress"
 }
@@ -216,16 +249,15 @@ load '../../helpers/common'
     assert_output --partial "Status: in_progress"
 }
 
-@test "batch start with mixed unknown and invalid shows both" {
+@test "batch start with mixed unknown and already-started" {
     id1=$(create_issue task "PartialMixed Task 1")
     id2=$(create_issue task "PartialMixed Task 2")
-    "$WK_BIN" start "$id1"  # Now in_progress, can't start again
+    "$WK_BIN" start "$id1"  # Now in_progress, start again is idempotent
 
     run "$WK_BIN" start "$id1" "$id2" "unknown-789"
     assert_failure
-    assert_output --partial "Started 1 of 3"
+    assert_output --partial "Started 2 of 3"
     assert_output --partial "Unknown IDs: unknown-789"
-    assert_output --partial "$id1: cannot go from in_progress to in_progress"
 }
 
 @test "batch done with unknown IDs performs partial update" {

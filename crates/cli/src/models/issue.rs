@@ -38,18 +38,10 @@ impl Status {
     }
 
     /// Check if a transition from this status to target is valid.
+    ///
+    /// All non-self transitions are valid (lenient transitions).
     pub fn can_transition_to(&self, target: Status) -> bool {
-        matches!(
-            (self, target),
-            (Status::Todo, Status::InProgress)
-                | (Status::Todo, Status::Done)
-                | (Status::Todo, Status::Closed)
-                | (Status::InProgress, Status::Todo)
-                | (Status::InProgress, Status::Done)
-                | (Status::InProgress, Status::Closed)
-                | (Status::Done, Status::Todo)
-                | (Status::Closed, Status::Todo)
-        )
+        *self != target
     }
 
     /// Get valid transition targets as a formatted string
@@ -57,8 +49,8 @@ impl Status {
         match self {
             Status::Todo => "in_progress, done (with reason), closed (with reason)".to_string(),
             Status::InProgress => "todo, done, closed (with reason)".to_string(),
-            Status::Done => "todo (with reason to reopen)".to_string(),
-            Status::Closed => "todo (with reason to reopen)".to_string(),
+            Status::Done => "in_progress, todo (with reason), closed (with reason)".to_string(),
+            Status::Closed => "in_progress, todo (with reason), done (with reason)".to_string(),
         }
     }
 }

@@ -243,13 +243,8 @@ fn start_single(db: &Database, id: &str) -> Result<()> {
     let resolved_id = db.resolve_id(id)?;
     let issue = db.get_issue(&resolved_id)?;
 
-    // Start only works from todo status; use reopen for other states
-    if issue.status != Status::Todo {
-        return Err(Error::InvalidTransition {
-            from: issue.status.to_string(),
-            to: "in_progress".to_string(),
-            valid_targets: "todo (use 'reopen' for other states)".to_string(),
-        });
+    if issue.status == Status::InProgress {
+        return Ok(()); // idempotent
     }
 
     db.update_issue_status(&resolved_id, Status::InProgress)?;
@@ -288,19 +283,15 @@ fn done_single(db: &Database, id: &str, reason: Option<&str>) -> Result<()> {
     let resolved_id = db.resolve_id(id)?;
     let issue = db.get_issue(&resolved_id)?;
 
-    // Require reason when transitioning from todo (skipping in_progress)
-    if issue.status == Status::Todo && reason.is_none() {
+    if issue.status == Status::Done {
+        return Ok(()); // idempotent
+    }
+
+    // Require reason when skipping in_progress (from todo or closed)
+    if (issue.status == Status::Todo || issue.status == Status::Closed) && reason.is_none() {
         // Try to resolve a reason (auto-generate for humans, error for agents)
         let effective_reason = resolve_reason(None, "complete")?;
         return done_single_with_reason(db, &resolved_id, &issue, &effective_reason);
-    }
-
-    if !issue.status.can_transition_to(Status::Done) {
-        return Err(Error::InvalidTransition {
-            from: issue.status.to_string(),
-            to: "done".to_string(),
-            valid_targets: issue.status.valid_targets(),
-        });
     }
 
     db.update_issue_status(&resolved_id, Status::Done)?;
@@ -337,14 +328,6 @@ fn done_single_with_reason(
     issue: &crate::models::Issue,
     reason: &str,
 ) -> Result<()> {
-    if !issue.status.can_transition_to(Status::Done) {
-        return Err(Error::InvalidTransition {
-            from: issue.status.to_string(),
-            to: "done".to_string(),
-            valid_targets: issue.status.valid_targets(),
-        });
-    }
-
     db.update_issue_status(id, Status::Done)?;
 
     // Add reason as note (will appear in "Summary" section)
@@ -381,12 +364,8 @@ fn close_single(db: &Database, id: &str, reason: &str) -> Result<()> {
     let resolved_id = db.resolve_id(id)?;
     let issue = db.get_issue(&resolved_id)?;
 
-    if !issue.status.can_transition_to(Status::Closed) {
-        return Err(Error::InvalidTransition {
-            from: issue.status.to_string(),
-            to: "closed".to_string(),
-            valid_targets: issue.status.valid_targets(),
-        });
+    if issue.status == Status::Closed {
+        return Ok(()); // idempotent
     }
 
     db.update_issue_status(&resolved_id, Status::Closed)?;
@@ -430,20 +409,16 @@ fn reopen_single(db: &Database, id: &str, reason: Option<&str>) -> Result<()> {
     let resolved_id = db.resolve_id(id)?;
     let issue = db.get_issue(&resolved_id)?;
 
+    if issue.status == Status::Todo {
+        return Ok(()); // idempotent
+    }
+
     // Reason is required when reopening from done/closed, but not from in_progress
     let requires_reason = issue.status == Status::Done || issue.status == Status::Closed;
     if requires_reason && reason.is_none() {
         // Try to resolve a reason (auto-generate for humans, error for agents)
         let effective_reason = resolve_reason(None, "reopened")?;
         return reopen_single_with_reason(db, &resolved_id, &issue, &effective_reason);
-    }
-
-    if !issue.status.can_transition_to(Status::Todo) {
-        return Err(Error::InvalidTransition {
-            from: issue.status.to_string(),
-            to: "todo".to_string(),
-            valid_targets: issue.status.valid_targets(),
-        });
     }
 
     db.update_issue_status(&resolved_id, Status::Todo)?;
@@ -471,14 +446,6 @@ fn reopen_single_with_reason(
     issue: &crate::models::Issue,
     reason: &str,
 ) -> Result<()> {
-    if !issue.status.can_transition_to(Status::Todo) {
-        return Err(Error::InvalidTransition {
-            from: issue.status.to_string(),
-            to: "todo".to_string(),
-            valid_targets: issue.status.valid_targets(),
-        });
-    }
-
     db.update_issue_status(id, Status::Todo)?;
 
     // Add reason as note (will appear in "Description" section)

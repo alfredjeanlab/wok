@@ -59,7 +59,7 @@ fn status_from_str_invalid(input: &str) {
     assert!(input.parse::<Status>().is_err());
 }
 
-// Valid status transitions
+// Valid status transitions (all non-self transitions are valid)
 #[parameterized(
     todo_to_in_progress = { Status::Todo, Status::InProgress },
     todo_to_done = { Status::Todo, Status::Done },
@@ -68,7 +68,11 @@ fn status_from_str_invalid(input: &str) {
     in_progress_to_done = { Status::InProgress, Status::Done },
     in_progress_to_closed = { Status::InProgress, Status::Closed },
     done_to_todo = { Status::Done, Status::Todo },
+    done_to_in_progress = { Status::Done, Status::InProgress },
+    done_to_closed = { Status::Done, Status::Closed },
     closed_to_todo = { Status::Closed, Status::Todo },
+    closed_to_in_progress = { Status::Closed, Status::InProgress },
+    closed_to_done = { Status::Closed, Status::Done },
 )]
 fn status_transition_valid(from: Status, to: Status) {
     assert!(
@@ -79,21 +83,17 @@ fn status_transition_valid(from: Status, to: Status) {
     );
 }
 
-// Invalid status transitions
+// Self-transitions are not valid (handled as idempotent at the command level)
 #[parameterized(
     todo_to_todo = { Status::Todo, Status::Todo },
     in_progress_to_in_progress = { Status::InProgress, Status::InProgress },
     done_to_done = { Status::Done, Status::Done },
     closed_to_closed = { Status::Closed, Status::Closed },
-    done_to_in_progress = { Status::Done, Status::InProgress },
-    done_to_closed = { Status::Done, Status::Closed },
-    closed_to_in_progress = { Status::Closed, Status::InProgress },
-    closed_to_done = { Status::Closed, Status::Done },
 )]
-fn status_transition_invalid(from: Status, to: Status) {
+fn status_self_transition_invalid(from: Status, to: Status) {
     assert!(
         !from.can_transition_to(to),
-        "{} -> {} should be invalid",
+        "{} -> {} should be invalid (self-transition)",
         from,
         to
     );
@@ -233,8 +233,8 @@ fn event_with_timestamp() {
 #[parameterized(
     todo = { Status::Todo, "in_progress, done (with reason), closed (with reason)" },
     in_progress = { Status::InProgress, "todo, done, closed (with reason)" },
-    done = { Status::Done, "todo (with reason to reopen)" },
-    closed = { Status::Closed, "todo (with reason to reopen)" },
+    done = { Status::Done, "in_progress, todo (with reason), closed (with reason)" },
+    closed = { Status::Closed, "in_progress, todo (with reason), done (with reason)" },
 )]
 fn status_valid_targets(status: Status, expected: &str) {
     assert_eq!(status.valid_targets(), expected);

@@ -76,7 +76,7 @@ fn test_status_from_str_invalid(input: &str) {
     assert!(input.parse::<Status>().is_err());
 }
 
-// Valid status transitions
+// Valid status transitions (all non-self transitions are valid)
 #[parameterized(
     todo_to_in_progress = { Status::Todo, Status::InProgress },
     todo_to_done = { Status::Todo, Status::Done },
@@ -85,7 +85,11 @@ fn test_status_from_str_invalid(input: &str) {
     in_progress_to_done = { Status::InProgress, Status::Done },
     in_progress_to_closed = { Status::InProgress, Status::Closed },
     done_to_todo = { Status::Done, Status::Todo },
+    done_to_in_progress = { Status::Done, Status::InProgress },
+    done_to_closed = { Status::Done, Status::Closed },
     closed_to_todo = { Status::Closed, Status::Todo },
+    closed_to_in_progress = { Status::Closed, Status::InProgress },
+    closed_to_done = { Status::Closed, Status::Done },
 )]
 fn test_status_transition_valid(from: Status, to: Status) {
     assert!(
@@ -96,21 +100,17 @@ fn test_status_transition_valid(from: Status, to: Status) {
     );
 }
 
-// Invalid status transitions
+// Self-transitions are not valid (handled as idempotent at the command level)
 #[parameterized(
     todo_to_todo = { Status::Todo, Status::Todo },
     in_progress_to_in_progress = { Status::InProgress, Status::InProgress },
     done_to_done = { Status::Done, Status::Done },
     closed_to_closed = { Status::Closed, Status::Closed },
-    done_to_in_progress = { Status::Done, Status::InProgress },
-    done_to_closed = { Status::Done, Status::Closed },
-    closed_to_in_progress = { Status::Closed, Status::InProgress },
-    closed_to_done = { Status::Closed, Status::Done },
 )]
-fn test_status_transition_invalid(from: Status, to: Status) {
+fn test_status_self_transition_invalid(from: Status, to: Status) {
     assert!(
         !from.can_transition_to(to),
-        "{} -> {} should be invalid",
+        "{} -> {} should be invalid (self-transition)",
         from,
         to
     );
@@ -129,12 +129,14 @@ fn test_status_valid_targets() {
     assert!(in_progress_targets.contains("closed"));
 
     let done_targets = Status::Done.valid_targets();
+    assert!(done_targets.contains("in_progress"));
     assert!(done_targets.contains("todo"));
-    assert!(done_targets.contains("reopen"));
+    assert!(done_targets.contains("closed"));
 
     let closed_targets = Status::Closed.valid_targets();
+    assert!(closed_targets.contains("in_progress"));
     assert!(closed_targets.contains("todo"));
-    assert!(closed_targets.contains("reopen"));
+    assert!(closed_targets.contains("done"));
 }
 
 // Issue tests

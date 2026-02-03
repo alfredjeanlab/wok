@@ -187,7 +187,7 @@ fn close_requires_reason() {
 }
 
 #[test]
-fn cannot_start_from_done_state() {
+fn start_from_done_state_succeeds() {
     let temp = init_temp();
     let id = create_issue(&temp, "Test task");
 
@@ -204,16 +204,17 @@ fn cannot_start_from_done_state() {
         .assert()
         .success();
 
-    // Start from done should fail
+    // Start from done should succeed (lenient transition)
     wk().arg("start")
         .arg(&id)
         .current_dir(temp.path())
         .assert()
-        .failure();
+        .success()
+        .stdout(predicate::str::contains("Started"));
 }
 
 #[test]
-fn cannot_start_from_closed_state() {
+fn start_from_closed_state_succeeds() {
     let temp = init_temp();
     let id = create_issue(&temp, "Test task");
 
@@ -226,12 +227,13 @@ fn cannot_start_from_closed_state() {
         .assert()
         .success();
 
-    // Start from closed should fail
+    // Start from closed should succeed (lenient transition)
     wk().arg("start")
         .arg(&id)
         .current_dir(temp.path())
         .assert()
-        .failure();
+        .success()
+        .stdout(predicate::str::contains("Started"));
 }
 
 #[test]
