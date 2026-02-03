@@ -5,19 +5,17 @@
 #   oj run build sync-perf "Optimize remote sync for large repositories"
 
 command "build" {
-  args = "<name> <instructions> [--base <branch>] [--rebase] [--new <folder>]"
+  args = "<name> <instructions> [--base <branch>]"
   run  = { pipeline = "build" }
 
   defaults = {
-    base   = "main"
-    rebase = ""
-    new    = ""
+    base = "main"
   }
 }
 
 pipeline "build" {
   name      = "${var.name}"
-  vars      = ["name", "instructions", "base", "rebase", "new"]
+  vars      = ["name", "instructions", "base"]
   workspace = "ephemeral"
 
   locals {
@@ -35,15 +33,10 @@ pipeline "build" {
   # Initialize workspace: worktree with shared build cache via .cargo/config.toml
   step "init" {
     run = <<-SHELL
-      if test -n "${var.new}"; then
-        git init
-        mkdir -p ${var.new}
-      else
-        git -C "${local.repo}" worktree add -b "${local.branch}" "${workspace.root}" HEAD
-        mkdir -p .cargo
-        echo "[build]" > .cargo/config.toml
-        echo "target-dir = \"${local.repo}/target\"" >> .cargo/config.toml
-      fi
+      git -C "${local.repo}" worktree add -b "${local.branch}" "${workspace.root}" HEAD
+      mkdir -p .cargo
+      echo "[build]" > .cargo/config.toml
+      echo "target-dir = \"${local.repo}/target\"" >> .cargo/config.toml
       mkdir -p plans
     SHELL
     on_done = { step = "plan" }
