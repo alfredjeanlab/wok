@@ -72,15 +72,22 @@ pipeline "chore" {
   }
 
   step "done" {
-    run = "cd ${invoke.dir} && wok done ${var.task.id}"
+    run     = "cd ${invoke.dir} && wok done ${var.task.id}"
+    on_done = { step = "cleanup" }
   }
 
   step "cancel" {
-    run = "cd ${invoke.dir} && wok close ${var.task.id} --reason 'Chore pipeline cancelled'"
+    run     = "cd ${invoke.dir} && wok close ${var.task.id} --reason 'Chore pipeline cancelled'"
+    on_done = { step = "cleanup" }
   }
 
   step "reopen" {
-    run = "cd ${invoke.dir} && wok reopen ${var.task.id} --reason 'Chore pipeline failed'"
+    run     = "cd ${invoke.dir} && wok reopen ${var.task.id} --reason 'Chore pipeline failed'"
+    on_done = { step = "cleanup" }
+  }
+
+  step "cleanup" {
+    run = "git -C \"${local.repo}\" worktree remove --force \"${workspace.root}\" 2>/dev/null || true"
   }
 }
 

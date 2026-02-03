@@ -72,15 +72,22 @@ pipeline "fix" {
   }
 
   step "done" {
-    run = "cd ${invoke.dir} && wok done ${var.bug.id}"
+    run     = "cd ${invoke.dir} && wok done ${var.bug.id}"
+    on_done = { step = "cleanup" }
   }
 
   step "cancel" {
-    run = "cd ${invoke.dir} && wok close ${var.bug.id} --reason 'Fix pipeline cancelled'"
+    run     = "cd ${invoke.dir} && wok close ${var.bug.id} --reason 'Fix pipeline cancelled'"
+    on_done = { step = "cleanup" }
   }
 
   step "reopen" {
-    run = "cd ${invoke.dir} && wok reopen ${var.bug.id} --reason 'Fix pipeline failed'"
+    run     = "cd ${invoke.dir} && wok reopen ${var.bug.id} --reason 'Fix pipeline failed'"
+    on_done = { step = "cleanup" }
+  }
+
+  step "cleanup" {
+    run = "git -C \"${local.repo}\" worktree remove --force \"${workspace.root}\" 2>/dev/null || true"
   }
 }
 
