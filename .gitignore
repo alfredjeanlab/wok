@@ -4,7 +4,6 @@
 .wok/
 .v0/
 .v0.profile.rc
-.cargo/config.toml
 
 # Build artifacts
 target/

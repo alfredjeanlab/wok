@@ -50,9 +50,6 @@ pipeline "merge" {
     run = <<-SHELL
       git -C "${local.repo}" fetch origin ${var.mr.base} ${var.mr.branch}
       git -C "${local.repo}" worktree add -b ${local.branch} "${workspace.root}" origin/${var.mr.base}
-      mkdir -p .cargo
-      echo "[build]" > .cargo/config.toml
-      echo "target-dir = \"${local.repo}/target\"" >> .cargo/config.toml
     SHELL
     on_done = { step = "merge" }
   }
