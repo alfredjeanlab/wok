@@ -13,8 +13,8 @@ Wok is a collaborative, offline-first, AI-friendly issue tracker.
 - `cargo check` - Check for errors and warnings
 - `cargo clippy` - Lint with clippy
 - `cargo test` - Run unit tests
-- `make check` - Run all validation checks (fmt, clippy, audit, build, test)
-- `make check-fast` - Fast validation for oj workspaces (skips audit, simpler clippy)
+- `make check` - Fast validation (fmt, clippy, build, test)
+- `make ci` - Full CI validation (adds audit, stricter clippy)
 - `make spec` - Run all specs
 - `make spec-cli` - Run CLI specs
 - `make spec ARGS='--filter "pattern"'` - Filter tests by name
@@ -51,12 +51,11 @@ See `tests/specs/CLAUDE.md` for spec philosophy and guidelines.
 
 Before committing changes:
 
-- [ ] Run `make check` (or `make check-fast` in oj workspaces) which will
-  - `cargo fmt --check`
-  - `cargo clippy -- -D warnings`
+- [ ] Run `make check` which will
+  - `cargo fmt`
+  - `cargo clippy --all`
   - `cargo check`
-  - `quench check`
-  - `cargo audit` (skipped by `check-fast`)
+  - `quench check --fix`
   - `cargo build --workspace`
   - `cargo test`
 - [ ] Complete per-crate checklists for any crates modified:

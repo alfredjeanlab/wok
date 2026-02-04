@@ -3,27 +3,33 @@
 SHELL := /bin/bash
 SPECS_DIR := tests/specs
 
-.PHONY: install check check-fast validate spec spec-cli spec-remote spec-todo coverage coverage-spec license
+.PHONY: install check ci validate spec spec-cli spec-remote spec-todo coverage coverage-spec license
 
 install:
 	@scripts/install
 
+# Quick checks
+#
+# Excluded:
+#   SKIP `cargo audit`
+#   SKIP `cargo deny`
+#
 check:
 	cargo fmt
-	cargo clippy --all-targets --all-features -- -D warnings
-	cargo check
-	quench check --fix
-	cargo audit
+	cargo clippy --all -- -D warnings
+	quench check --fix --no-cloc
 	cargo build --workspace
-	cargo test
+	cargo test --workspace
 
-check-fast:
+# Full pre-release checks
+ci:
 	cargo fmt
-	cargo clippy --all
-	cargo check
+	cargo clippy --all -- -D warnings
 	quench check --fix
 	cargo build --workspace
-	cargo test
+	cargo test --all
+	cargo audit
+	cargo deny check licenses bans sources
 
 validate:
 	@scripts/validate
