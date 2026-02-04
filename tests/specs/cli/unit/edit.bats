@@ -75,7 +75,7 @@ load '../../helpers/common'
 
 @test "edit with invalid type fails" {
     id=$(create_issue task "Test task")
-    run "$WK_BIN" edit "$id" type epic
+    run "$WK_BIN" edit "$id" type bogus
     assert_failure
 }
 

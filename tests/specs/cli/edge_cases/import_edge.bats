@@ -147,9 +147,9 @@ EOF
     assert_output --partial "[bug]"
     run "$WK_BIN" show bd-feature
     assert_output --partial "[feature]"
-    # Epic maps to feature
+    # Epic is preserved as epic
     run "$WK_BIN" show bd-epic
-    assert_output --partial "[feature]"
+    assert_output --partial "[epic]"
 }
 
 @test "import beads format preserves labels" {

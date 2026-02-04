@@ -343,8 +343,8 @@ fn new_empty_title_fails() {
 fn new_invalid_type_fails() {
     let temp = init_temp();
     wk().arg("new")
-        .arg("epic")
-        .arg("My epic")
+        .arg("bogus")
+        .arg("My bogus")
         .current_dir(temp.path())
         .assert()
         .failure();

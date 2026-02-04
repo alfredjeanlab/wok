@@ -203,7 +203,8 @@ fn convert_beads_dep_type(dep_type: &str) -> Relation {
 fn convert_beads_type(issue_type: &str) -> IssueType {
     match issue_type {
         "bug" => IssueType::Bug,
-        "feature" | "epic" => IssueType::Feature,
+        "feature" => IssueType::Feature,
+        "epic" => IssueType::Epic,
         "chore" => IssueType::Chore,
         _ => IssueType::Task, // task, etc.
     }

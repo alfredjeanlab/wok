@@ -33,7 +33,9 @@ pub enum Error {
         to: String,
     },
 
-    #[error("invalid issue type: '{0}'\n  hint: valid types are: feature, task, bug, chore, idea")]
+    #[error(
+        "invalid issue type: '{0}'\n  hint: valid types are: feature, task, bug, chore, idea, epic"
+    )]
     InvalidIssueType(String),
 
     #[error("invalid status: '{0}'\n  hint: valid statuses are: todo, in_progress, done, closed")]

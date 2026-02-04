@@ -28,6 +28,8 @@ pub enum IssueType {
     Chore,
     /// Early-stage thought or proposal, not yet refined into actionable work.
     Idea,
+    /// Cross-cutting initiative spanning multiple features or projects.
+    Epic,
 }
 
 impl IssueType {
@@ -39,6 +41,7 @@ impl IssueType {
             IssueType::Bug => "bug",
             IssueType::Chore => "chore",
             IssueType::Idea => "idea",
+            IssueType::Epic => "epic",
         }
     }
 }
@@ -59,6 +62,7 @@ impl FromStr for IssueType {
             "bug" => Ok(IssueType::Bug),
             "chore" => Ok(IssueType::Chore),
             "idea" => Ok(IssueType::Idea),
+            "epic" => Ok(IssueType::Epic),
             _ => Err(Error::InvalidIssueType(s.to_string())),
         }
     }

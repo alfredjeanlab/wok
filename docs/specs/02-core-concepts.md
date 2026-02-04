@@ -7,6 +7,7 @@
 - `bug` - Defect to fix
 - `chore` - Maintenance work (refactoring, cleanup, dependency updates)
 - `idea` - Early-stage thought or proposal, not yet actionable
+- `epic` - Cross-cutting initiative spanning multiple features or projects
 
 ## Status State Machine
 

@@ -104,7 +104,7 @@ wok reopen <id>... --reason "regression found" # from done/closed: reason requir
 # Edit issue description, title, type, or assignee
 wok edit <id> description "new description"   # Update description
 wok edit <id> title "new title"               # Update title
-wok edit <id> type <type>                     # Change type (feature|task|bug|chore|idea)
+wok edit <id> type <type>                     # Change type (feature|task|bug|chore|idea|epic)
 wok edit <id> assignee alice                  # Assign to alice
 wok edit <id> assignee none                   # Clear assignment
 ```
@@ -114,7 +114,7 @@ wok edit <id> assignee none                   # Clear assignment
 ```bash
 # List issues (default: open issues - todo + in_progress)
 wok list [--status/-s <status>[,<status>...]]   # todo|in_progress|done|closed
-        [--type/-t <type>[,<type>...]]         # feature|task|bug|chore|idea
+        [--type/-t <type>[,<type>...]]         # feature|task|bug|chore|idea|epic
         [--label/-l <label>[,<label>...]]...   # repeatable
         [--assignee/-a <name>[,<name>...]]     # filter by assignee
         [--unassigned]                          # show only unassigned issues
@@ -126,7 +126,7 @@ wok list [--status/-s <status>[,<status>...]]   # todo|in_progress|done|closed
 # Sort order: priority ASC (0=highest first), then created_at DESC (newest first)
 
 # Show ready issues (unblocked todo items only)
-wok ready [--type/-t <type>[,<type>...]]        # feature|task|bug|chore|idea
+wok ready [--type/-t <type>[,<type>...]]        # feature|task|bug|chore|idea|epic
          [--label/-l <label>[,<label>...]]...  # repeatable
          [--assignee/-a <name>[,<name>...]]    # filter by assignee
          [--unassigned]                         # show only unassigned issues
@@ -330,7 +330,7 @@ wok import path/to/.beads/issues.jsonl   # auto-detects bd format
 - Collisions (same ID, different content) are detected and reported
 - Missing dependencies are warned but don't fail import
 - Format auto-detected from `.beads/issues.jsonl` suffix
-- When importing beads format, 'epic' type is mapped to 'feature'
+- When importing beads format, 'epic' type is preserved as 'epic'
 
 **Exit codes:**
 - 0: Success (may include warnings)

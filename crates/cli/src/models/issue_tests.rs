@@ -13,6 +13,7 @@ use yare::parameterized;
     task = { IssueType::Task, "task" },
     bug = { IssueType::Bug, "bug" },
     chore = { IssueType::Chore, "chore" },
+    epic = { IssueType::Epic, "epic" },
 )]
 fn test_issue_type_as_str(issue_type: IssueType, expected: &str) {
     assert_eq!(issue_type.as_str(), expected);
@@ -24,11 +25,13 @@ fn test_issue_type_as_str(issue_type: IssueType, expected: &str) {
     task_lower = { "task", IssueType::Task },
     bug_lower = { "bug", IssueType::Bug },
     chore_lower = { "chore", IssueType::Chore },
+    epic_lower = { "epic", IssueType::Epic },
     feature_upper = { "FEATURE", IssueType::Feature },
     task_mixed = { "Task", IssueType::Task },
     bug_upper = { "BUG", IssueType::Bug },
     chore_upper = { "CHORE", IssueType::Chore },
     chore_mixed = { "Chore", IssueType::Chore },
+    epic_upper = { "EPIC", IssueType::Epic },
 )]
 fn test_issue_type_from_str_valid(input: &str, expected: IssueType) {
     assert_eq!(input.parse::<IssueType>().unwrap(), expected);
@@ -37,7 +40,6 @@ fn test_issue_type_from_str_valid(input: &str, expected: IssueType) {
 #[parameterized(
     invalid = { "invalid" },
     empty = { "" },
-    epic = { "epic" },
 )]
 fn test_issue_type_from_str_invalid(input: &str) {
     assert!(input.parse::<IssueType>().is_err());

@@ -71,6 +71,7 @@ pub enum IssueType {
     Bug,
     Chore,
     Idea,
+    Epic,
 }
 
 impl From<wk_core::IssueType> for IssueType {
@@ -81,6 +82,7 @@ impl From<wk_core::IssueType> for IssueType {
             wk_core::IssueType::Bug => IssueType::Bug,
             wk_core::IssueType::Chore => IssueType::Chore,
             wk_core::IssueType::Idea => IssueType::Idea,
+            wk_core::IssueType::Epic => IssueType::Epic,
         }
     }
 }

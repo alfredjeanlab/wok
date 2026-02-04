@@ -49,7 +49,7 @@ fn test_convert_beads_type() {
     assert_eq!(convert_beads_type("bug"), IssueType::Bug);
     assert_eq!(convert_beads_type("feature"), IssueType::Feature);
     assert_eq!(convert_beads_type("task"), IssueType::Task);
-    assert_eq!(convert_beads_type("epic"), IssueType::Feature);
+    assert_eq!(convert_beads_type("epic"), IssueType::Epic);
     assert_eq!(convert_beads_type("chore"), IssueType::Chore);
 }
 
@@ -545,7 +545,7 @@ fn test_import_beads_chore_type() {
 }
 
 #[test]
-fn test_import_beads_epic_becomes_feature() {
+fn test_import_beads_epic_preserved() {
     let (db, _dir) = setup_test_db();
     let config = dummy_config();
 
@@ -571,7 +571,7 @@ fn test_import_beads_epic_becomes_feature() {
 
     let issue = db.get_issue("bd-epic").unwrap();
     assert_eq!(issue.title, "New feature");
-    assert_eq!(issue.issue_type, IssueType::Feature); // epic maps to feature
+    assert_eq!(issue.issue_type, IssueType::Epic);
 }
 
 // === Phase 4-8 Unit Tests ===

@@ -6,7 +6,7 @@
 -- Core issue table
 CREATE TABLE issues (
     id TEXT PRIMARY KEY,           -- e.g. "PROJ-a3f2" (prefix + hash)
-    type TEXT NOT NULL,            -- feature|task|bug|chore|idea
+    type TEXT NOT NULL,            -- feature|task|bug|chore|idea|epic
     title TEXT NOT NULL,           -- short title
     description TEXT,              -- optional description text
     status TEXT NOT NULL DEFAULT 'todo',  -- todo|in_progress|done|closed

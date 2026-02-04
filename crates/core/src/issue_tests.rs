@@ -13,9 +13,11 @@ use yare::parameterized;
     bug_lower = { "bug", IssueType::Bug },
     chore_lower = { "chore", IssueType::Chore },
     idea_lower = { "idea", IssueType::Idea },
+    epic_lower = { "epic", IssueType::Epic },
     feature_upper = { "FEATURE", IssueType::Feature },
     idea_upper = { "IDEA", IssueType::Idea },
     idea_mixed = { "Idea", IssueType::Idea },
+    epic_upper = { "EPIC", IssueType::Epic },
 )]
 fn issue_type_from_str_valid(input: &str, expected: IssueType) {
     assert_eq!(input.parse::<IssueType>().unwrap(), expected);
@@ -35,6 +37,7 @@ fn issue_type_from_str_invalid(input: &str) {
     bug = { IssueType::Bug, "bug" },
     chore = { IssueType::Chore, "chore" },
     idea = { IssueType::Idea, "idea" },
+    epic = { IssueType::Epic, "epic" },
 )]
 fn issue_type_as_str(issue_type: IssueType, expected: &str) {
     assert_eq!(issue_type.as_str(), expected);
@@ -247,6 +250,7 @@ fn issue_type_display() {
     assert_eq!(format!("{}", IssueType::Bug), "bug");
     assert_eq!(format!("{}", IssueType::Chore), "chore");
     assert_eq!(format!("{}", IssueType::Idea), "idea");
+    assert_eq!(format!("{}", IssueType::Epic), "epic");
 }
 
 #[test]

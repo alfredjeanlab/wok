@@ -79,7 +79,7 @@ Examples:
   wok new task \"My task\" -o id           Create task, output only ID
   wok new \"Task\" --prefix other          Create task with a different prefix"))]
     New {
-        /// Issue type (feature, task, bug, chore, idea) or title if type is omitted
+        /// Issue type (feature, task, bug, chore, idea, epic) or title if type is omitted
         #[arg(value_parser = non_empty_string)]
         type_or_title: String,
 

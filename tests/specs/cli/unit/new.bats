@@ -76,8 +76,13 @@ load '../../helpers/common'
     run "$WK_BIN" new ""
     assert_failure
 
-    # Invalid type fails
+    # Epic
     run "$WK_BIN" new epic "My epic"
+    assert_success
+    assert_output --partial "[epic]"
+
+    # Invalid type fails
+    run "$WK_BIN" new bogus "My bogus"
     assert_failure
 }
 

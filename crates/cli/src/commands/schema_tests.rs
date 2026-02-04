@@ -118,6 +118,7 @@ fn schema_issue_type_has_all_variants() {
     assert!(json.contains("\"bug\""));
     assert!(json.contains("\"chore\""));
     assert!(json.contains("\"idea\""));
+    assert!(json.contains("\"epic\""));
 }
 
 #[test]

@@ -11,7 +11,7 @@ Product specifications defining wok's design, behavior, and interfaces.
    - Semantic flag policy
 
 2. **[Core Concepts](02-core-concepts.md)**
-   - Issue types (feature, task, bug, chore, idea)
+   - Issue types (feature, task, bug, chore, idea, epic)
    - Status state machine
    - Dependencies (hierarchical)
    - Notes by status
