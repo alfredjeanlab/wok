@@ -54,44 +54,6 @@ fn test_convert_beads_type() {
 }
 
 #[test]
-fn test_filter_matches_status() {
-    let groups = parse_filter_groups(&["todo".to_string()], |s| s.parse::<Status>()).unwrap();
-    assert!(matches_filter_groups(&groups, || Status::Todo));
-    assert!(!matches_filter_groups(&groups, || Status::Done));
-}
-
-#[test]
-fn test_filter_matches_or() {
-    let groups =
-        parse_filter_groups(&["todo,in_progress".to_string()], |s| s.parse::<Status>()).unwrap();
-    assert!(matches_filter_groups(&groups, || Status::Todo));
-    assert!(matches_filter_groups(&groups, || Status::InProgress));
-    assert!(!matches_filter_groups(&groups, || Status::Done));
-}
-
-#[test]
-fn test_filter_matches_and() {
-    // Two separate flags = AND for labels
-    let groups = parse_filter_groups(&["urgent".to_string(), "auth".to_string()], |s| {
-        Ok(s.to_string())
-    })
-    .unwrap();
-    assert!(matches_label_groups(
-        &groups,
-        &["urgent".to_string(), "auth".to_string()]
-    ));
-    assert!(!matches_label_groups(&groups, &["urgent".to_string()]));
-}
-
-#[test]
-fn test_filter_empty() {
-    let groups: Option<Vec<Vec<Status>>> =
-        parse_filter_groups(&[], |s| s.parse::<Status>()).unwrap();
-    assert!(groups.is_none());
-    assert!(matches_filter_groups(&groups, || Status::Todo));
-}
-
-#[test]
 fn test_parse_wk_format() {
     let json = r#"{"id":"test-1","issue_type":"task","title":"Test task","status":"todo","created_at":"2024-01-01T00:00:00Z","updated_at":"2024-01-01T00:00:00Z","labels":["urgent"],"notes":[],"deps":[],"events":[]}"#;
     let wk: WkIssue = serde_json::from_str(json).unwrap();
