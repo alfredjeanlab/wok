@@ -99,7 +99,7 @@ impl FromStr for LinkRel {
 }
 
 /// An external link attached to an issue.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Link {
     /// Database-assigned identifier.
     pub id: i64,

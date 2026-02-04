@@ -4,10 +4,10 @@
 //! Prefix tracking for multi-project support.
 
 use chrono::{DateTime, Utc};
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
 /// Information about a prefix in the issue tracker.
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct PrefixInfo {
     /// The prefix string (e.g., "proj", "api")
     pub prefix: String,

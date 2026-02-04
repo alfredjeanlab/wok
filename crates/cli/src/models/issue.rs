@@ -90,7 +90,7 @@ impl From<Status> for wk_core::Status {
 ///
 /// Issues are identified by a unique ID generated from a project prefix
 /// and a hash of the title and creation time (e.g., "proj-a1b2").
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Issue {
     /// Unique identifier (format: `{prefix}-{hash}`).
     pub id: String,

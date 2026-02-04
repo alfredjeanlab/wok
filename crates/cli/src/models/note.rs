@@ -10,7 +10,7 @@ use super::Status;
 ///
 /// Notes capture context, decisions, and progress updates. Each note records
 /// the issue's status at the time it was added, enabling status-grouped display.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Note {
     /// Database-assigned identifier.
     pub id: i64,

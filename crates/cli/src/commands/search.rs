@@ -36,7 +36,7 @@ pub fn run(
     format: OutputFormat,
 ) -> Result<()> {
     let (db, config, _) = open_db()?;
-    let prefix = prefix.or((!config.prefix.is_empty()).then(|| config.prefix));
+    let prefix = prefix.or((!config.prefix.is_empty()).then_some(config.prefix));
     let effective_limit = if no_limit { Some(0) } else { limit };
     run_impl(
         &db,
