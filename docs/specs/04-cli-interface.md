@@ -71,6 +71,9 @@ wok init --workspace /path/to/workspace --prefix prj
 ```bash
 # Create issue (type defaults to "task")
 wok new [type] <title> [--label <label>[,<label>...]]... [--note "..."] [--link <url>]...
+                       [--assignee/-a <name>] [--blocks <ids>] [--blocked-by <ids>]
+                       [--tracks <ids>] [--tracked-by <ids>] [--prefix <prefix>]
+                       [--output/-o text|json|id]
 # Examples:
 wok new "Fix login bug"                              # task (default)
 wok new task "Fix login bug" --label auth --note "Check session handling"
@@ -78,6 +81,11 @@ wok new bug "Memory leak in worker"
 wok new feature "User authentication"
 wok new task "Port feature" --link "https://github.com/org/repo/issues/123"
 wok new task "Multi-labeled" --label a,b,c           # comma-separated labels
+wok new "Task" -a alice                              # assign to alice
+wok new bug "Fix bug" --blocks prj-1                 # blocks another issue
+wok new "Task" --tracked-by prj-feat                 # tracked by a feature
+wok new task "My task" -o id                         # output only ID
+wok new "Task" --prefix other                        # use different prefix
 
 # Start work (todo → in_progress)
 wok start <id>...
@@ -93,10 +101,12 @@ wok close <id>... --reason "duplicate of prj-a3f2"
 wok reopen <id>...                            # from in_progress: no reason needed
 wok reopen <id>... --reason "regression found" # from done/closed: reason required
 
-# Edit issue description, title, or type
+# Edit issue description, title, type, or assignee
 wok edit <id> description "new description"   # Update description
 wok edit <id> title "new title"               # Update title
-wok edit <id> type <type>                     # Change type (feature|task|bug|chore)
+wok edit <id> type <type>                     # Change type (feature|task|bug|chore|idea)
+wok edit <id> assignee alice                  # Assign to alice
+wok edit <id> assignee none                   # Clear assignment
 ```
 
 ### Viewing Issues
@@ -104,17 +114,26 @@ wok edit <id> type <type>                     # Change type (feature|task|bug|ch
 ```bash
 # List issues (default: open issues - todo + in_progress)
 wok list [--status/-s <status>[,<status>...]]   # todo|in_progress|done|closed
-        [--type/-t <type>[,<type>...]]         # feature|task|bug|chore
+        [--type/-t <type>[,<type>...]]         # feature|task|bug|chore|idea
         [--label/-l <label>[,<label>...]]...   # repeatable
-        [--blocked]         # show only blocked issues
-        [--output/-o text|json|ids]          # output format (default: text)
+        [--assignee/-a <name>[,<name>...]]     # filter by assignee
+        [--unassigned]                          # show only unassigned issues
+        [--filter/-q <expr>]...                 # temporal filter expression
+        [--blocked]                             # show only blocked issues
+        [--all]                                 # ignore default status filter
+        [--limit/-n <N>] [--offset <N>]         # pagination
+        [--output/-o text|json|id]             # output format (default: text)
 # Sort order: priority ASC (0=highest first), then created_at DESC (newest first)
 
 # Show ready issues (unblocked todo items only)
-wok ready [--type/-t <type>[,<type>...]]        # feature|task|bug|chore
+wok ready [--type/-t <type>[,<type>...]]        # feature|task|bug|chore|idea
          [--label/-l <label>[,<label>...]]...  # repeatable
-         [--output/-o text|json]            # output format (default: text)
+         [--assignee/-a <name>[,<name>...]]    # filter by assignee
+         [--unassigned]                         # show only unassigned issues
+         [--all-assignees]                      # show all regardless of assignment
+         [--output/-o text|json]               # output format (default: text)
 # Note: ready = unblocked todo by definition (no --status, --all, or --blocked flags)
+# Default: shows unassigned issues only (use --all-assignees to see all)
 # Sort order:
 #   1. Recent issues (created <48h ago) come first, sorted by priority ASC
 #   2. Old issues (created >=48h ago) come after, sorted by created_at ASC (oldest first)
@@ -130,6 +149,20 @@ wok list --status todo,in_progress              # todo OR in_progress
 wok list --label mod:wkrs,mod:wkgo              # wkrs OR wkgo module
 wok list --label mod:wkrs,mod:wkgo --label urgent   # (wkrs OR wkgo) AND urgent
 wok list --type task,bug --status todo          # (task OR bug) AND todo
+wok list -a alice                               # issues assigned to alice
+wok list --unassigned                           # unassigned issues only
+wok list -q "age < 3d"                          # issues created in last 3 days
+wok list -q "updated > 1w"                      # issues not updated in 7+ days
+wok list --limit 10                             # first 10 results only
+wok list --all                                  # all issues (any status)
+
+# Filter Expressions (-q/--filter):
+#   Syntax: FIELD [OPERATOR VALUE]
+#   Fields: age, activity (updated), completed, skipped, closed
+#   Status shortcuts: 'closed', 'skipped', 'completed' (no operator needed)
+#   Operators: < <= > >= = != (or: lt lte gt gte eq ne)
+#   Values: durations (30d, 1w, 24h, 5m, 10s), dates (2024-01-01), or 'now'
+#   Duration units: ms, s, m, h, d, w, M (30d), y (365d)
 
 # Show single issue with full details (includes deps, notes, events)
 wok show <id> [--output json]
@@ -154,6 +187,27 @@ wok tree <id>
     {"id": "prj-a3f2", "issue_type": "task", "status": "todo", "title": "Example", "labels": ["label1"]}
   ]
 }
+```
+
+### Search
+
+```bash
+# Search issues by text (searches title, description, notes)
+wok search <query> [--status/-s <status>[,<status>...]]
+                   [--type/-t <type>[,<type>...]]
+                   [--label/-l <label>[,<label>...]]...
+                   [--assignee/-a <name>[,<name>...]]
+                   [--filter/-q <expr>]...
+                   [--limit/-n <N>] [--offset <N>]
+                   [--output/-o text|json]
+
+# Examples:
+wok search "login"                    # Search for 'login' in all fields
+wok search "auth" -s todo             # Search todo issues only
+wok search "bug" -t bug               # Search bugs only
+wok search "task" -a alice            # Search issues assigned to alice
+wok search "auth" -q "age < 30d"      # Search with time filter
+wok search "auth" -n 5                # Limit to 5 results
 ```
 
 ### Dependencies
@@ -217,6 +271,9 @@ wok unlabel <id>... <label>
 ```bash
 # Add note (status recorded automatically)
 wok note <id> "note content"
+
+# Replace most recent note instead of adding new
+wok note <id> "updated content" --replace
 
 # View notes (included in `wok show`)
 # Note: Cannot add notes to closed issues
@@ -340,6 +397,22 @@ wok completion zsh > ~/.zsh/completions/_wok
 wok completion fish > ~/.config/fish/completions/wok.fish
 ```
 
+### Schema
+
+```bash
+# Output JSON Schema for command output validation
+wok schema <command>
+# Available: list, show, ready, search
+
+# Examples:
+wok schema list    # Schema for 'wok list -o json'
+wok schema show    # Schema for 'wok show <id> -o json'
+wok schema ready   # Schema for 'wok ready -o json'
+wok schema search  # Schema for 'wok search -o json'
+```
+
+Use schemas to validate JSON output or generate type definitions for tooling integration.
+
 ### Configuration Management
 
 ```bash
@@ -368,6 +441,24 @@ wok config rename old new         # Rename prefix from 'old' to 'new'
 - All related tables are updated atomically (issues, deps, labels, notes, events, links, prefixes)
 - Both prefixes must be valid (2+ lowercase alphanumeric with at least one letter)
 - If old and new prefix are the same, no changes are made (noop with message)
+
+### Daemon Management
+
+```bash
+# Show daemon status
+wok daemon status
+
+# Start the daemon
+wok daemon start
+wok daemon start --foreground  # Run in foreground for debugging
+
+# Stop the daemon
+wok daemon stop
+
+# View daemon logs
+wok daemon logs
+wok daemon logs --follow       # Tail logs (like tail -f)
+```
 
 ### Remote (Remote Mode)
 

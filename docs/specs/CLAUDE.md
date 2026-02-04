@@ -11,7 +11,7 @@ Product specifications defining wok's design, behavior, and interfaces.
    - Semantic flag policy
 
 2. **[Core Concepts](02-core-concepts.md)**
-   - Issue types (feature, task, bug, chore)
+   - Issue types (feature, task, bug, chore, idea)
    - Status state machine
    - Dependencies (hierarchical)
    - Notes by status
@@ -24,7 +24,7 @@ Product specifications defining wok's design, behavior, and interfaces.
 
 4. **[CLI Interface](04-cli-interface.md)**
    - Command structure
-   - All commands (help, setup, lifecycle, viewing, dependencies, links, labels, notes, log, export, import, shell completion, remote, hooks)
+   - All commands (help, setup, lifecycle, viewing, search, dependencies, links, labels, notes, log, export, import, shell completion, schema, daemon, remote, hooks)
    - Output format
    - Claude Code integration
 

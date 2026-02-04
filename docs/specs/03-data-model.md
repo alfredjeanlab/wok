@@ -6,9 +6,11 @@
 -- Core issue table
 CREATE TABLE issues (
     id TEXT PRIMARY KEY,           -- e.g. "PROJ-a3f2" (prefix + hash)
-    type TEXT NOT NULL,            -- feature|task|bug|chore
-    title TEXT NOT NULL,           -- short title, no description
+    type TEXT NOT NULL,            -- feature|task|bug|chore|idea
+    title TEXT NOT NULL,           -- short title
+    description TEXT,              -- optional description text
     status TEXT NOT NULL DEFAULT 'todo',  -- todo|in_progress|done|closed
+    assignee TEXT,                 -- optional assignee (e.g., "alice", "queue:merge")
     created_at TEXT NOT NULL,
     updated_at TEXT NOT NULL
 );
