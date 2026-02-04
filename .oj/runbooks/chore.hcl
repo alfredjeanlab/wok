@@ -29,14 +29,17 @@ worker "chore" {
 pipeline "chore" {
   name      = "${var.task.title}"
   vars      = ["task"]
-  workspace = "ephemeral"
   on_cancel = { step = "cancel" }
   on_fail   = { step = "reopen" }
 
-  locals {
-    repo   = "$(git -C ${invoke.dir} rev-parse --show-toplevel)"
+  workspace {
+    git    = "worktree"
     branch = "chore/${var.task.id}-${workspace.nonce}"
-    title  = "chore: ${var.task.title}"
+  }
+
+  locals {
+    base   = "main"
+    title  = "$(printf '%s' \"chore: ${var.task.title}\" | tr '\\n' ' ' | cut -c1-80)"
   }
 
   notify {
@@ -45,63 +48,42 @@ pipeline "chore" {
     on_fail  = "Chore failed: ${var.task.title}"
   }
 
-  step "init" {
-    run = "git -C \"${local.repo}\" worktree add -b \"${local.branch}\" \"${workspace.root}\" HEAD"
-    on_done = { step = "work" }
-  }
-
   step "work" {
     run     = { agent = "chores" }
     on_done = { step = "submit" }
   }
 
+  # TODO: hook into merge pipeline to mark issue done instead
   step "submit" {
     run = <<-SHELL
-      _title=$(printf '%s' "${local.title}" | tr '\n' ' ' | cut -c1-80)
       git add -A
-      git diff --cached --quiet || git commit -m "$_title"
-      git -C "${local.repo}" push origin "${local.branch}"
-      oj queue push merges --var branch="${local.branch}" --var title="$_title"
+      git diff --cached --quiet || git commit -m "${local.title}"
+      test "$(git rev-list --count HEAD ^origin/${local.base})" -gt 0 || { echo "No changes to submit" >&2; exit 1; }
+      git push origin "${workspace.branch}"
+      cd ${invoke.dir} && wok done ${var.task.id}
+      oj queue push merges --var branch="${workspace.branch}" --var title="${local.title}"
     SHELL
-    on_done = { step = "done" }
-  }
-
-  step "done" {
-    run     = "cd ${invoke.dir} && wok done ${var.task.id}"
-    on_done = { step = "cleanup" }
-  }
-
-  step "cancel" {
-    run     = "cd ${invoke.dir} && wok close ${var.task.id} --reason 'Chore pipeline cancelled'"
-    on_done = { step = "abandon" }
   }
 
   step "reopen" {
-    run     = "cd ${invoke.dir} && wok reopen ${var.task.id} --reason 'Chore pipeline failed'"
-    on_done = { step = "abandon" }
+    run = "cd ${invoke.dir} && wok reopen ${var.task.id} --reason 'Chore pipeline failed'"
   }
 
-  step "abandon" {
-    run = <<-SHELL
-      git -C "${local.repo}" worktree remove --force "${workspace.root}" 2>/dev/null || true
-      git -C "${local.repo}" branch -D "${local.branch}" 2>/dev/null || true
-    SHELL
-  }
-
-  step "cleanup" {
-    run = "git -C \"${local.repo}\" worktree remove --force \"${workspace.root}\" 2>/dev/null || true"
+  step "cancel" {
+    run = "cd ${invoke.dir} && wok close ${var.task.id} --reason 'Chore pipeline cancelled'"
   }
 }
 
 agent "chores" {
-  run      = "claude --model opus --dangerously-skip-permissions --disallowed-tools ExitPlanMode,AskUserQuestion,EnterPlanMode"
+  # NOTE: Since chores should quick and small, prevent unnecessary EnterPlanMode and ExitPlanMode
+  run      = "claude --model opus --dangerously-skip-permissions --disallowed-tools ExitPlanMode,EnterPlanMode"
   on_idle  = { action = "nudge", message = "Keep working. Complete the task, write tests, run make check, and commit." }
   on_dead  = { action = "gate", run = "make check" }
 
-  prompt = <<-PROMPT
-    Complete the following task:
+  prime = ["cd ${invoke.dir} && wok show ${var.task.id}"]
 
-    ${var.task.title}
+  prompt = <<-PROMPT
+    Complete the following task: ${var.task.id} - ${var.task.title}
 
     ## Steps
 
