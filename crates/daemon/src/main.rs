@@ -15,9 +15,11 @@ use std::os::unix::net::UnixListener;
 use std::path::{Path, PathBuf};
 use std::time::Instant;
 
+mod db;
 mod env;
 mod ipc;
 
+use db::Database;
 use ipc::{framing, DaemonRequest, DaemonResponse, DaemonStatus};
 
 /// Socket filename within daemon directory.
@@ -55,6 +57,18 @@ fn main() {
         std::process::exit(1);
     }
 
+    // Open the database
+    let db_path = state_dir.join("issues.db");
+    let db = match Database::open(&db_path) {
+        Ok(db) => db,
+        Err(e) => {
+            tracing::error!("failed to open database: {}", e);
+            cleanup(&pid_path, &state_dir.join(SOCKET_NAME));
+            std::process::exit(1);
+        }
+    };
+    tracing::info!("database opened at {}", db_path.display());
+
     // Bind Unix socket
     let socket_path = state_dir.join(SOCKET_NAME);
     // Remove stale socket if it exists
@@ -87,7 +101,7 @@ fn main() {
 
                 match framing::read_request(&mut stream) {
                     Ok(request) => {
-                        let response = handle_request(request, &start_time);
+                        let response = handle_request(request, &start_time, &db);
                         let should_shutdown = matches!(response, DaemonResponse::ShuttingDown);
                         let _ = framing::write_response(&mut stream, &response);
                         if should_shutdown {
@@ -112,7 +126,7 @@ fn main() {
     tracing::info!("wokd stopped");
 }
 
-fn handle_request(request: DaemonRequest, start_time: &Instant) -> DaemonResponse {
+fn handle_request(request: DaemonRequest, start_time: &Instant, db: &Database) -> DaemonResponse {
     match request {
         DaemonRequest::Ping => DaemonResponse::Pong,
         DaemonRequest::Status => {
@@ -123,6 +137,14 @@ fn handle_request(request: DaemonRequest, start_time: &Instant) -> DaemonRespons
         DaemonRequest::Shutdown => DaemonResponse::ShuttingDown,
         DaemonRequest::Hello { version: _ } => DaemonResponse::Hello {
             version: env!("CARGO_PKG_VERSION").to_string(),
+        },
+        DaemonRequest::Query(op) => match db.execute_query(op) {
+            Ok(result) => DaemonResponse::QueryResult(result),
+            Err(e) => DaemonResponse::Error { message: e },
+        },
+        DaemonRequest::Mutate(op) => match db.execute_mutate(op) {
+            Ok(result) => DaemonResponse::MutateResult(result),
+            Err(e) => DaemonResponse::Error { message: e },
         },
     }
 }

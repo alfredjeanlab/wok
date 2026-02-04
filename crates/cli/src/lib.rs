@@ -34,7 +34,8 @@ mod cli;
 pub mod colors;
 mod commands;
 mod completions;
-mod daemon;
+pub mod daemon;
+mod db_handle;
 mod display;
 pub mod env;
 pub mod filter;
@@ -50,6 +51,8 @@ pub mod db;
 pub mod error;
 pub mod id;
 pub mod models;
+
+pub use db_handle::DatabaseHandle;
 
 pub use cli::{
     AssigneeArgs, Cli, Command, ConfigCommand, DaemonCommand, HooksCommand, LimitArgs,

@@ -8,6 +8,11 @@
 
 use serde::{Deserialize, Serialize};
 
+use crate::models::{
+    Dependency, Event, Issue, IssueType, Link, LinkRel, LinkType, Note, PrefixInfo, Relation,
+    Status,
+};
+
 /// Request sent from CLI to daemon.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(tag = "type")]
@@ -20,6 +25,118 @@ pub enum DaemonRequest {
     Ping,
     /// Version handshake request.
     Hello { version: String },
+    /// Database query operation.
+    Query(QueryOp),
+    /// Database mutation operation.
+    Mutate(MutateOp),
+}
+
+/// Query operations for reading from the database.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(tag = "op")]
+pub enum QueryOp {
+    /// Resolve a partial ID to a full ID.
+    ResolveId { partial_id: String },
+    /// Check if an issue exists.
+    IssueExists { id: String },
+    /// Get a single issue by ID.
+    GetIssue { id: String },
+    /// List issues with optional filters.
+    ListIssues {
+        status: Option<Status>,
+        issue_type: Option<IssueType>,
+        label: Option<String>,
+    },
+    /// Search issues by query string.
+    SearchIssues { query: String },
+    /// Get IDs of blocked issues.
+    GetBlockedIssueIds,
+    /// Get labels for an issue.
+    GetLabels { id: String },
+    /// Get labels for multiple issues.
+    GetLabelsBatch { ids: Vec<String> },
+    /// Get notes for an issue.
+    GetNotes { id: String },
+    /// Get events for an issue.
+    GetEvents { id: String },
+    /// Get all events with optional limit.
+    GetAllEvents { limit: Option<usize> },
+    /// Get dependencies from an issue.
+    GetDepsFrom { id: String },
+    /// Get blockers for an issue.
+    GetBlockers { id: String },
+    /// Get issues blocked by an issue.
+    GetBlocking { id: String },
+    /// Get tracked issues.
+    GetTracked { id: String },
+    /// Get tracking issues.
+    GetTracking { id: String },
+    /// Get transitive blockers.
+    GetTransitiveBlockers { id: String },
+    /// Get links for an issue.
+    GetLinks { id: String },
+    /// Get a specific link by URL.
+    GetLinkByUrl { id: String, url: String },
+    /// List all prefixes.
+    ListPrefixes,
+}
+
+/// Mutation operations for writing to the database.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(tag = "op")]
+pub enum MutateOp {
+    /// Create a new issue.
+    CreateIssue { issue: Issue },
+    /// Update issue status.
+    UpdateIssueStatus { id: String, status: Status },
+    /// Update issue title.
+    UpdateIssueTitle { id: String, title: String },
+    /// Update issue description.
+    UpdateIssueDescription { id: String, description: String },
+    /// Update issue type.
+    UpdateIssueType { id: String, issue_type: IssueType },
+    /// Set issue assignee.
+    SetAssignee { id: String, assignee: String },
+    /// Clear issue assignee.
+    ClearAssignee { id: String },
+    /// Add a label to an issue.
+    AddLabel { id: String, label: String },
+    /// Remove a label from an issue.
+    RemoveLabel { id: String, label: String },
+    /// Add a note to an issue.
+    AddNote {
+        id: String,
+        status: Status,
+        content: String,
+    },
+    /// Log an event.
+    LogEvent { event: Event },
+    /// Add a dependency.
+    AddDependency {
+        from_id: String,
+        to_id: String,
+        relation: Relation,
+    },
+    /// Remove a dependency.
+    RemoveDependency {
+        from_id: String,
+        to_id: String,
+        relation: Relation,
+    },
+    /// Add a link to an issue.
+    AddLink {
+        id: String,
+        link_type: Option<LinkType>,
+        url: Option<String>,
+        external_id: Option<String>,
+        rel: Option<LinkRel>,
+    },
+    /// Remove a link from an issue.
+    RemoveLink { id: String, url: String },
+    /// Ensure a prefix exists.
+    EnsurePrefix { prefix: String },
+    /// Increment prefix issue count.
+    IncrementPrefixCount { prefix: String },
 }
 
 /// Response sent from daemon to CLI.
@@ -36,6 +153,54 @@ pub enum DaemonResponse {
     Error { message: String },
     /// Version handshake response.
     Hello { version: String },
+    /// Query result.
+    QueryResult(QueryResult),
+    /// Mutation acknowledgment.
+    MutateResult(MutateResult),
+}
+
+/// Results from query operations.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(tag = "result")]
+pub enum QueryResult {
+    /// Resolved ID.
+    ResolvedId { id: String },
+    /// Boolean result (e.g., issue_exists).
+    Bool { value: bool },
+    /// Single issue.
+    Issue { issue: Issue },
+    /// List of issues.
+    Issues { issues: Vec<Issue> },
+    /// List of string IDs.
+    Ids { ids: Vec<String> },
+    /// List of labels.
+    Labels { labels: Vec<String> },
+    /// Labels for multiple issues.
+    LabelsBatch {
+        labels: std::collections::HashMap<String, Vec<String>>,
+    },
+    /// List of notes.
+    Notes { notes: Vec<Note> },
+    /// List of events.
+    Events { events: Vec<Event> },
+    /// List of dependencies.
+    Dependencies { deps: Vec<Dependency> },
+    /// List of links.
+    Links { links: Vec<Link> },
+    /// Optional link.
+    Link { link: Option<Link> },
+    /// List of prefix info.
+    Prefixes { prefixes: Vec<PrefixInfo> },
+}
+
+/// Results from mutation operations.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(tag = "result")]
+pub enum MutateResult {
+    /// Mutation succeeded.
+    Ok,
+    /// Mutation succeeded, label was removed (returns true if it existed).
+    LabelRemoved { removed: bool },
 }
 
 /// Daemon status information.

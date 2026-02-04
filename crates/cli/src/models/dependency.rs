@@ -87,7 +87,7 @@ impl FromStr for UserRelation {
 /// Dependencies are directional: `from_id` has the relationship to `to_id`.
 /// For example, if issue A blocks issue B, the dependency is stored as
 /// `from_id: "A", to_id: "B", relation: Blocks`.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Dependency {
     /// The source issue of the relationship.
     pub from_id: String,

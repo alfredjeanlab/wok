@@ -113,7 +113,7 @@ impl FromStr for Action {
 ///
 /// Events form an immutable history of all changes, enabling activity logs
 /// and change tracking.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Event {
     /// Database-assigned identifier.
     pub id: i64,
