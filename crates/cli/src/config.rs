@@ -104,18 +104,6 @@ pub fn get_db_path(work_dir: &Path, config: &Config) -> PathBuf {
     }
 }
 
-/// Get the directory for daemon files (socket, pid, lock, log).
-/// In user-level mode, this is the XDG state directory.
-/// In private mode, this is the .wok directory (though daemon is not used).
-pub fn get_daemon_dir(config: &Config) -> PathBuf {
-    if config.private {
-        // Private mode doesn't use a daemon, but return a sane path anyway
-        PathBuf::from(".")
-    } else {
-        wok_state_dir()
-    }
-}
-
 /// Resolve the XDG state directory for wok.
 ///
 /// Precedence:

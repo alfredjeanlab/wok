@@ -114,21 +114,6 @@ fn test_private_mode() {
 }
 
 #[test]
-fn test_daemon_dir_user_level() {
-    let config = Config::new("prj".to_string()).unwrap();
-    let daemon_dir = get_daemon_dir(&config);
-    assert_eq!(daemon_dir, wok_state_dir());
-}
-
-#[test]
-fn test_daemon_dir_private() {
-    let config = Config::new_private("prj".to_string()).unwrap();
-    let daemon_dir = get_daemon_dir(&config);
-    // Private mode returns "." as sane default (daemon not used)
-    assert_eq!(daemon_dir, PathBuf::from("."));
-}
-
-#[test]
 fn test_write_gitignore_private_mode() {
     let temp = TempDir::new().unwrap();
     let work_dir = temp.path().join(".wok");
