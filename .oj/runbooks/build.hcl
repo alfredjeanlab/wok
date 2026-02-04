@@ -118,8 +118,8 @@ agent "plan" {
 
 agent "implement" {
   run      = "claude --model opus --dangerously-skip-permissions"
-  on_idle  = { action = "nudge", message = "Keep working. Follow the plan in plans/${var.name}.md, implement all phases, run make check-fast, and commit." }
-  on_dead  = { action = "gate", run = "make check-fast" }
+  on_idle  = { action = "nudge", message = "Keep working. Follow the plan in plans/${var.name}.md, implement all phases, run make check, and commit." }
+  on_dead  = { action = "gate", run = "make check" }
 
   prompt = <<-PROMPT
     Implement the plan in `plans/${var.name}.md`.
@@ -129,7 +129,7 @@ agent "implement" {
     1. Read the plan in `plans/${var.name}.md`
     2. Implement all changes described in the plan
     3. Write tests for new functionality
-    4. Run `make check-fast` to verify everything passes
+    4. Run `make check` to verify everything passes
     5. Commit your changes
 
     ## Context

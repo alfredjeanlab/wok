@@ -73,12 +73,19 @@ pipeline "chore" {
 
   step "cancel" {
     run     = "cd ${invoke.dir} && wok close ${var.task.id} --reason 'Chore pipeline cancelled'"
-    on_done = { step = "cleanup" }
+    on_done = { step = "abandon" }
   }
 
   step "reopen" {
     run     = "cd ${invoke.dir} && wok reopen ${var.task.id} --reason 'Chore pipeline failed'"
-    on_done = { step = "cleanup" }
+    on_done = { step = "abandon" }
+  }
+
+  step "abandon" {
+    run = <<-SHELL
+      git -C "${local.repo}" worktree remove --force "${workspace.root}" 2>/dev/null || true
+      git -C "${local.repo}" branch -D "${local.branch}" 2>/dev/null || true
+    SHELL
   }
 
   step "cleanup" {
@@ -88,8 +95,8 @@ pipeline "chore" {
 
 agent "chores" {
   run      = "claude --model opus --dangerously-skip-permissions --disallowed-tools ExitPlanMode,AskUserQuestion,EnterPlanMode"
-  on_idle  = { action = "nudge", message = "Keep working. Complete the task, write tests, run make check-fast, and commit." }
-  on_dead  = { action = "gate", run = "make check-fast" }
+  on_idle  = { action = "nudge", message = "Keep working. Complete the task, write tests, run make check, and commit." }
+  on_dead  = { action = "gate", run = "make check" }
 
   prompt = <<-PROMPT
     Complete the following task:
@@ -102,7 +109,7 @@ agent "chores" {
     2. Find the relevant code
     3. Implement the changes
     4. Write or update tests
-    5. Run `make check-fast` to verify
+    5. Run `make check` to verify
     6. Commit your changes
   PROMPT
 }
