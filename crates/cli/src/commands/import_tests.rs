@@ -56,17 +56,17 @@ fn test_convert_beads_type() {
 #[test]
 fn test_filter_matches_status() {
     let groups = parse_filter_groups(&["todo".to_string()], |s| s.parse::<Status>()).unwrap();
-    assert!(matches_filter(&groups, &Status::Todo));
-    assert!(!matches_filter(&groups, &Status::Done));
+    assert!(matches_filter_groups(&groups, || Status::Todo));
+    assert!(!matches_filter_groups(&groups, || Status::Done));
 }
 
 #[test]
 fn test_filter_matches_or() {
     let groups =
         parse_filter_groups(&["todo,in_progress".to_string()], |s| s.parse::<Status>()).unwrap();
-    assert!(matches_filter(&groups, &Status::Todo));
-    assert!(matches_filter(&groups, &Status::InProgress));
-    assert!(!matches_filter(&groups, &Status::Done));
+    assert!(matches_filter_groups(&groups, || Status::Todo));
+    assert!(matches_filter_groups(&groups, || Status::InProgress));
+    assert!(!matches_filter_groups(&groups, || Status::Done));
 }
 
 #[test]
@@ -76,11 +76,11 @@ fn test_filter_matches_and() {
         Ok(s.to_string())
     })
     .unwrap();
-    assert!(matches_labels(
+    assert!(matches_label_groups(
         &groups,
         &["urgent".to_string(), "auth".to_string()]
     ));
-    assert!(!matches_labels(&groups, &["urgent".to_string()]));
+    assert!(!matches_label_groups(&groups, &["urgent".to_string()]));
 }
 
 #[test]
@@ -88,7 +88,7 @@ fn test_filter_empty() {
     let groups: Option<Vec<Vec<Status>>> =
         parse_filter_groups(&[], |s| s.parse::<Status>()).unwrap();
     assert!(groups.is_none());
-    assert!(matches_filter(&groups, &Status::Todo));
+    assert!(matches_filter_groups(&groups, || Status::Todo));
 }
 
 #[test]

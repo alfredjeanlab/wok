@@ -12,6 +12,7 @@ use crate::db::Database;
 use crate::error::{Error, Result};
 use crate::models::{Action, Event, Issue, IssueType, Link, LinkRel, LinkType, Relation, Status};
 
+use super::filtering::{matches_filter_groups, matches_label_groups, parse_filter_groups};
 use super::open_db;
 
 // Type alias for imported issue data
@@ -37,50 +38,6 @@ struct ImportedLink {
     url: Option<String>,
     external_id: Option<String>,
     rel: Option<LinkRel>,
-}
-
-// Reuse filter logic from list.rs pattern
-fn parse_filter_groups<T, F>(values: &[String], parse_fn: F) -> Result<Option<Vec<Vec<T>>>>
-where
-    F: Fn(&str) -> Result<T>,
-{
-    if values.is_empty() {
-        return Ok(None);
-    }
-
-    let mut groups = Vec::new();
-    for value in values {
-        let mut group = Vec::new();
-        for part in value.split(',') {
-            let part = part.trim();
-            if !part.is_empty() {
-                group.push(parse_fn(part)?);
-            }
-        }
-        if !group.is_empty() {
-            groups.push(group);
-        }
-    }
-
-    if groups.is_empty() {
-        Ok(None)
-    } else {
-        Ok(Some(groups))
-    }
-}
-
-fn matches_filter<T: PartialEq>(groups: &Option<Vec<Vec<T>>>, value: &T) -> bool {
-    match groups {
-        None => true,
-        Some(groups) => groups.iter().all(|group| group.contains(value)),
-    }
-}
-
-fn matches_labels(groups: &Option<Vec<Vec<String>>>, labels: &[String]) -> bool {
-    match groups {
-        None => true,
-        Some(groups) => groups.iter().all(|g| g.iter().any(|l| labels.contains(l))),
-    }
 }
 
 // wk native export format (matches export.rs ExportedIssue)
@@ -473,15 +430,15 @@ pub(crate) fn run_impl(
             }
         }
 
-        if !matches_filter(&status_groups, &issue.status) {
+        if !matches_filter_groups(&status_groups, || issue.status) {
             result.filtered += 1;
             continue;
         }
-        if !matches_filter(&type_groups, &issue.issue_type) {
+        if !matches_filter_groups(&type_groups, || issue.issue_type) {
             result.filtered += 1;
             continue;
         }
-        if !matches_labels(&label_groups, &labels) {
+        if !matches_label_groups(&label_groups, &labels) {
             result.filtered += 1;
             continue;
         }
