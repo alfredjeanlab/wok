@@ -1,5 +1,11 @@
 # Plan and implement a feature, then submit to the merge queue.
 #
+# Prereq: configure sccache in .cargo/config.toml so worktrees get fast
+# builds without sharing a target-dir (which causes cache poisoning):
+#
+#   [build]
+#   rustc-wrapper = "sccache"
+#
 # Examples:
 #   oj run build edit-flags "Add hidden --title and --description flags to wok edit"
 #   oj run build sync-perf "Optimize remote sync for large repositories"
@@ -25,8 +31,8 @@ pipeline "build" {
   }
 
   locals {
-    issue  = "$(cd ${invoke.dir} && wok new feature \"${var.instructions}\" --note \"${var.name}\" -o id)"
-    title  = "feat(${var.name}): ${var.instructions:0:72}"
+    title  = "$(printf 'feat(${var.name}): %.72s' \"${var.instructions}\")"
+    issue  = "$(cd ${invoke.dir} && wok new feature \"${var.instructions}\" -o id)"
   }
 
   notify {

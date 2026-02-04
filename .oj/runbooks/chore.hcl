@@ -39,7 +39,7 @@ pipeline "chore" {
 
   locals {
     base   = "main"
-    title  = "chore: ${var.task.title:0:73}"
+    title  = "$(printf 'chore: %.73s' \"${var.task.title}\")"
   }
 
   notify {

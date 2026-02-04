@@ -39,7 +39,7 @@ pipeline "bug" {
 
   locals {
     base   = "main"
-    title  = "fix: ${var.bug.title:0:75}"
+    title  = "$(printf 'fix: %.75s' \"${var.bug.title}\")"
   }
 
   notify {
