@@ -17,7 +17,8 @@ pipeline "build" {
   name      = "${var.name}"
   vars      = ["name", "instructions", "base"]
   workspace = "ephemeral"
-  on_cancel = { step = "cleanup" }
+  on_cancel = { step = "abandon" }
+  on_fail   = { step = "abandon" }
 
   locals {
     repo   = "$(git -C ${invoke.dir} rev-parse --show-toplevel)"
@@ -60,6 +61,13 @@ pipeline "build" {
       oj queue push merges --var branch="${local.branch}" --var title="${local.title}"
     SHELL
     on_done = { step = "cleanup" }
+  }
+
+  step "abandon" {
+    run = <<-SHELL
+      git -C "${local.repo}" worktree remove --force "${workspace.root}" 2>/dev/null || true
+      git -C "${local.repo}" branch -D "${local.branch}" 2>/dev/null || true
+    SHELL
   }
 
   step "cleanup" {
