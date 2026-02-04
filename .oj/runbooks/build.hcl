@@ -17,6 +17,7 @@ pipeline "build" {
   name      = "${var.name}"
   vars      = ["name", "instructions", "base"]
   workspace = "ephemeral"
+  on_cancel = { step = "cleanup" }
 
   locals {
     repo   = "$(git -C ${invoke.dir} rev-parse --show-toplevel)"
