@@ -48,6 +48,8 @@ pipeline "merge" {
 
   step "init" {
     run = <<-SHELL
+      git -C "${local.repo}" ls-remote --exit-code origin "refs/heads/${var.mr.branch}" >/dev/null 2>&1 \
+        || { echo "error: branch '${var.mr.branch}' not found on remote"; exit 1; }
       git -C "${local.repo}" fetch origin ${var.mr.base} ${var.mr.branch}
       git -C "${local.repo}" worktree add -b ${local.branch} "${workspace.root}" origin/${var.mr.base}
     SHELL
@@ -60,6 +62,8 @@ pipeline "merge" {
       git -C "${local.repo}" worktree remove --force "${workspace.root}" 2>/dev/null || true
       git -C "${local.repo}" branch -D "${local.branch}" 2>/dev/null || true
       rm -rf "${workspace.root}" 2>/dev/null || true
+      git -C "${local.repo}" ls-remote --exit-code origin "refs/heads/${var.mr.branch}" >/dev/null 2>&1 \
+        || { echo "error: branch '${var.mr.branch}' not found on remote"; exit 1; }
       git -C "${local.repo}" fetch origin ${var.mr.base} ${var.mr.branch}
       git -C "${local.repo}" worktree add -b ${local.branch} "${workspace.root}" origin/${var.mr.base}
     SHELL
@@ -87,16 +91,8 @@ pipeline "merge" {
     run = <<-SHELL
       git add -A
       git diff --cached --quiet || git commit --amend --no-edit
-      git rebase --abort 2>/dev/null || true
       git -C "${local.repo}" fetch origin ${var.mr.base}
-
-      # Try rebase for linear history; if it fails for any reason, abort
-      # and merge instead -- preserves the resolver conflict resolutions
-      if ! git rebase origin/${var.mr.base} 2>/dev/null; then
-        git rebase --abort 2>/dev/null || true
-        git merge origin/${var.mr.base} --no-edit
-      fi
-
+      git merge origin/${var.mr.base} --no-edit
       git -C "${local.repo}" push origin ${local.branch}:${var.mr.base}
       git -C "${local.repo}" push origin --delete ${var.mr.branch} || true
     SHELL
