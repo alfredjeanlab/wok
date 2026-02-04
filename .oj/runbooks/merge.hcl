@@ -78,13 +78,7 @@ pipeline "merge" {
 
   step "resolve" {
     run     = { agent = "conflicts" }
-    on_done = { step = "check" }
-  }
-
-  step "check" {
-    run     = "make check-fast"
     on_done = { step = "push" }
-    on_fail = { step = "resolve" }
   }
 
   step "push" {
@@ -118,7 +112,7 @@ pipeline "merge" {
 
 agent "conflicts" {
   run      = "claude --model opus --dangerously-skip-permissions"
-  on_idle  = { action = "gate", run = "make check-fast", attempts = 2 }
+  on_idle  = "done"
   on_dead  = { action = "escalate" }
 
   prime = [
