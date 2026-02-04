@@ -625,3 +625,21 @@ load '../../helpers/common'
     assert_success
     assert_output --partial "PrefixFilter Alpha task"
 }
+
+@test "list auto-filters by configured project prefix" {
+    id1=$(create_issue task "AutoPrefix Own task")
+    # Create an issue with a different prefix in the same DB
+    id2=$("$WK_BIN" new task "AutoPrefix Other task" --prefix beta | grep -oE '[a-z]+-[a-z0-9]+(-[0-9]+)?' | head -1)
+
+    # Without -p flag, should only show issues matching configured prefix
+    run "$WK_BIN" list
+    assert_success
+    assert_output --partial "AutoPrefix Own task"
+    refute_output --partial "AutoPrefix Other task"
+
+    # Explicit -p should override: show only beta issues
+    run "$WK_BIN" list -p beta
+    assert_success
+    assert_output --partial "AutoPrefix Other task"
+    refute_output --partial "AutoPrefix Own task"
+}

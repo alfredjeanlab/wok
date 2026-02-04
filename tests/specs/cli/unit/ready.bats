@@ -228,3 +228,14 @@ load '../../helpers/common'
     assert_output --partial "PrefixReady Beta task"
     refute_output --partial "PrefixReady Alpha task"
 }
+
+@test "ready auto-filters by configured project prefix" {
+    id1=$(create_issue task "AutoReady Own task")
+    id2=$("$WK_BIN" new task "AutoReady Other task" --prefix beta | grep -oE '[a-z]+-[a-z0-9]+(-[0-9]+)?' | head -1)
+
+    # Without -p flag, should only show issues matching configured prefix
+    run "$WK_BIN" ready --all-assignees
+    assert_success
+    assert_output --partial "AutoReady Own task"
+    refute_output --partial "AutoReady Other task"
+}

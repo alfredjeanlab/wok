@@ -242,3 +242,14 @@ load '../../helpers/common'
     assert_output --partial "PrefixSearch Beta task"
     refute_output --partial "PrefixSearch Alpha task"
 }
+
+@test "search auto-filters by configured project prefix" {
+    id1=$(create_issue task "AutoSearch Own task")
+    id2=$("$WK_BIN" new task "AutoSearch Other task" --prefix beta | grep -oE '[a-z]+-[a-z0-9]+(-[0-9]+)?' | head -1)
+
+    # Without -p flag, should only show issues matching configured prefix
+    run "$WK_BIN" search "AutoSearch"
+    assert_success
+    assert_output --partial "AutoSearch Own task"
+    refute_output --partial "AutoSearch Other task"
+}

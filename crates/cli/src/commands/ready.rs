@@ -77,7 +77,8 @@ pub fn run(
     all_assignees: bool,
     format: OutputFormat,
 ) -> Result<()> {
-    let (db, _, _) = open_db()?;
+    let (db, config, _) = open_db()?;
+    let prefix = prefix.or((!config.prefix.is_empty()).then(|| config.prefix));
     // Get work directory for default assignee config
     let work_dir = crate::config::find_work_dir()?;
     run_impl(
