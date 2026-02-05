@@ -11,26 +11,12 @@ setup() {
 }
 
 teardown() {
-    # Stop daemon if running (from remote sync tests)
-    if command -v timeout >/dev/null 2>&1; then
-        timeout 1 "$WK_BIN" remote stop 2>/dev/null || true
-    fi
-    # Force kill by PID if daemon.pid exists
-    local daemon_pid_file="${TEST_DIR}/.wok/daemon.pid"
-    if [ -f "$daemon_pid_file" ]; then
-        local pid
-        pid=$(cat "$daemon_pid_file" 2>/dev/null || true)
-        if [ -n "$pid" ]; then
-            kill -9 "$pid" 2>/dev/null || true
-        fi
-    fi
-    sleep 0.01
     cd / || exit 1
     rm -rf "$TEST_DIR"
 }
 
 @test "init creates .wok directory and fails if already initialized" {
-    run "$WK_BIN" init --prefix myapp
+    run "$WK_BIN" init --prefix myapp --private
     assert_success
     [ -n "$output" ]
     [ -d ".wok" ]
@@ -39,21 +25,21 @@ teardown() {
     grep -q 'prefix = "myapp"' .wok/config.toml
 
     # Fails if already initialized
-    run "$WK_BIN" init --prefix prj
+    run "$WK_BIN" init --prefix prj --private
     assert_failure
     [ -n "$output" ]
 
     # Succeeds if .wok exists but has no config.toml
     rm -rf .wok
     mkdir -p .wok
-    run "$WK_BIN" init --prefix prj
+    run "$WK_BIN" init --prefix prj --private
     assert_success
     [ -f ".wok/config.toml" ]
 }
 
 @test "init with --path creates at specified location" {
     mkdir -p subdir
-    run "$WK_BIN" init --path subdir --prefix sub
+    run "$WK_BIN" init --path subdir --prefix sub --private
     assert_success
     [ -d "subdir/.wok" ]
     [ -f "subdir/.wok/config.toml" ]
@@ -61,12 +47,12 @@ teardown() {
     grep -q 'prefix = "sub"' subdir/.wok/config.toml
 
     # Creates parent directories if needed
-    run "$WK_BIN" init --path nested/deep/dir --prefix prj
+    run "$WK_BIN" init --path nested/deep/dir --prefix prj --private
     assert_success
     [ -d "nested/deep/dir/.wok" ]
 
     # Fails if already initialized at path
-    run "$WK_BIN" init --path subdir --prefix sub
+    run "$WK_BIN" init --path subdir --prefix sub --private
     assert_failure
 }
 
@@ -126,7 +112,7 @@ teardown() {
 }
 
 @test "init creates valid database, config, and allows issue creation" {
-    run "$WK_BIN" init --prefix prj
+    run "$WK_BIN" init --prefix prj --private
     assert_success
 
     # Valid SQLite database
@@ -154,97 +140,31 @@ teardown() {
 
     # Allows immediate issue creation with correct prefix
     rm -rf .wok
-    run "$WK_BIN" init --prefix myprj
+    run "$WK_BIN" init --prefix myprj --private
     assert_success
     run "$WK_BIN" new task "Test issue"
     assert_success
     assert_output --regexp 'myprj-[a-z0-9]+'
 }
 
-@test "init with --workspace" {
-    mkdir -p /tmp/workspace
-    run "$WK_BIN" init --workspace /tmp/workspace
-    assert_success
-    [ -f ".wok/config.toml" ]
-    [ ! -f ".wok/issues.db" ]
-    grep -q 'workspace = "/tmp/workspace"' .wok/config.toml
-    ! grep -q '^prefix' .wok/config.toml
-    rm -rf .wok
-
-    # With both workspace and prefix
-    run "$WK_BIN" init --workspace /tmp/workspace --prefix prj
-    assert_success
-    grep -q 'workspace = "/tmp/workspace"' .wok/config.toml
-    grep -q 'prefix = "prj"' .wok/config.toml
-    [ ! -f ".wok/issues.db" ]
-    rm -rf .wok
-
-    # Validates prefix if provided
-    run "$WK_BIN" init --workspace /tmp/workspace --prefix ABC
-    assert_failure
-    rm -rf .wok
-
-    # Accepts relative path
-    mkdir -p external/workspace
-    run "$WK_BIN" init --workspace external/workspace
-    assert_success
-    grep -q 'workspace = "external/workspace"' .wok/config.toml
-    rm -rf .wok
-
-    # At specific --path
-    mkdir -p subdir subdir/external/workspace
-    run "$WK_BIN" init --path subdir --workspace external/workspace
-    assert_success
-    [ -d "subdir/.wok" ]
-    grep -q 'workspace = "external/workspace"' subdir/.wok/config.toml
-
-    # Fails if workspace does not exist
-    rm -rf .wok subdir/.wok
-    run "$WK_BIN" init --workspace /nonexistent/path
-    assert_failure
-    assert_output --partial "workspace not found"
-
-    run "$WK_BIN" init --workspace ./nonexistent/dir
-    assert_failure
-    assert_output --partial "workspace not found"
-}
 
 @test "init creates .gitignore with correct entries" {
-    # Default is now local mode - config.toml should be ignored
+    # User-level mode ignores config.toml (no local db)
     run "$WK_BIN" init --prefix prj
     assert_success
     [ -f ".wok/.gitignore" ]
-    grep -q "current/" .wok/.gitignore
-    grep -q "issues.db" .wok/.gitignore
     grep -q "config.toml" .wok/.gitignore
+    ! grep -q "issues.db" .wok/.gitignore
     rm -rf .wok
 
-    # --private mode also ignores config.toml (same as default, kept for compatibility)
+    # Private mode ignores config.toml and issues.db
     run "$WK_BIN" init --prefix prj --private
     assert_success
-    grep -q "config.toml" .wok/.gitignore
-    rm -rf .wok
-
-    # --workspace mode ignores config.toml
-    mkdir -p /tmp/workspace
-    run "$WK_BIN" init --workspace /tmp/workspace
-    assert_success
     [ -f ".wok/.gitignore" ]
-    grep -q "current/" .wok/.gitignore
-    grep -q "issues.db" .wok/.gitignore
     grep -q "config.toml" .wok/.gitignore
+    grep -q "issues.db" .wok/.gitignore
 }
 
-@test "init with --remote excludes config.toml from .gitignore" {
-    run timeout 3 git init
-    run "$WK_BIN" init --prefix prj --remote .
-    assert_success
-    [ -f ".wok/.gitignore" ]
-    grep -q "current/" .wok/.gitignore
-    grep -q "issues.db" .wok/.gitignore
-    # Remote mode - config.toml should NOT be ignored (shared via git)
-    ! grep -q "config.toml" .wok/.gitignore
-}
 
 @test "init defaults to local mode without remote" {
     run "$WK_BIN" init --prefix prj
@@ -253,31 +173,4 @@ teardown() {
     # Should not have remote config
     ! grep -q "\[remote\]" .wok/config.toml
     ! grep -q "url =" .wok/config.toml
-
-    # Should not create git worktree (we're not in a git repo anyway)
-    [ ! -d ".git/wk/oplog" ]
-}
-
-@test "init with git remote creates worktree and supports sync" {
-    run timeout 3 git init
-    assert_success
-    run timeout 3 "$WK_BIN" init --prefix prj --remote .
-    assert_success
-    [ -d ".git/wk/oplog" ]
-    [ -f ".git/wk/oplog/oplog.jsonl" ]
-
-    # Creates orphan branch
-    run timeout 3 git rev-parse --verify refs/heads/wok/oplog
-    assert_success
-
-    # Worktree protects branch from deletion
-    run timeout 3 git branch -D wok/oplog
-    assert_failure
-    assert_output --partial "worktree"
-
-    # Remote sync works with .git/wk/oplog worktree
-    run timeout 3 "$WK_BIN" new task "Test issue"
-    assert_success
-    run timeout 3 "$WK_BIN" remote sync
-    assert_success
 }

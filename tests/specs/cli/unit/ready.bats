@@ -213,28 +213,28 @@ load '../../helpers/common'
 }
 
 @test "ready filters by prefix" {
-    id1=$(create_issue task "PrefixReady Alpha task")
-    id2=$("$WK_BIN" new task "PrefixReady Beta task" --prefix beta | grep -oE '[a-z]+-[a-z0-9]+(-[0-9]+)?' | head -1)
+    id1=$(create_issue task "PrefixReady Alpha task" --label "test:prefix-filter")
+    id2=$("$WK_BIN" new task "PrefixReady Beta task" --prefix beta --label "test:prefix-filter" -o id)
 
     prefix1="${id1%%-*}"
 
-    run "$WK_BIN" ready -p "$prefix1"
+    run "$WK_BIN" ready -p "$prefix1" --label "test:prefix-filter"
     assert_success
     assert_output --partial "PrefixReady Alpha task"
     refute_output --partial "PrefixReady Beta task"
 
-    run "$WK_BIN" ready --prefix beta
+    run "$WK_BIN" ready --prefix beta --label "test:prefix-filter"
     assert_success
     assert_output --partial "PrefixReady Beta task"
     refute_output --partial "PrefixReady Alpha task"
 }
 
 @test "ready auto-filters by configured project prefix" {
-    id1=$(create_issue task "AutoReady Own task")
-    id2=$("$WK_BIN" new task "AutoReady Other task" --prefix beta | grep -oE '[a-z]+-[a-z0-9]+(-[0-9]+)?' | head -1)
+    id1=$(create_issue task "AutoReady Own task" --label "test:auto-prefix")
+    id2=$("$WK_BIN" new task "AutoReady Other task" --prefix beta --label "test:auto-prefix" -o id)
 
     # Without -p flag, should only show issues matching configured prefix
-    run "$WK_BIN" ready --all-assignees
+    run "$WK_BIN" ready --all-assignees --label "test:auto-prefix"
     assert_success
     assert_output --partial "AutoReady Own task"
     refute_output --partial "AutoReady Other task"

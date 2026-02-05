@@ -3,7 +3,7 @@
 SHELL := /bin/bash
 SPECS_DIR := tests/specs
 
-.PHONY: install check ci validate spec spec-cli spec-remote spec-todo coverage coverage-spec license
+.PHONY: install check ci validate spec spec-cli spec-todo coverage coverage-spec license
 
 install:
 	@scripts/install
@@ -35,16 +35,11 @@ validate:
 	@scripts/validate
 
 # Run specs via script (pass ARGS for options like --filter, --file)
-# Runs CLI parallel, then remote sequential
 spec:
 	@scripts/spec cli --parallel $(ARGS)
-	@scripts/spec remote $(ARGS)
 
 spec-cli:
 	@scripts/spec cli --parallel $(ARGS)
-
-spec-remote:
-	@scripts/spec remote $(ARGS)
 
 spec-todo:
 	@scripts/spec --filter-tags todo:implement $(ARGS)
@@ -61,12 +56,7 @@ coverage-spec:
 	@echo "Running specs with coverage..."
 	-@LLVM_PROFILE_FILE="$(CURDIR)/target/llvm-cov-target/%p-%m.profraw" \
 		WK_BIN="$(CURDIR)/target/debug/wok" \
-		WK_REMOTE_BIN="$(CURDIR)/target/debug/wk-remote" \
 		scripts/spec cli --parallel
-	-@LLVM_PROFILE_FILE="$(CURDIR)/target/llvm-cov-target/%p-%m.profraw" \
-		WK_BIN="$(CURDIR)/target/debug/wok" \
-		WK_REMOTE_BIN="$(CURDIR)/target/debug/wk-remote" \
-		scripts/spec remote
 	@echo "Generating coverage report..."
 	@if [ -t 1 ] && [ "$(FMT)" = "--html" ]; then cargo llvm-cov report $(FMT) --open; else cargo llvm-cov report $(FMT); fi
 

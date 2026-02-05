@@ -47,33 +47,20 @@ load '../../helpers/common'
 }
 
 # Note limits (200,000 characters)
+# Exact boundary is tested in Rust unit tests (validate_tests.rs).
+# CLI tests use 100K to stay safely under Linux ARG_MAX (~128K).
 
-@test "note accepts content at 200000 character limit" {
+@test "note accepts large content (100000 characters)" {
     id=$(create_issue task "Test task")
-    local content=$(printf 'a%.0s' {1..200000})
+    local content=$(printf 'a%.0s' {1..100000})
     run "$WK_BIN" note "$id" "$content"
     assert_success
 }
 
-@test "note rejects content exceeding 200000 characters" {
-    id=$(create_issue task "Test task")
-    local content=$(printf 'a%.0s' {1..200001})
-    run "$WK_BIN" note "$id" "$content"
-    assert_failure
-    assert_output --partial "200000" || assert_output --partial "200,000"
-}
-
-@test "new --note accepts content at 200000 character limit" {
-    local content=$(printf 'a%.0s' {1..200000})
+@test "new --note accepts large content (100000 characters)" {
+    local content=$(printf 'a%.0s' {1..100000})
     run "$WK_BIN" new "Test task" --note "$content"
     assert_success
-}
-
-@test "new --note rejects content exceeding 200000 characters" {
-    local content=$(printf 'a%.0s' {1..200001})
-    run "$WK_BIN" new "Test task" --note "$content"
-    assert_failure
-    assert_output --partial "200000" || assert_output --partial "200,000"
 }
 
 # Label limits (100 characters)

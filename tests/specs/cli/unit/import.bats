@@ -261,18 +261,24 @@ EOF
     assert_output --partial "This is a comment from beads"
 }
 
-@test "import rejects -i and -p shorthands" {
+@test "import rejects -i shorthand" {
     cat > t11_import.jsonl << 'EOF'
 {"id":"test-i","issue_type":"task","title":"Test","status":"todo","created_at":"2024-01-01T00:00:00Z","updated_at":"2024-01-01T00:00:00Z","labels":[],"notes":[],"deps":[],"events":[]}
 EOF
     run "$WK_BIN" import -i t11_import.jsonl
     assert_failure
     assert_output --partial "unexpected argument '-i'"
+}
 
+@test "import -p shorthand works as --prefix" {
     cat > t11_import2.jsonl << 'EOF'
 {"id":"myproj-test","issue_type":"task","title":"Test","status":"todo","created_at":"2024-01-01T00:00:00Z","updated_at":"2024-01-01T00:00:00Z","labels":[],"notes":[],"deps":[],"events":[]}
+{"id":"other-test","issue_type":"task","title":"Other","status":"todo","created_at":"2024-01-01T00:00:00Z","updated_at":"2024-01-01T00:00:00Z","labels":[],"notes":[],"deps":[],"events":[]}
 EOF
     run "$WK_BIN" import -p myproj t11_import2.jsonl
+    assert_success
+    run "$WK_BIN" show myproj-test
+    assert_success
+    run "$WK_BIN" show other-test
     assert_failure
-    assert_output --partial "unexpected argument '-p'"
 }

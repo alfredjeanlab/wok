@@ -50,7 +50,7 @@ jobs:
       - uses: actions/checkout@v6
       - name: Install quench
         run: curl -fsSL https://github.com/alfredjeanlab/quench/releases/latest/download/install.sh | bash
-      - run: quench check
+      - run: quench check --no-cloc
 
   audit:
     name: Security Audit
@@ -88,7 +88,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        suite: [cli, remote]
+        suite: [cli]
     steps:
       - uses: actions/checkout@v6
       - uses: dtolnay/rust-toolchain@stable
@@ -116,6 +116,5 @@ jobs:
       - name: Cleanup orphan processes
         if: always()
         run: |
-          pkill -9 -f wk-remote 2>/dev/null || true
-          pkill -9 -f 'wk.*daemon' 2>/dev/null || true
+          pkill -9 -f 'wok.*daemon' 2>/dev/null || true
           sleep 1

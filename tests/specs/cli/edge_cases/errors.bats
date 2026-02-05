@@ -120,27 +120,27 @@ teardown() {
     [ "$status" -ne 0 ]
 }
 
-@test "removed commands (sync/daemon) are not available" {
-    # help does not list sync as a command
+@test "removed commands (sync/remote) are not available" {
+    # help does not list sync or remote as a command
     run "$WK_BIN" help
     assert_success
     refute_line --regexp '^  sync[[:space:]]'
-    refute_line --regexp '^  daemon[[:space:]]'
+    refute_line --regexp '^  remote[[:space:]]'
 
     # Commands are not recognized
     run "$WK_BIN" sync
     assert_failure
 
-    run "$WK_BIN" daemon
+    run "$WK_BIN" remote
     assert_failure
 }
 
 @test "new fails when project has no prefix configured" {
-    mkdir -p workspace
-    "$WK_BIN" init --path workspace --prefix ws
-    run "$WK_BIN" init --workspace workspace
-    assert_success
-    run "$WK_BIN" new "Test task"
+    # Manually create a .wok with config that has no prefix
+    mkdir -p .wok
+    echo 'private = true' > .wok/config.toml
+    sqlite3 .wok/issues.db "SELECT 1;" >/dev/null
+    run "$WK_BIN" new task "Test task"
     assert_failure
     assert_output --partial "no prefix configured"
 }

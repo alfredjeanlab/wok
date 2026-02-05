@@ -23,41 +23,43 @@ load '../../helpers/common'
 }
 
 @test "export includes issue data (title, type, status, labels)" {
+    local efile="$BATS_FILE_TMPDIR/export_data.jsonl"
+
     # Includes issue data
     create_issue task "ExportData My test task"
-    "$WK_BIN" export "export.jsonl"
-    grep -q "My test task" "export.jsonl"
+    "$WK_BIN" export "$efile"
+    grep -q "My test task" "$efile"
 
     # Includes all issues
     create_issue task "ExportData Task 1"
     create_issue bug "ExportData Bug 1"
     create_issue feature "ExportData Feature 1"
-    "$WK_BIN" export "export.jsonl"
-    grep -q "Task 1" "export.jsonl"
-    grep -q "Bug 1" "export.jsonl"
-    grep -q "Feature 1" "export.jsonl"
+    "$WK_BIN" export "$efile"
+    grep -q "Task 1" "$efile"
+    grep -q "Bug 1" "$efile"
+    grep -q "Feature 1" "$efile"
 
     # Includes issue type
     create_issue bug "ExportData Test bug"
-    "$WK_BIN" export "export.jsonl"
-    grep -q "bug" "export.jsonl"
+    "$WK_BIN" export "$efile"
+    grep -q "bug" "$efile"
 
     # Includes issue status
     id=$(create_issue task "ExportData Status task")
     "$WK_BIN" start "$id"
-    "$WK_BIN" export "export.jsonl"
-    grep -q "in_progress" "export.jsonl"
+    "$WK_BIN" export "$efile"
+    grep -q "in_progress" "$efile"
 
     # Includes labels
     id=$(create_issue task "ExportData Labeled task" --label "mylabel")
-    "$WK_BIN" export "export.jsonl"
-    grep -q "mylabel" "export.jsonl"
+    "$WK_BIN" export "$efile"
+    grep -q "mylabel" "$efile"
 
     # Overwrites existing file
-    echo "old content" > "export.jsonl"
+    echo "old content" > "$efile"
     create_issue task "ExportData New task"
-    "$WK_BIN" export "export.jsonl"
-    refute grep -q "old content" "export.jsonl"
+    "$WK_BIN" export "$efile"
+    refute grep -q "old content" "$efile"
 }
 
 @test "export requires filepath" {

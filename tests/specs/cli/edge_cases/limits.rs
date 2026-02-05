@@ -112,14 +112,16 @@ fn edit_normalizes_title_exceeding_120_characters() {
 }
 
 // =============================================================================
-// Note limits (200,000 characters)
+// Note limits
 // =============================================================================
+// Exact 200K boundary is tested in validate_tests.rs unit tests.
+// Integration tests use 100K to stay within Linux ARG_MAX.
 
 #[test]
-fn note_accepts_content_at_200000_character_limit() {
+fn note_accepts_large_content() {
     let temp = init_temp();
     let id = create_issue(&temp, "task", "Test task");
-    let content: String = "a".repeat(200000);
+    let content: String = "a".repeat(100000);
 
     wk().arg("note")
         .arg(&id)
@@ -130,24 +132,9 @@ fn note_accepts_content_at_200000_character_limit() {
 }
 
 #[test]
-fn note_rejects_content_exceeding_200000_characters() {
+fn new_note_accepts_large_content() {
     let temp = init_temp();
-    let id = create_issue(&temp, "task", "Test task");
-    let content: String = "a".repeat(200001);
-
-    wk().arg("note")
-        .arg(&id)
-        .arg(&content)
-        .current_dir(temp.path())
-        .assert()
-        .failure()
-        .stderr(predicate::str::contains("200000").or(predicate::str::contains("200,000")));
-}
-
-#[test]
-fn new_note_accepts_content_at_200000_character_limit() {
-    let temp = init_temp();
-    let content: String = "a".repeat(200000);
+    let content: String = "a".repeat(100000);
 
     wk().arg("new")
         .arg("task")
@@ -157,22 +144,6 @@ fn new_note_accepts_content_at_200000_character_limit() {
         .current_dir(temp.path())
         .assert()
         .success();
-}
-
-#[test]
-fn new_note_rejects_content_exceeding_200000_characters() {
-    let temp = init_temp();
-    let content: String = "a".repeat(200001);
-
-    wk().arg("new")
-        .arg("task")
-        .arg("Test task")
-        .arg("--note")
-        .arg(&content)
-        .current_dir(temp.path())
-        .assert()
-        .failure()
-        .stderr(predicate::str::contains("200000").or(predicate::str::contains("200,000")));
 }
 
 // =============================================================================
