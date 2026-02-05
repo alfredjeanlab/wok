@@ -136,7 +136,7 @@ fn test_run_impl_simple() {
         .create_issue("test-2", IssueType::Task, "Child task")
         .tracks("test-1", "test-2");
 
-    let result = run_impl(&ctx.db, "test-1");
+    let result = run_impl(&ctx.db, &["test-1".to_string()]);
     assert!(result.is_ok());
 }
 
@@ -145,7 +145,7 @@ fn test_run_impl_leaf_node() {
     let ctx = TestContext::new();
     ctx.create_issue("leaf", IssueType::Task, "Leaf task");
 
-    let result = run_impl(&ctx.db, "leaf");
+    let result = run_impl(&ctx.db, &["leaf".to_string()]);
     assert!(result.is_ok());
 }
 
@@ -153,7 +153,7 @@ fn test_run_impl_leaf_node() {
 fn test_run_impl_nonexistent() {
     let ctx = TestContext::new();
 
-    let result = run_impl(&ctx.db, "nonexistent");
+    let result = run_impl(&ctx.db, &["nonexistent".to_string()]);
     assert!(result.is_err());
 }
 
@@ -164,7 +164,7 @@ fn test_run_impl_with_blockers() {
         .create_issue("blocked", IssueType::Task, "Blocked")
         .blocks("blocker", "blocked");
 
-    let result = run_impl(&ctx.db, "blocked");
+    let result = run_impl(&ctx.db, &["blocked".to_string()]);
     assert!(result.is_ok());
 }
 
@@ -177,7 +177,7 @@ fn test_run_impl_deep_hierarchy() {
         .tracks("l1", "l2")
         .tracks("l2", "l3");
 
-    let result = run_impl(&ctx.db, "l1");
+    let result = run_impl(&ctx.db, &["l1".to_string()]);
     assert!(result.is_ok());
 }
 
@@ -199,7 +199,7 @@ fn test_run_impl_with_tracked_and_blocked() {
     assert_eq!(blocking.len(), 1);
     assert_eq!(blocking[0], "dependent");
 
-    let result = run_impl(&ctx.db, "epic");
+    let result = run_impl(&ctx.db, &["epic".to_string()]);
     assert!(result.is_ok());
 }
 
@@ -219,6 +219,40 @@ fn test_run_impl_blocks_only() {
     let blocking = ctx.db.get_blocking("blocker").unwrap();
     assert_eq!(blocking.len(), 2);
 
-    let result = run_impl(&ctx.db, "blocker");
+    let result = run_impl(&ctx.db, &["blocker".to_string()]);
+    assert!(result.is_ok());
+}
+
+#[test]
+fn test_run_impl_multiple_ids() {
+    let ctx = TestContext::new();
+    ctx.create_issue("feature1", IssueType::Feature, "Feature 1")
+        .create_issue("feature2", IssueType::Feature, "Feature 2")
+        .create_issue("task1", IssueType::Task, "Task for F1")
+        .create_issue("task2", IssueType::Task, "Task for F2")
+        .tracks("feature1", "task1")
+        .tracks("feature2", "task2");
+
+    let result = run_impl(&ctx.db, &["feature1".to_string(), "feature2".to_string()]);
+    assert!(result.is_ok());
+}
+
+#[test]
+fn test_run_impl_multiple_ids_fail_fast() {
+    let ctx = TestContext::new();
+    ctx.create_issue("valid", IssueType::Task, "Valid task");
+
+    // Second ID is invalid - should fail fast before printing anything
+    let result = run_impl(&ctx.db, &["valid".to_string(), "nonexistent".to_string()]);
+    assert!(result.is_err());
+}
+
+#[test]
+fn test_run_impl_single_id_backward_compatible() {
+    let ctx = TestContext::new();
+    ctx.create_issue("single", IssueType::Task, "Single task");
+
+    // Single ID should work exactly as before
+    let result = run_impl(&ctx.db, &["single".to_string()]);
     assert!(result.is_ok());
 }
