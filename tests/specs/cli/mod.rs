@@ -4,6 +4,7 @@
 mod common;
 mod edit;
 mod export;
+mod flags;
 mod help;
 mod init;
 mod log;
