@@ -2,6 +2,7 @@
 // Copyright (c) 2026 Alfred Jean LLC
 
 mod common;
+mod config;
 mod hooks;
 mod init;
 mod new;
