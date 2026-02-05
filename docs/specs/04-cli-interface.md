@@ -143,12 +143,16 @@ wok ready [--type/-t <type>[,<type>...]]        # feature|task|bug|chore|idea|ep
 #   Comma-separated = OR (any match):  --label mod:wkrs,mod:wkgo
 #   Repeated flags = AND (all match):  --label urgent --label security
 #   Cross-filter = AND:                --status todo --label auth
+#   Negation (!prefix):                --label '!wontfix' excludes label
 #
 # Examples:
 wok list --status todo,in_progress              # todo OR in_progress
 wok list --label mod:wkrs,mod:wkgo              # wkrs OR wkgo module
 wok list --label mod:wkrs,mod:wkgo --label urgent   # (wkrs OR wkgo) AND urgent
 wok list --type task,bug --status todo          # (task OR bug) AND todo
+wok list --label '!wontfix'                     # exclude issues with wontfix
+wok list --label '!plan:needed'                 # exclude issues needing a plan
+wok list --label '!a' --label '!b'              # exclude issues with a AND b
 wok list -a alice                               # issues assigned to alice
 wok list --unassigned                           # unassigned issues only
 wok list -q "age < 3d"                          # issues created in last 3 days

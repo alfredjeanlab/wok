@@ -643,3 +643,71 @@ load '../../helpers/common'
     assert_output --partial "AutoPrefix Other task"
     refute_output --partial "AutoPrefix Own task"
 }
+
+@test "list --label supports negation with ! prefix" {
+    # Create issues with different labels
+    create_issue task "NegLabel Has wontfix" --label "wontfix"
+    create_issue task "NegLabel Has bug" --label "bug"
+    create_issue task "NegLabel No labels"
+
+    # Positive filter: only wontfix
+    run "$WK_BIN" list --label "wontfix"
+    assert_success
+    assert_output --partial "NegLabel Has wontfix"
+    refute_output --partial "NegLabel Has bug"
+    refute_output --partial "NegLabel No labels"
+
+    # Negative filter: exclude wontfix (shell quoting required)
+    run "$WK_BIN" list --label '!wontfix'
+    assert_success
+    refute_output --partial "NegLabel Has wontfix"
+    assert_output --partial "NegLabel Has bug"
+    assert_output --partial "NegLabel No labels"
+
+    # Multiple negative filters with AND logic: exclude both
+    run "$WK_BIN" list --label '!wontfix' --label '!bug'
+    assert_success
+    refute_output --partial "NegLabel Has wontfix"
+    refute_output --partial "NegLabel Has bug"
+    assert_output --partial "NegLabel No labels"
+}
+
+@test "list --label negation works with namespaced labels" {
+    # Create issues with namespaced labels
+    create_issue task "NSLabel plan:needed" --label "plan:needed"
+    create_issue task "NSLabel plan:ready" --label "plan:ready"
+    create_issue task "NSLabel no plan"
+
+    # Exclude issues needing a plan
+    run "$WK_BIN" list --label '!plan:needed'
+    assert_success
+    refute_output --partial "NSLabel plan:needed"
+    assert_output --partial "NSLabel plan:ready"
+    assert_output --partial "NSLabel no plan"
+}
+
+@test "list --label mixed positive and negative in OR group" {
+    # Create test issues
+    create_issue task "MixedLabel bug only" --label "bug"
+    create_issue task "MixedLabel wontfix only" --label "wontfix"
+    create_issue task "MixedLabel both" --label "bug" --label "wontfix"
+    create_issue task "MixedLabel neither"
+
+    # 'bug,!wontfix' means "(has bug) OR (lacks wontfix)"
+    # - "bug only" matches: has bug
+    # - "wontfix only" doesn't match: no bug, has wontfix
+    # - "both" matches: has bug
+    # - "neither" matches: lacks wontfix
+    run "$WK_BIN" list --label 'bug,!wontfix'
+    assert_success
+    assert_output --partial "MixedLabel bug only"
+    refute_output --partial "MixedLabel wontfix only"
+    assert_output --partial "MixedLabel both"
+    assert_output --partial "MixedLabel neither"
+}
+
+@test "list --label rejects empty label after !" {
+    run "$WK_BIN" list --label '!'
+    assert_failure
+    assert_output --partial "empty label"
+}
