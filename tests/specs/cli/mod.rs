@@ -8,4 +8,5 @@ mod help;
 mod init;
 mod log;
 mod new;
+mod schema;
 mod show;
