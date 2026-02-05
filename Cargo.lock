@@ -1303,7 +1303,9 @@ dependencies = [
  "assert_cmd",
  "predicates",
  "serde_json",
+ "similar-asserts",
  "tempfile",
+ "yare",
 ]
 
 [[package]]
