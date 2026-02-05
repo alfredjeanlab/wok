@@ -11,7 +11,6 @@
 #![allow(clippy::expect_used)]
 
 use super::common::*;
-use std::fs;
 use yare::parameterized;
 
 fn create_issue(temp: &TempDir, type_: &str, title: &str) -> String {
