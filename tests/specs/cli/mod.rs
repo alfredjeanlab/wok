@@ -10,3 +10,4 @@ mod init;
 mod log;
 mod new;
 mod show;
+mod tree;
