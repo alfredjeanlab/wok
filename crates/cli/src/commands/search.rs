@@ -13,7 +13,7 @@ use crate::schema::search::SearchOutputJson;
 use crate::schema::IssueJson;
 
 use super::filtering::{
-    matches_filter_groups, matches_label_groups, matches_prefix, parse_filter_groups,
+    matches_filter_groups, matches_label_groups, matches_prefix, parse_filter_groups, LabelMatcher,
 };
 use super::open_db;
 
@@ -72,7 +72,7 @@ pub(crate) fn run_impl(
     let status_groups = parse_filter_groups(&status, |s| Ok(s.parse::<Status>()?))?;
     let type_groups =
         parse_filter_groups(&issue_type, |s| s.parse::<IssueType>().map_err(Into::into))?;
-    let label_groups = parse_filter_groups(&label, |s| Ok(s.to_string()))?;
+    let label_groups = parse_filter_groups(&label, LabelMatcher::parse)?;
 
     // Parse time-based filter expressions
     let filters: Vec<FilterExpr> = filter
