@@ -12,4 +12,5 @@ mod init;
 mod lifecycle;
 mod new;
 mod note;
+mod prefix_matching;
 mod show;
