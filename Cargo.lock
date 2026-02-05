@@ -1301,6 +1301,7 @@ name = "specs"
 version = "0.1.0"
 dependencies = [
  "assert_cmd",
+ "libc",
  "predicates",
  "regex",
  "serde_json",
