@@ -12,7 +12,6 @@ mod help_examples;
 mod import;
 mod init;
 mod integration;
-mod lifecycle;
 mod log;
 mod new;
 mod search;
