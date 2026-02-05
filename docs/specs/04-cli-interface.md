@@ -143,6 +143,7 @@ wok ready [--type/-t <type>[,<type>...]]        # feature|task|bug|chore|idea|ep
 #   Comma-separated = OR (any match):  --label mod:wkrs,mod:wkgo
 #   Repeated flags = AND (all match):  --label urgent --label security
 #   Cross-filter = AND:                --status todo --label auth
+#   Negation with ! prefix:            --label '!wontfix' (exclude label)
 #
 # Examples:
 wok list --status todo,in_progress              # todo OR in_progress
@@ -155,6 +156,10 @@ wok list -q "age < 3d"                          # issues created in last 3 days
 wok list -q "updated > 1w"                      # issues not updated in 7+ days
 wok list --limit 10                             # first 10 results only
 wok list --all                                  # all issues (any status)
+wok list --label '!wontfix'                     # exclude issues with wontfix label
+wok list --label '!plan:needed'                 # exclude issues needing planning
+wok list --label 'bug,!wontfix'                 # (has bug) OR (lacks wontfix)
+wok list --label '!a' --label '!b'              # (lacks a) AND (lacks b)
 
 # Filter Expressions (-q/--filter):
 #   Syntax: FIELD [OPERATOR VALUE]
