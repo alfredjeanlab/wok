@@ -16,3 +16,4 @@ mod new;
 mod search;
 mod show;
 mod sync;
+mod tree;
