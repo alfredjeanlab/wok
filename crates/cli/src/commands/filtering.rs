@@ -5,7 +5,41 @@
 //!
 //! This module provides shared filtering utilities used by list, search, and ready commands.
 
-use crate::error::Result;
+use crate::error::{Error, Result};
+
+/// A label matcher that can be positive (Has) or negative (NotHas).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) enum LabelMatcher {
+    /// Issue must have this label
+    Has(String),
+    /// Issue must NOT have this label
+    NotHas(String),
+}
+
+impl LabelMatcher {
+    /// Parse a label matcher from a string.
+    /// Strings starting with `!` are negated (NotHas), otherwise positive (Has).
+    pub(crate) fn parse(s: &str) -> Result<Self> {
+        if let Some(label) = s.strip_prefix('!') {
+            if label.is_empty() {
+                return Err(Error::FieldEmpty {
+                    field: "label after '!'",
+                });
+            }
+            Ok(LabelMatcher::NotHas(label.to_string()))
+        } else {
+            Ok(LabelMatcher::Has(s.to_string()))
+        }
+    }
+
+    /// Check if this matcher matches the given issue labels.
+    pub(crate) fn matches(&self, issue_labels: &[String]) -> bool {
+        match self {
+            LabelMatcher::Has(label) => issue_labels.contains(label),
+            LabelMatcher::NotHas(label) => !issue_labels.contains(label),
+        }
+    }
+}
 
 /// Parse filter values: comma-separated values within each Vec entry are OR'd,
 /// multiple Vec entries are AND'd together.
@@ -59,17 +93,17 @@ where
 }
 
 /// Check if an issue matches label filter groups.
-/// Each group is OR'd internally (issue has at least one label from group),
+/// Each group is OR'd internally (at least one matcher in group must match),
 /// all groups must match (AND).
 pub(crate) fn matches_label_groups(
-    groups: &Option<Vec<Vec<String>>>,
+    groups: &Option<Vec<Vec<LabelMatcher>>>,
     issue_labels: &[String],
 ) -> bool {
     match groups {
         None => true,
         Some(groups) => groups
             .iter()
-            .all(|group| group.iter().any(|label| issue_labels.contains(label))),
+            .all(|group| group.iter().any(|matcher| matcher.matches(issue_labels))),
     }
 }
 

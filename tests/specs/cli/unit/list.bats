@@ -643,3 +643,67 @@ load '../../helpers/common'
     assert_output --partial "AutoPrefix Other task"
     refute_output --partial "AutoPrefix Own task"
 }
+
+@test "list --label supports negation with ! prefix" {
+    # Create issues with different labels
+    create_issue task "NegLabel Has wontfix" --label "wontfix"
+    create_issue task "NegLabel Has bug" --label "bug"
+    create_issue task "NegLabel No labels"
+
+    # Positive filter: only issues with wontfix
+    run "$WK_BIN" list --label "wontfix"
+    assert_success
+    assert_output --partial "NegLabel Has wontfix"
+    refute_output --partial "NegLabel Has bug"
+    refute_output --partial "NegLabel No labels"
+
+    # Negative filter: exclude issues with wontfix
+    run "$WK_BIN" list --label '!wontfix'
+    assert_success
+    refute_output --partial "NegLabel Has wontfix"
+    assert_output --partial "NegLabel Has bug"
+    assert_output --partial "NegLabel No labels"
+
+    # Mixed: has bug OR lacks wontfix (comma = OR)
+    run "$WK_BIN" list --label 'bug,!wontfix'
+    assert_success
+    assert_output --partial "NegLabel Has bug"
+    assert_output --partial "NegLabel No labels"
+    # Has wontfix but no bug, but matches '!wontfix' is false, 'bug' is false → no match... wait
+    # Actually: has wontfix has the label 'wontfix', so '!wontfix' is false, 'bug' is false → no match
+    refute_output --partial "NegLabel Has wontfix"
+
+    # Multiple flags: (lacks wontfix) AND (lacks bug)
+    run "$WK_BIN" list --label '!wontfix' --label '!bug'
+    assert_success
+    refute_output --partial "NegLabel Has wontfix"
+    refute_output --partial "NegLabel Has bug"
+    assert_output --partial "NegLabel No labels"
+}
+
+@test "list --label negation works with namespaced labels" {
+    # Create issues with namespaced labels
+    create_issue task "NSLabel Plan needed" --label "plan:needed"
+    create_issue task "NSLabel Plan ready" --label "plan:ready"
+    create_issue task "NSLabel No plan"
+
+    # Exclude issues needing planning
+    run "$WK_BIN" list --label '!plan:needed'
+    assert_success
+    refute_output --partial "NSLabel Plan needed"
+    assert_output --partial "NSLabel Plan ready"
+    assert_output --partial "NSLabel No plan"
+
+    # Combine: has plan:ready AND lacks plan:needed
+    run "$WK_BIN" list --label 'plan:ready' --label '!plan:needed'
+    assert_success
+    refute_output --partial "NSLabel Plan needed"
+    assert_output --partial "NSLabel Plan ready"
+    refute_output --partial "NSLabel No plan"
+}
+
+@test "list --label empty label after ! is an error" {
+    run "$WK_BIN" list --label '!'
+    assert_failure
+    assert_output --partial "cannot be empty"
+}

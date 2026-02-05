@@ -15,7 +15,7 @@ use crate::schema::ready::ReadyOutputJson;
 use crate::schema::IssueJson;
 
 use super::filtering::{
-    matches_filter_groups, matches_label_groups, matches_prefix, parse_filter_groups,
+    matches_filter_groups, matches_label_groups, matches_prefix, parse_filter_groups, LabelMatcher,
 };
 use super::open_db;
 
@@ -110,7 +110,7 @@ pub(crate) fn run_impl(
     // Parse filter groups
     let type_groups =
         parse_filter_groups(&issue_type, |s| s.parse::<IssueType>().map_err(Into::into))?;
-    let label_groups = parse_filter_groups(&label, |s| Ok(s.to_string()))?;
+    let label_groups = parse_filter_groups(&label, LabelMatcher::parse)?;
 
     // Ready = unblocked todo items only
     let mut issues = db.list_issues(Some(Status::Todo), None, None)?;
