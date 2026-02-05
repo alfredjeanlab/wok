@@ -4,3 +4,4 @@
 mod collisions;
 mod import_edge;
 mod limits;
+mod no_aliases;
