@@ -1825,6 +1825,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "wk-ipc"
+version = "0.4.0"
+dependencies = [
+ "chrono",
+ "serde",
+ "serde_json",
+ "wk-core",
+ "yare",
+]
+
+[[package]]
 name = "wok"
 version = "0.4.0"
 dependencies = [
@@ -1851,6 +1862,7 @@ dependencies = [
  "toml",
  "tracing",
  "wk-core",
+ "wk-ipc",
  "yare",
 ]
 
@@ -1867,6 +1879,7 @@ dependencies = [
  "tracing",
  "tracing-subscriber",
  "wk-core",
+ "wk-ipc",
 ]
 
 [[package]]

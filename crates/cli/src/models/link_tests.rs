@@ -5,6 +5,7 @@
 #![allow(clippy::expect_used)]
 
 use super::*;
+use wk_ipc::{LinkRel, LinkType};
 use yare::parameterized;
 
 // LinkType tests

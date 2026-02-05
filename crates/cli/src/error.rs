@@ -201,6 +201,18 @@ pub enum Error {
 /// A specialized Result type for wkrs operations.
 pub type Result<T> = std::result::Result<T, Error>;
 
+impl From<wk_ipc::ParseError> for Error {
+    fn from(e: wk_ipc::ParseError) -> Self {
+        match e {
+            wk_ipc::ParseError::InvalidStatus(s) => Error::InvalidStatus(s),
+            wk_ipc::ParseError::InvalidAction(s) => Error::InvalidStatus(s),
+            wk_ipc::ParseError::InvalidRelation(s) => Error::InvalidRelation(s),
+            wk_ipc::ParseError::InvalidLinkType(s) => Error::InvalidLinkType(s),
+            wk_ipc::ParseError::InvalidLinkRel(s) => Error::InvalidLinkRel(s),
+        }
+    }
+}
+
 // TODO(refactor): Remove once deprecated wk_core::Error variants are removed
 #[allow(deprecated)]
 impl From<wk_core::Error> for Error {

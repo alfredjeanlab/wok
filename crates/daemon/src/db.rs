@@ -1107,8 +1107,11 @@ fn parse_timestamp(s: &str) -> DateTime<Utc> {
 
 fn parse_issue_type(s: &str) -> IssueType {
     match s {
+        "feature" => IssueType::Feature,
         "task" => IssueType::Task,
         "bug" => IssueType::Bug,
+        "chore" => IssueType::Chore,
+        "idea" => IssueType::Idea,
         "epic" => IssueType::Epic,
         _ => IssueType::Task,
     }
@@ -1173,27 +1176,5 @@ fn parse_link_rel(s: &str) -> Option<LinkRel> {
         "tracks" => Some(LinkRel::Tracks),
         "tracked-by" => Some(LinkRel::TrackedBy),
         _ => None,
-    }
-}
-
-impl LinkType {
-    fn as_str(&self) -> &'static str {
-        match self {
-            LinkType::Github => "github",
-            LinkType::Jira => "jira",
-            LinkType::Gitlab => "gitlab",
-            LinkType::Confluence => "confluence",
-        }
-    }
-}
-
-impl LinkRel {
-    fn as_str(&self) -> &'static str {
-        match self {
-            LinkRel::Import => "import",
-            LinkRel::Blocks => "blocks",
-            LinkRel::Tracks => "tracks",
-            LinkRel::TrackedBy => "tracked-by",
-        }
     }
 }

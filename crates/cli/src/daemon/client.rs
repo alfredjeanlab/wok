@@ -10,8 +10,7 @@ use std::path::Path;
 use std::time::Duration;
 
 use crate::error::{Error, Result};
-
-use super::ipc::{
+use wk_ipc::{
     framing, DaemonRequest, DaemonResponse, MutateOp, MutateResult, QueryOp, QueryResult,
 };
 
@@ -41,8 +40,8 @@ impl DaemonClient {
 
     /// Send a request and receive a response.
     fn request(&mut self, request: DaemonRequest) -> Result<DaemonResponse> {
-        framing::write_request(&mut self.stream, &request)?;
-        framing::read_response(&mut self.stream)
+        framing::write_message(&mut self.stream, &request)?;
+        framing::read_message(&mut self.stream).map_err(Into::into)
     }
 
     /// Execute a query operation.

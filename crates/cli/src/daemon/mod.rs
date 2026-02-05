@@ -7,18 +7,13 @@
 //! user-level mode database operations.
 
 mod client;
-pub mod ipc;
 mod lifecycle;
 
 pub use client::DaemonClient;
-pub use ipc::{MutateOp, MutateResult, QueryOp, QueryResult};
 pub use lifecycle::{
     detect_daemon, get_daemon_status, get_socket_path, spawn_daemon, stop_daemon_forcefully,
 };
-
-#[cfg(test)]
-#[path = "ipc_tests.rs"]
-mod ipc_tests;
+pub use wk_ipc::{MutateOp, MutateResult, QueryOp, QueryResult};
 
 #[cfg(test)]
 #[path = "lifecycle_tests.rs"]

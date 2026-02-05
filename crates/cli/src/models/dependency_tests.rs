@@ -7,35 +7,6 @@
 use super::*;
 use yare::parameterized;
 
-// Relation tests - parameterized
-#[parameterized(
-    blocks = { Relation::Blocks, "blocks" },
-    tracked_by = { Relation::TrackedBy, "tracked-by" },
-    tracks = { Relation::Tracks, "tracks" },
-)]
-fn test_relation_roundtrip(relation: Relation, expected: &str) {
-    assert_eq!(relation.as_str(), expected);
-    assert_eq!(relation.to_string(), expected);
-    assert_eq!(expected.parse::<Relation>().unwrap(), relation);
-}
-
-#[parameterized(
-    blocks_upper = { "BLOCKS", Relation::Blocks },
-    tracked_by_mixed = { "Tracked-By", Relation::TrackedBy },
-)]
-fn test_relation_from_str_case_insensitive(input: &str, expected: Relation) {
-    assert_eq!(input.parse::<Relation>().unwrap(), expected);
-}
-
-#[parameterized(
-    invalid = { "invalid" },
-    empty = { "" },
-    child_of = { "child-of" },
-)]
-fn test_relation_from_str_invalid(input: &str) {
-    assert!(input.parse::<Relation>().is_err());
-}
-
 // UserRelation tests - parameterized
 #[parameterized(
     blocks = { "blocks", UserRelation::Blocks },
@@ -63,17 +34,4 @@ fn test_user_relation_from_str_valid(input: &str, expected: UserRelation) {
 )]
 fn test_user_relation_from_str_invalid(input: &str) {
     assert!(input.parse::<UserRelation>().is_err());
-}
-
-// Dependency tests - parameterized
-#[parameterized(
-    blocks = { Relation::Blocks },
-    tracked_by = { Relation::TrackedBy },
-    tracks = { Relation::Tracks },
-)]
-fn test_dependency_new(relation: Relation) {
-    let dep = Dependency::new("a".to_string(), "b".to_string(), relation);
-    assert_eq!(dep.from_id, "a");
-    assert_eq!(dep.to_id, "b");
-    assert_eq!(dep.relation, relation);
 }

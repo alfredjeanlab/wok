@@ -99,11 +99,11 @@ fn main() {
                 let _ = stream.set_read_timeout(Some(std::time::Duration::from_secs(5)));
                 let _ = stream.set_write_timeout(Some(std::time::Duration::from_secs(5)));
 
-                match framing::read_request(&mut stream) {
+                match framing::read_message::<_, DaemonRequest>(&mut stream) {
                     Ok(request) => {
                         let response = handle_request(request, &start_time, &db);
                         let should_shutdown = matches!(response, DaemonResponse::ShuttingDown);
-                        let _ = framing::write_response(&mut stream, &response);
+                        let _ = framing::write_message(&mut stream, &response);
                         if should_shutdown {
                             tracing::info!("shutting down");
                             break;

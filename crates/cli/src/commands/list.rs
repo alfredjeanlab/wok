@@ -75,7 +75,7 @@ pub(crate) fn run_impl(
     format: OutputFormat,
 ) -> Result<()> {
     // Parse filter groups
-    let status_groups = parse_filter_groups(&status, |s| s.parse::<Status>())?;
+    let status_groups = parse_filter_groups(&status, |s| Ok(s.parse::<Status>()?))?;
     let type_groups =
         parse_filter_groups(&issue_type, |s| s.parse::<IssueType>().map_err(Into::into))?;
     let label_groups = parse_filter_groups(&label, |s| Ok(s.to_string()))?;

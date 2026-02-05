@@ -15,7 +15,7 @@ use std::time::Duration;
 
 use crate::error::{Error, Result};
 
-use super::ipc::{framing, DaemonRequest, DaemonResponse, DaemonStatus};
+use wk_ipc::{framing, DaemonRequest, DaemonResponse, DaemonStatus};
 
 /// Socket filename within daemon directory.
 const SOCKET_NAME: &str = "daemon.sock";
@@ -73,14 +73,14 @@ pub fn detect_daemon(daemon_dir: &Path) -> Result<Option<DaemonInfo>> {
             let _ = stream.set_write_timeout(Some(Duration::from_secs(2)));
 
             // Send ping request
-            if framing::write_request(&mut stream, &DaemonRequest::Ping).is_err() {
+            if framing::write_message(&mut stream, &DaemonRequest::Ping).is_err() {
                 // Failed to write, daemon is dead
                 cleanup_stale_files(daemon_dir);
                 return Ok(None);
             }
 
             // Read response
-            match framing::read_response(&mut stream) {
+            match framing::read_message(&mut stream) {
                 Ok(DaemonResponse::Pong) => {
                     // Daemon is alive, read PID
                     match read_pid_file(&pid_path) {
@@ -119,9 +119,9 @@ pub fn get_daemon_status(daemon_dir: &Path) -> Result<Option<DaemonStatus>> {
             let _ = stream.set_read_timeout(Some(Duration::from_secs(5)));
             let _ = stream.set_write_timeout(Some(Duration::from_secs(5)));
 
-            framing::write_request(&mut stream, &DaemonRequest::Status)?;
+            framing::write_message(&mut stream, &DaemonRequest::Status)?;
 
-            match framing::read_response(&mut stream)? {
+            match framing::read_message(&mut stream)? {
                 DaemonResponse::Status(status) => Ok(Some(status)),
                 DaemonResponse::Error { message } => Err(Error::Io(std::io::Error::other(message))),
                 _ => Err(Error::Io(std::io::Error::other(
@@ -151,9 +151,9 @@ fn stop_daemon(daemon_dir: &Path) -> Result<()> {
     let _ = stream.set_read_timeout(Some(Duration::from_secs(2)));
     let _ = stream.set_write_timeout(Some(Duration::from_secs(2)));
 
-    framing::write_request(&mut stream, &DaemonRequest::Shutdown)?;
+    framing::write_message(&mut stream, &DaemonRequest::Shutdown)?;
 
-    match framing::read_response(&mut stream)? {
+    match framing::read_message(&mut stream)? {
         DaemonResponse::ShuttingDown => Ok(()),
         DaemonResponse::Error { message } => Err(Error::Io(std::io::Error::other(message))),
         _ => Err(Error::Io(std::io::Error::other(

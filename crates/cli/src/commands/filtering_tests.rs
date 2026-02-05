@@ -40,28 +40,28 @@ fn test_matches_prefix_empty_id() {
 
 #[test]
 fn test_parse_filter_groups_empty() {
-    let result = parse_filter_groups::<Status, _>(&[], |s| s.parse()).unwrap();
+    let result = parse_filter_groups::<Status, _>(&[], |s| Ok(s.parse()?)).unwrap();
     assert!(result.is_none());
 }
 
 #[test]
 fn test_parse_filter_groups_single_value() {
     let values = vec!["todo".to_string()];
-    let result = parse_filter_groups(&values, |s| s.parse::<Status>()).unwrap();
+    let result = parse_filter_groups(&values, |s| Ok(s.parse::<Status>()?)).unwrap();
     assert_eq!(result, Some(vec![vec![Status::Todo]]));
 }
 
 #[test]
 fn test_parse_filter_groups_comma_separated() {
     let values = vec!["todo,in_progress".to_string()];
-    let result = parse_filter_groups(&values, |s| s.parse::<Status>()).unwrap();
+    let result = parse_filter_groups(&values, |s| Ok(s.parse::<Status>()?)).unwrap();
     assert_eq!(result, Some(vec![vec![Status::Todo, Status::InProgress]]));
 }
 
 #[test]
 fn test_parse_filter_groups_multiple_entries() {
     let values = vec!["todo".to_string(), "in_progress".to_string()];
-    let result = parse_filter_groups(&values, |s| s.parse::<Status>()).unwrap();
+    let result = parse_filter_groups(&values, |s| Ok(s.parse::<Status>()?)).unwrap();
     assert_eq!(
         result,
         Some(vec![vec![Status::Todo], vec![Status::InProgress]])
