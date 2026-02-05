@@ -15,6 +15,7 @@ teardown() {
 
 # Tests for remote command in local mode (no remote configured)
 
+# bats test_tags=todo:implement
 @test "remote status in local mode shows not applicable" {
     init_project
     run "$WK_BIN" remote status
@@ -22,6 +23,7 @@ teardown() {
     assert_output --partial "not"
 }
 
+# bats test_tags=todo:implement
 @test "remote sync in local mode is silent" {
     run "$WK_BIN" init --prefix test --private
     assert_success
@@ -30,6 +32,7 @@ teardown() {
     assert_output ""
 }
 
+# bats test_tags=todo:implement
 @test "remote status provides configuration hint" {
     run "$WK_BIN" init --prefix test --private
     assert_success
@@ -39,6 +42,7 @@ teardown() {
     assert_output --partial "url"
 }
 
+# bats test_tags=todo:implement
 @test "remote help shows subcommands" {
     run "$WK_BIN" help remote
     assert_success
@@ -46,6 +50,7 @@ teardown() {
     assert_output --partial "sync"
 }
 
+# bats test_tags=todo:implement
 @test "remote --help shows subcommands" {
     run "$WK_BIN" remote --help
     assert_success
@@ -53,6 +58,7 @@ teardown() {
     assert_output --partial "sync"
 }
 
+# bats test_tags=todo:implement
 @test "remote appears in main help" {
     run "$WK_BIN" help
     assert_success

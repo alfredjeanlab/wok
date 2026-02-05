@@ -2,6 +2,7 @@
 // Copyright (c) 2026 Alfred Jean LLC
 
 mod common;
+mod edge_cases;
 mod edit;
 mod export;
 mod flags;
@@ -14,3 +15,4 @@ mod new;
 mod note;
 mod prefix_matching;
 mod show;
+mod sync;
