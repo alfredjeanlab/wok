@@ -1,19 +1,19 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Alfred Jean LLC
 
-//! Commands for managing issue hooks.
+//! Issue hooks management commands.
+//!
+//! Commands for listing configured hooks and testing them.
 
-use crate::models::{Action, Event};
+use crate::cli::OutputFormat;
+use crate::error::Result;
+use crate::hooks::{load_hooks_config, test_hook, HookEvent};
 
 use super::open_db;
-use crate::cli::OutputFormat;
-use crate::config::find_work_dir;
-use crate::error::Result;
-use crate::hooks::{execute_hook, load_hooks_config, HookEvent, HookFilter, HookPayload};
 
-/// List configured hooks.
+/// Run the hook list command.
 pub fn list(output: OutputFormat) -> Result<()> {
-    let work_dir = find_work_dir()?;
+    let (_, _, work_dir) = open_db()?;
     let config = load_hooks_config(&work_dir)?;
 
     match config {
@@ -21,34 +21,30 @@ pub fn list(output: OutputFormat) -> Result<()> {
             if matches!(output, OutputFormat::Json) {
                 println!("[]");
             } else {
-                println!("No hooks configured");
+                println!("No hooks configured.");
                 println!();
-                println!("Create .wok/hooks.toml or .wok/hooks.json to configure hooks.");
+                println!("To configure hooks, create .wok/hooks.toml:");
+                println!("  [[hooks]]");
+                println!("  name = \"my-hook\"");
+                println!("  events = [\"issue.created\"]");
+                println!("  run = \"./scripts/notify.sh\"");
             }
         }
         Some(config) => {
-            if config.hooks.is_empty() {
-                if matches!(output, OutputFormat::Json) {
-                    println!("[]");
-                } else {
-                    println!("No hooks configured");
-                }
-                return Ok(());
-            }
-
             if matches!(output, OutputFormat::Json) {
                 let json = serde_json::to_string_pretty(&config.hooks)
-                    .map_err(|e| crate::error::Error::Config(format!("JSON error: {}", e)))?;
+                    .map_err(|e| crate::error::Error::Config(e.to_string()))?;
                 println!("{}", json);
             } else {
+                println!("Configured hooks:");
                 for hook in &config.hooks {
-                    println!("{}:", hook.name);
-                    println!("  events: {}", hook.events.join(", "));
-                    if let Some(ref filter) = hook.filter {
-                        println!("  filter: {}", filter);
-                    }
-                    println!("  run: {}", hook.run);
                     println!();
+                    println!("  {}", hook.name);
+                    println!("    Events: {}", hook.events.join(", "));
+                    if let Some(filter) = &hook.filter {
+                        println!("    Filter: {}", filter);
+                    }
+                    println!("    Run: {}", hook.run);
                 }
             }
         }
@@ -57,89 +53,72 @@ pub fn list(output: OutputFormat) -> Result<()> {
     Ok(())
 }
 
-/// Test a hook by simulating an event.
-pub fn test(hook_name: &str, issue_id: &str) -> Result<()> {
-    let work_dir = find_work_dir()?;
-    let (db, _config, _work_dir) = open_db()?;
-
-    // Load hooks config
-    let config = load_hooks_config(&work_dir)?
-        .ok_or_else(|| crate::error::Error::Config("no hooks configured".to_string()))?;
-
-    // Find the named hook
-    let hook = config
-        .hooks
-        .iter()
-        .find(|h| h.name == hook_name)
-        .ok_or_else(|| crate::error::Error::Config(format!("hook '{}' not found", hook_name)))?;
+/// Run the hook test command.
+pub fn test(name: String, id: String, event: Option<String>) -> Result<()> {
+    let (db, _, work_dir) = open_db()?;
 
     // Resolve the issue ID
-    let resolved_id = db.resolve_id(issue_id)?;
-    let issue = db.get_issue(&resolved_id)?;
-    let labels = db.get_labels(&resolved_id)?;
+    let resolved_id = db.resolve_id(&id)?;
 
-    // Determine the event to simulate (use first event from hook config, or issue.created)
-    let event_name = hook
-        .events
-        .first()
-        .map(String::as_str)
-        .unwrap_or("issue.created");
-    let action = match event_name {
-        "issue.created" | "issue.*" => Action::Created,
-        "issue.edited" => Action::Edited,
-        "issue.started" => Action::Started,
-        "issue.stopped" => Action::Stopped,
-        "issue.done" => Action::Done,
-        "issue.closed" => Action::Closed,
-        "issue.reopened" => Action::Reopened,
-        "issue.labeled" => Action::Labeled,
-        "issue.unlabeled" => Action::Unlabeled,
-        "issue.assigned" => Action::Assigned,
-        "issue.unassigned" => Action::Unassigned,
-        "issue.noted" => Action::Noted,
-        "issue.linked" => Action::Linked,
-        "issue.unlinked" => Action::Unlinked,
-        "issue.related" => Action::Related,
-        "issue.unrelated" => Action::Unrelated,
-        "issue.unblocked" => Action::Unblocked,
-        _ => Action::Created,
+    // Parse the event if provided, default to "issue.created"
+    let test_event = match event.as_deref() {
+        Some(e) => parse_event(e)?,
+        None => HookEvent::Created,
     };
 
-    // Create a simulated event
-    let event = Event::new(resolved_id.clone(), action);
-    let hook_event: HookEvent = event.action.into();
-
-    println!("Testing hook '{}'", hook_name);
-    println!("  Issue: {} ({})", issue.id, issue.title);
-    println!("  Event: {}", hook_event.as_event_name());
-
-    // Check filter if present
-    if let Some(ref filter_str) = hook.filter {
-        let filter = HookFilter::parse(filter_str)?;
-        let matches = filter.matches(&issue, &labels);
-        println!(
-            "  Filter: {} ({})",
-            filter_str,
-            if matches { "MATCH" } else { "NO MATCH" }
-        );
-        if !matches {
-            println!();
-            println!("Hook would NOT trigger - filter does not match");
-            return Ok(());
+    match test_hook(&db, &work_dir, &name, &resolved_id, test_event)? {
+        None => {
+            println!(
+                "Hook '{}' not found or issue '{}' not found.",
+                name, resolved_id
+            );
+        }
+        Some(true) => {
+            println!(
+                "Hook '{}' would fire for issue '{}' on event '{}'.",
+                name,
+                resolved_id,
+                test_event.as_event_name()
+            );
+        }
+        Some(false) => {
+            println!(
+                "Hook '{}' would NOT fire for issue '{}' on event '{}' (filter/event mismatch).",
+                name,
+                resolved_id,
+                test_event.as_event_name()
+            );
         }
     }
 
-    // Build payload and execute
-    let payload = HookPayload::build(&event, &issue, &labels);
-    println!("  Command: {}", hook.run);
-    println!();
-    println!("Executing hook...");
-
-    execute_hook(hook, &payload, &work_dir)?;
-
-    println!("Hook triggered (fire-and-forget)");
-
     Ok(())
+}
+
+/// Parse an event name into a HookEvent.
+fn parse_event(event: &str) -> Result<HookEvent> {
+    match event {
+        "issue.created" | "created" => Ok(HookEvent::Created),
+        "issue.edited" | "edited" => Ok(HookEvent::Edited),
+        "issue.started" | "started" => Ok(HookEvent::Started),
+        "issue.stopped" | "stopped" => Ok(HookEvent::Stopped),
+        "issue.done" | "done" => Ok(HookEvent::Done),
+        "issue.closed" | "closed" => Ok(HookEvent::Closed),
+        "issue.reopened" | "reopened" => Ok(HookEvent::Reopened),
+        "issue.labeled" | "labeled" => Ok(HookEvent::Labeled),
+        "issue.unlabeled" | "unlabeled" => Ok(HookEvent::Unlabeled),
+        "issue.assigned" | "assigned" => Ok(HookEvent::Assigned),
+        "issue.unassigned" | "unassigned" => Ok(HookEvent::Unassigned),
+        "issue.noted" | "noted" => Ok(HookEvent::Noted),
+        "issue.linked" | "linked" => Ok(HookEvent::Linked),
+        "issue.unlinked" | "unlinked" => Ok(HookEvent::Unlinked),
+        "issue.related" | "related" => Ok(HookEvent::Related),
+        "issue.unrelated" | "unrelated" => Ok(HookEvent::Unrelated),
+        "issue.unblocked" | "unblocked" => Ok(HookEvent::Unblocked),
+        _ => Err(crate::error::Error::Config(format!(
+            "unknown event: {}",
+            event
+        ))),
+    }
 }
 
 #[cfg(test)]

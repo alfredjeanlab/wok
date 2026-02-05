@@ -4,14 +4,14 @@
 #![allow(clippy::unwrap_used)]
 
 use super::*;
-use crate::models::{Action, IssueType, Status};
+use crate::models::{Action, Event, IssueType, Status};
 use chrono::Utc;
 
-fn make_issue(id: &str) -> Issue {
+fn make_test_issue() -> Issue {
     Issue {
-        id: id.to_string(),
+        id: "test-123".to_string(),
         issue_type: IssueType::Bug,
-        title: "Test bug".to_string(),
+        title: "Fix login bug".to_string(),
         description: None,
         status: Status::InProgress,
         assignee: Some("alice".to_string()),
@@ -21,111 +21,74 @@ fn make_issue(id: &str) -> Issue {
     }
 }
 
-fn make_event(issue_id: &str, action: Action) -> Event {
+fn make_test_event(action: Action) -> Event {
     Event {
-        id: 0,
-        issue_id: issue_id.to_string(),
+        id: 1,
+        issue_id: "test-123".to_string(),
         action,
-        old_value: None,
-        new_value: None,
+        old_value: Some("todo".to_string()),
+        new_value: Some("in_progress".to_string()),
         reason: None,
         created_at: Utc::now(),
     }
 }
 
 #[test]
-fn build_payload_basic() {
-    let issue = make_issue("proj-abc");
-    let event = make_event("proj-abc", Action::Created);
+fn test_payload_from_event() {
+    let issue = make_test_issue();
+    let event = make_test_event(Action::Started);
     let labels = vec!["urgent".to_string(), "backend".to_string()];
 
-    let payload = HookPayload::build(&event, &issue, &labels);
+    let payload = HookPayload::from_event(&event, &issue, labels.clone());
 
-    assert_eq!(payload.event, "issue.created");
-    assert_eq!(payload.issue.id, "proj-abc");
-    assert_eq!(payload.issue.issue_type, "bug");
-    assert_eq!(payload.issue.title, "Test bug");
+    assert_eq!(payload.event, "issue.started");
+    assert_eq!(payload.issue.id, "test-123");
+    assert_eq!(payload.issue.r#type, "bug");
+    assert_eq!(payload.issue.title, "Fix login bug");
     assert_eq!(payload.issue.status, "in_progress");
     assert_eq!(payload.issue.assignee, Some("alice".to_string()));
     assert_eq!(payload.issue.labels, labels);
+    assert_eq!(payload.change.old_value, Some("todo".to_string()));
+    assert_eq!(payload.change.new_value, Some("in_progress".to_string()));
+    assert!(payload.change.reason.is_none());
 }
 
 #[test]
-fn build_payload_with_change_values() {
-    let issue = make_issue("proj-abc");
-    let mut event = make_event("proj-abc", Action::Labeled);
-    event.old_value = None;
-    event.new_value = Some("urgent".to_string());
+fn test_payload_to_json() {
+    let issue = make_test_issue();
+    let event = make_test_event(Action::Done);
+    let labels = vec!["urgent".to_string()];
 
-    let payload = HookPayload::build(&event, &issue, &[]);
+    let payload = HookPayload::from_event(&event, &issue, labels);
+    let json = payload.to_json().unwrap();
 
-    assert_eq!(payload.change.old_value, None);
-    assert_eq!(payload.change.new_value, Some("urgent".to_string()));
+    // Verify it's valid JSON
+    let parsed: serde_json::Value = serde_json::from_str(&json).unwrap();
+    assert_eq!(parsed["event"], "issue.done");
+    assert_eq!(parsed["issue"]["id"], "test-123");
+    assert_eq!(parsed["issue"]["type"], "bug");
 }
 
 #[test]
-fn build_payload_with_reason() {
-    let issue = make_issue("proj-abc");
-    let mut event = make_event("proj-abc", Action::Closed);
-    event.reason = Some("Duplicate".to_string());
+fn test_payload_event_mapping() {
+    let issue = make_test_issue();
+    let labels = vec![];
 
-    let payload = HookPayload::build(&event, &issue, &[]);
+    let test_cases = [
+        (Action::Created, "issue.created"),
+        (Action::Edited, "issue.edited"),
+        (Action::Started, "issue.started"),
+        (Action::Stopped, "issue.stopped"),
+        (Action::Done, "issue.done"),
+        (Action::Closed, "issue.closed"),
+        (Action::Reopened, "issue.reopened"),
+        (Action::Labeled, "issue.labeled"),
+        (Action::Unlabeled, "issue.unlabeled"),
+    ];
 
-    assert_eq!(payload.change.reason, Some("Duplicate".to_string()));
-}
-
-#[test]
-fn payload_serializes_to_json() {
-    let issue = make_issue("proj-abc");
-    let event = make_event("proj-abc", Action::Done);
-    let payload = HookPayload::build(&event, &issue, &["done".to_string()]);
-
-    let json = serde_json::to_string(&payload).unwrap();
-
-    assert!(json.contains("\"event\":\"issue.done\""));
-    assert!(json.contains("\"id\":\"proj-abc\""));
-    assert!(json.contains("\"type\":\"bug\""));
-    assert!(json.contains("\"labels\":[\"done\"]"));
-}
-
-#[test]
-fn payload_skips_none_values() {
-    let mut issue = make_issue("proj-abc");
-    issue.assignee = None;
-    let event = make_event("proj-abc", Action::Created);
-
-    let payload = HookPayload::build(&event, &issue, &[]);
-    let json = serde_json::to_string(&payload).unwrap();
-
-    // assignee should be skipped when None
-    assert!(!json.contains("\"assignee\":null"));
-}
-
-#[test]
-fn event_types_map_correctly() {
-    let issue = make_issue("proj-abc");
-
-    for action in [
-        Action::Created,
-        Action::Edited,
-        Action::Started,
-        Action::Stopped,
-        Action::Done,
-        Action::Closed,
-        Action::Reopened,
-        Action::Labeled,
-        Action::Unlabeled,
-        Action::Assigned,
-        Action::Unassigned,
-        Action::Noted,
-        Action::Linked,
-        Action::Unlinked,
-        Action::Related,
-        Action::Unrelated,
-        Action::Unblocked,
-    ] {
-        let event = make_event("proj-abc", action);
-        let payload = HookPayload::build(&event, &issue, &[]);
-        assert!(payload.event.starts_with("issue."));
+    for (action, expected_event) in test_cases {
+        let event = make_test_event(action);
+        let payload = HookPayload::from_event(&event, &issue, labels.clone());
+        assert_eq!(payload.event, expected_event);
     }
 }

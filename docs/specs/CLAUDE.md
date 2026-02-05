@@ -41,7 +41,14 @@ Product specifications defining wok's design, behavior, and interfaces.
    - Database location
    - Git integration options
 
-7. **[Project Structure](08-project-structure.md)**
+7. **[Issue Hooks](07-hooks.md)**
+   - Hook configuration (TOML/JSON)
+   - Event types and patterns
+   - Filter syntax
+   - Script interface
+   - CLI commands
+
+8. **[Project Structure](08-project-structure.md)**
    - Project layout (crates/, tests/)
    - Test suites
    - Running tests

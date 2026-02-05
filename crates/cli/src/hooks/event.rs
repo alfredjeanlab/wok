@@ -1,11 +1,13 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Alfred Jean LLC
 
-//! Event name mapping from core Action enum to hook event names.
+//! Event name mapping for issue hooks.
+//!
+//! Maps the core `Action` enum to hook event names like "issue.created".
 
 use crate::models::Action;
 
-/// Event types for hooks, mapped from core Action enum.
+/// Event types for hooks, derived from the core Action enum.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum HookEvent {
     Created,
@@ -24,14 +26,11 @@ pub enum HookEvent {
     Unlinked,
     Related,
     Unrelated,
-    // Note: "Blocked" event doesn't exist as an action - unblocked is triggered
-    // when a blocking issue is resolved, not explicitly set.
     Unblocked,
 }
 
 impl HookEvent {
-    /// Get the event name as used in hook configuration (e.g., "issue.created").
-    #[must_use]
+    /// Get the event name as used in config (e.g., "issue.created").
     pub fn as_event_name(&self) -> &'static str {
         match self {
             HookEvent::Created => "issue.created",
@@ -56,8 +55,7 @@ impl HookEvent {
 
     /// Check if a pattern matches this event.
     ///
-    /// Supports exact matches and the `issue.*` wildcard pattern.
-    #[must_use]
+    /// Supports exact matches and the "issue.*" wildcard.
     pub fn matches_pattern(&self, pattern: &str) -> bool {
         pattern == "issue.*" || pattern == self.as_event_name()
     }

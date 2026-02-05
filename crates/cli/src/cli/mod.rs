@@ -597,13 +597,13 @@ Examples:
     #[command(subcommand)]
     Daemon(DaemonCommand),
 
-    /// Manage issue hooks
-    #[command(subcommand)]
-    Hook(HookCommand),
-
     /// Manage Claude Code hooks integration
     #[command(subcommand)]
     Hooks(HooksCommand),
+
+    /// Manage issue hooks (scripts triggered on events)
+    #[command(subcommand)]
+    Hook(HookCommand),
 
     /// Manage configuration settings
     #[command(subcommand)]
@@ -694,7 +694,7 @@ pub enum SchemaCommand {
     Search,
 }
 
-/// Hooks management commands (Claude Code hooks).
+/// Claude Code hooks management commands.
 #[derive(Subcommand)]
 pub enum HooksCommand {
     /// Install Claude Code hooks
@@ -727,7 +727,7 @@ Examples:
     Status,
 }
 
-/// Issue hook management commands.
+/// Issue hooks management commands.
 #[derive(Subcommand)]
 pub enum HookCommand {
     /// List configured issue hooks
@@ -736,24 +736,24 @@ Examples:
   wok hook list                  List all configured hooks
   wok hook list -o json          Output as JSON"))]
     List {
-        /// Output format
+        /// Output format (text, json)
         #[arg(long = "output", short = 'o', value_enum, default_value = "text")]
         output: OutputFormat,
     },
 
-    /// Test a hook by simulating an event
-    #[command(
-        arg_required_else_help = true,
-        after_help = colors::examples("\
+    /// Test if a hook would fire for an issue
+    #[command(after_help = colors::examples("\
 Examples:
-  wok hook test urgent-bugs proj-1234     Test 'urgent-bugs' hook with issue proj-1234
-  wok hook test audit-hook abc            Test 'audit-hook' with issue abc")
-    )]
+  wok hook test my-hook prj-1              Test with default event (created)
+  wok hook test my-hook prj-1 --event done Test with specific event"))]
     Test {
         /// Hook name to test
         name: String,
         /// Issue ID to use
         id: String,
+        /// Event to simulate (default: created)
+        #[arg(long)]
+        event: Option<String>,
     },
 }
 

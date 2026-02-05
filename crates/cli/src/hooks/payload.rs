@@ -1,38 +1,39 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Alfred Jean LLC
 
-//! Hook payload structures for passing data to hook scripts.
+//! Hook payload building for stdin JSON.
 
-use crate::models::{Event, Issue};
+use crate::models::Issue;
 use chrono::{DateTime, Utc};
 use serde::Serialize;
 
-use super::HookEvent;
+use crate::models::Event;
+
+use super::event::HookEvent;
 
 /// JSON payload passed to hook scripts via stdin.
 #[derive(Debug, Clone, Serialize)]
 pub struct HookPayload {
-    /// Event type that triggered the hook (e.g., "issue.created").
+    /// The event that triggered this hook (e.g., "issue.created").
     pub event: String,
-    /// Timestamp when the event occurred.
+    /// When the event occurred.
     pub timestamp: DateTime<Utc>,
-    /// Details about the issue.
+    /// The issue that was affected.
     pub issue: IssuePayload,
-    /// Details about the change that triggered the event.
+    /// Details about the change.
     pub change: ChangePayload,
 }
 
-/// Issue details included in hook payload.
+/// Issue information included in the hook payload.
 #[derive(Debug, Clone, Serialize)]
 pub struct IssuePayload {
-    /// Issue ID (e.g., "proj-a1b2").
+    /// Issue ID.
     pub id: String,
-    /// Issue type (e.g., "bug", "task").
-    #[serde(rename = "type")]
-    pub issue_type: String,
+    /// Issue type (task, bug, etc.).
+    pub r#type: String,
     /// Issue title.
     pub title: String,
-    /// Issue status (e.g., "todo", "in_progress").
+    /// Current status.
     pub status: String,
     /// Assignee if any.
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -41,24 +42,23 @@ pub struct IssuePayload {
     pub labels: Vec<String>,
 }
 
-/// Change details included in hook payload.
+/// Change information included in the hook payload.
 #[derive(Debug, Clone, Serialize)]
 pub struct ChangePayload {
     /// Previous value (for edits, status changes).
     #[serde(skip_serializing_if = "Option::is_none")]
     pub old_value: Option<String>,
-    /// New value (for edits, labels, etc.).
+    /// New value (for edits, tags, related issues).
     #[serde(skip_serializing_if = "Option::is_none")]
     pub new_value: Option<String>,
-    /// Reason provided for the change.
+    /// Reason for the change (for closes, reopens).
     #[serde(skip_serializing_if = "Option::is_none")]
     pub reason: Option<String>,
 }
 
 impl HookPayload {
-    /// Build a hook payload from an event and issue context.
-    #[must_use]
-    pub fn build(event: &Event, issue: &Issue, labels: &[String]) -> Self {
+    /// Build a payload from an event and issue.
+    pub fn from_event(event: &Event, issue: &Issue, labels: Vec<String>) -> Self {
         let hook_event: HookEvent = event.action.into();
 
         HookPayload {
@@ -66,11 +66,11 @@ impl HookPayload {
             timestamp: event.created_at,
             issue: IssuePayload {
                 id: issue.id.clone(),
-                issue_type: issue.issue_type.as_str().to_string(),
+                r#type: issue.issue_type.as_str().to_string(),
                 title: issue.title.clone(),
                 status: issue.status.as_str().to_string(),
                 assignee: issue.assignee.clone(),
-                labels: labels.to_vec(),
+                labels,
             },
             change: ChangePayload {
                 old_value: event.old_value.clone(),
@@ -78,6 +78,11 @@ impl HookPayload {
                 reason: event.reason.clone(),
             },
         }
+    }
+
+    /// Serialize to JSON string.
+    pub fn to_json(&self) -> Result<String, serde_json::Error> {
+        serde_json::to_string(self)
     }
 }
 

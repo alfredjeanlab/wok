@@ -6,14 +6,14 @@
 use super::*;
 use chrono::Utc;
 
-fn make_issue(id: &str, issue_type: IssueType, status: Status) -> Issue {
+fn make_test_issue(issue_type: IssueType, status: Status, assignee: Option<&str>) -> Issue {
     Issue {
-        id: id.to_string(),
+        id: "test-123".to_string(),
         issue_type,
         title: "Test issue".to_string(),
         description: None,
         status,
-        assignee: None,
+        assignee: assignee.map(String::from),
         created_at: Utc::now(),
         updated_at: Utc::now(),
         closed_at: None,
@@ -21,64 +21,71 @@ fn make_issue(id: &str, issue_type: IssueType, status: Status) -> Issue {
 }
 
 #[test]
-fn parse_empty_filter() {
+fn test_parse_empty_filter() {
     let filter = HookFilter::parse("").unwrap();
-    assert!(filter.is_empty());
+    assert!(filter.types.is_none());
+    assert!(filter.labels.is_none());
+    assert!(filter.statuses.is_none());
+    assert!(filter.assignees.is_none());
+    assert!(filter.prefix.is_none());
 }
 
 #[test]
-fn parse_type_filter() {
+fn test_parse_type_filter() {
     let filter = HookFilter::parse("-t bug").unwrap();
     assert!(filter.types.is_some());
-    assert_eq!(filter.types.as_ref().unwrap().len(), 1);
-    assert_eq!(filter.types.as_ref().unwrap()[0].len(), 1);
-    assert_eq!(filter.types.as_ref().unwrap()[0][0], IssueType::Bug);
-}
-
-#[test]
-fn parse_multiple_types() {
-    let filter = HookFilter::parse("-t bug,task").unwrap();
-    assert!(filter.types.is_some());
-    let types = filter.types.as_ref().unwrap();
+    let types = filter.types.unwrap();
     assert_eq!(types.len(), 1);
-    assert_eq!(types[0].len(), 2);
+    assert_eq!(types[0], vec![IssueType::Bug]);
 }
 
 #[test]
-fn parse_label_filter() {
+fn test_parse_type_filter_comma_separated() {
+    let filter = HookFilter::parse("-t bug,task").unwrap();
+    let types = filter.types.unwrap();
+    assert_eq!(types.len(), 1);
+    assert_eq!(types[0], vec![IssueType::Bug, IssueType::Task]);
+}
+
+#[test]
+fn test_parse_label_filter() {
     let filter = HookFilter::parse("-l urgent").unwrap();
     assert!(filter.labels.is_some());
-    assert_eq!(filter.labels.as_ref().unwrap().len(), 1);
 }
 
 #[test]
-fn parse_negated_label() {
+fn test_parse_label_filter_negated() {
     let filter = HookFilter::parse("-l !wip").unwrap();
-    assert!(filter.labels.is_some());
+    let labels = filter.labels.unwrap();
+    assert_eq!(labels.len(), 1);
+    assert_eq!(labels[0].len(), 1);
+    assert!(matches!(labels[0][0], LabelMatcher::NotHas(_)));
 }
 
 #[test]
-fn parse_status_filter() {
-    let filter = HookFilter::parse("-s todo").unwrap();
-    assert!(filter.statuses.is_some());
-    assert_eq!(filter.statuses.as_ref().unwrap().len(), 1);
+fn test_parse_status_filter() {
+    let filter = HookFilter::parse("-s todo,in_progress").unwrap();
+    let statuses = filter.statuses.unwrap();
+    assert_eq!(statuses.len(), 1);
+    assert_eq!(statuses[0], vec![Status::Todo, Status::InProgress]);
 }
 
 #[test]
-fn parse_assignee_filter() {
+fn test_parse_assignee_filter() {
     let filter = HookFilter::parse("-a alice").unwrap();
-    assert!(filter.assignees.is_some());
-    assert_eq!(filter.assignees.as_ref().unwrap()[0][0], "alice");
+    let assignees = filter.assignees.unwrap();
+    assert_eq!(assignees.len(), 1);
+    assert_eq!(assignees[0], vec!["alice".to_string()]);
 }
 
 #[test]
-fn parse_prefix_filter() {
+fn test_parse_prefix_filter() {
     let filter = HookFilter::parse("-p proj").unwrap();
     assert_eq!(filter.prefix, Some("proj".to_string()));
 }
 
 #[test]
-fn parse_combined_filters() {
+fn test_parse_combined_filters() {
     let filter = HookFilter::parse("-t bug -l urgent -s todo").unwrap();
     assert!(filter.types.is_some());
     assert!(filter.labels.is_some());
@@ -86,7 +93,7 @@ fn parse_combined_filters() {
 }
 
 #[test]
-fn parse_long_form_flags() {
+fn test_parse_long_flags() {
     let filter = HookFilter::parse("--type bug --label urgent --status todo").unwrap();
     assert!(filter.types.is_some());
     assert!(filter.labels.is_some());
@@ -94,63 +101,51 @@ fn parse_long_form_flags() {
 }
 
 #[test]
-fn parse_invalid_type_returns_error() {
-    let result = HookFilter::parse("-t invalid");
+fn test_parse_unknown_flag() {
+    let result = HookFilter::parse("-x unknown");
     assert!(result.is_err());
 }
 
 #[test]
-fn parse_invalid_status_returns_error() {
-    let result = HookFilter::parse("-s invalid");
-    assert!(result.is_err());
-}
-
-#[test]
-fn parse_unknown_flag_returns_error() {
-    let result = HookFilter::parse("--unknown value");
-    assert!(result.is_err());
-}
-
-#[test]
-fn parse_missing_value_returns_error() {
+fn test_parse_missing_value() {
     let result = HookFilter::parse("-t");
     assert!(result.is_err());
 }
 
 #[test]
-fn matches_type_filter() {
+fn test_matches_type_filter() {
     let filter = HookFilter::parse("-t bug").unwrap();
-    let bug = make_issue("test-1", IssueType::Bug, Status::Todo);
-    let task = make_issue("test-2", IssueType::Task, Status::Todo);
+    let issue = make_test_issue(IssueType::Bug, Status::Todo, None);
+    assert!(filter.matches(&issue, &[]));
 
-    assert!(filter.matches(&bug, &[]));
-    assert!(!filter.matches(&task, &[]));
-}
-
-#[test]
-fn matches_status_filter() {
-    let filter = HookFilter::parse("-s in_progress").unwrap();
-    let in_progress = make_issue("test-1", IssueType::Bug, Status::InProgress);
-    let todo = make_issue("test-2", IssueType::Bug, Status::Todo);
-
-    assert!(filter.matches(&in_progress, &[]));
-    assert!(!filter.matches(&todo, &[]));
-}
-
-#[test]
-fn matches_label_filter() {
-    let filter = HookFilter::parse("-l urgent").unwrap();
-    let issue = make_issue("test-1", IssueType::Bug, Status::Todo);
-
-    assert!(filter.matches(&issue, &["urgent".to_string()]));
-    assert!(!filter.matches(&issue, &["normal".to_string()]));
+    let issue = make_test_issue(IssueType::Task, Status::Todo, None);
     assert!(!filter.matches(&issue, &[]));
 }
 
 #[test]
-fn matches_negated_label() {
+fn test_matches_status_filter() {
+    let filter = HookFilter::parse("-s todo").unwrap();
+    let issue = make_test_issue(IssueType::Bug, Status::Todo, None);
+    assert!(filter.matches(&issue, &[]));
+
+    let issue = make_test_issue(IssueType::Bug, Status::InProgress, None);
+    assert!(!filter.matches(&issue, &[]));
+}
+
+#[test]
+fn test_matches_label_filter() {
+    let filter = HookFilter::parse("-l urgent").unwrap();
+    let issue = make_test_issue(IssueType::Bug, Status::Todo, None);
+
+    assert!(filter.matches(&issue, &["urgent".to_string()]));
+    assert!(!filter.matches(&issue, &["other".to_string()]));
+    assert!(!filter.matches(&issue, &[]));
+}
+
+#[test]
+fn test_matches_label_filter_negated() {
     let filter = HookFilter::parse("-l !wip").unwrap();
-    let issue = make_issue("test-1", IssueType::Bug, Status::Todo);
+    let issue = make_test_issue(IssueType::Bug, Status::Todo, None);
 
     assert!(filter.matches(&issue, &[]));
     assert!(filter.matches(&issue, &["urgent".to_string()]));
@@ -158,32 +153,56 @@ fn matches_negated_label() {
 }
 
 #[test]
-fn matches_prefix_filter() {
-    let filter = HookFilter::parse("-p proj").unwrap();
-    let proj_issue = make_issue("proj-abc", IssueType::Bug, Status::Todo);
-    let other_issue = make_issue("other-abc", IssueType::Bug, Status::Todo);
-
-    assert!(filter.matches(&proj_issue, &[]));
-    assert!(!filter.matches(&other_issue, &[]));
-}
-
-#[test]
-fn empty_filter_matches_all() {
-    let filter = HookFilter::parse("").unwrap();
-    let issue = make_issue("test-1", IssueType::Bug, Status::Todo);
-
+fn test_matches_assignee_filter() {
+    let filter = HookFilter::parse("-a alice").unwrap();
+    let issue = make_test_issue(IssueType::Bug, Status::Todo, Some("alice"));
     assert!(filter.matches(&issue, &[]));
-    assert!(filter.matches(&issue, &["any".to_string()]));
+
+    let issue = make_test_issue(IssueType::Bug, Status::Todo, Some("bob"));
+    assert!(!filter.matches(&issue, &[]));
+
+    let issue = make_test_issue(IssueType::Bug, Status::Todo, None);
+    assert!(!filter.matches(&issue, &[]));
 }
 
 #[test]
-fn combined_filter_requires_all() {
-    let filter = HookFilter::parse("-t bug -l urgent").unwrap();
-    let bug_urgent = make_issue("test-1", IssueType::Bug, Status::Todo);
-    let bug_normal = make_issue("test-2", IssueType::Bug, Status::Todo);
-    let task_urgent = make_issue("test-3", IssueType::Task, Status::Todo);
+fn test_matches_prefix_filter() {
+    let filter = HookFilter::parse("-p test").unwrap();
+    let mut issue = make_test_issue(IssueType::Bug, Status::Todo, None);
+    issue.id = "test-123".to_string();
+    assert!(filter.matches(&issue, &[]));
 
-    assert!(filter.matches(&bug_urgent, &["urgent".to_string()]));
-    assert!(!filter.matches(&bug_normal, &["normal".to_string()]));
-    assert!(!filter.matches(&task_urgent, &["urgent".to_string()]));
+    issue.id = "proj-123".to_string();
+    assert!(!filter.matches(&issue, &[]));
+}
+
+#[test]
+fn test_matches_combined_filters_all_must_match() {
+    let filter = HookFilter::parse("-t bug -l urgent").unwrap();
+    let issue = make_test_issue(IssueType::Bug, Status::Todo, None);
+
+    // Both type and label must match
+    assert!(filter.matches(&issue, &["urgent".to_string()]));
+    assert!(!filter.matches(&issue, &[])); // missing label
+
+    let issue = make_test_issue(IssueType::Task, Status::Todo, None);
+    assert!(!filter.matches(&issue, &["urgent".to_string()])); // wrong type
+}
+
+#[test]
+fn test_tokenize_simple() {
+    let tokens = tokenize("-t bug -l urgent").unwrap();
+    assert_eq!(tokens, vec!["-t", "bug", "-l", "urgent"]);
+}
+
+#[test]
+fn test_tokenize_quoted() {
+    let tokens = tokenize("-l \"label with space\"").unwrap();
+    assert_eq!(tokens, vec!["-l", "label with space"]);
+}
+
+#[test]
+fn test_tokenize_unclosed_quote() {
+    let result = tokenize("-l \"unclosed");
+    assert!(result.is_err());
 }

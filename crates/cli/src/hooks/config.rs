@@ -1,32 +1,29 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Alfred Jean LLC
 
-//! Hook configuration loading from TOML and JSON files.
+//! Hook configuration loading from .wok/hooks.toml and .wok/hooks.json.
 
 use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::Path;
 
-use crate::error::{Error, Result};
-
-const HOOKS_TOML_FILE: &str = "hooks.toml";
-const HOOKS_JSON_FILE: &str = "hooks.json";
+use crate::error::Result;
 
 /// A single hook definition from configuration.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct HookConfig {
-    /// Identifier for the hook.
+    /// Unique identifier for this hook.
     pub name: String,
-    /// Event patterns to trigger on (e.g., "issue.created", "issue.*").
+    /// Event patterns this hook responds to (e.g., "issue.created", "issue.*").
     pub events: Vec<String>,
-    /// Optional filter string using CLI filter syntax (e.g., "-t bug -l urgent").
+    /// Optional filter string (e.g., "-t bug -l urgent").
     #[serde(default)]
     pub filter: Option<String>,
-    /// Command to execute when the hook triggers.
+    /// Command to execute when hook is triggered.
     pub run: String,
 }
 
-/// Root configuration structure for hooks.
+/// Root configuration structure for hooks files.
 #[derive(Debug, Clone, Default, Deserialize)]
 pub struct HooksConfig {
     /// List of configured hooks.
@@ -34,13 +31,20 @@ pub struct HooksConfig {
     pub hooks: Vec<HookConfig>,
 }
 
-/// Load hooks configuration from `.wok/hooks.toml` and/or `.wok/hooks.json`.
+impl HooksConfig {
+    /// Merge another config into this one.
+    pub fn merge(&mut self, other: HooksConfig) {
+        self.hooks.extend(other.hooks);
+    }
+}
+
+/// Load hooks config from .wok/hooks.toml and/or .wok/hooks.json.
 ///
-/// If both files exist, hooks from both are merged. Returns `None` if neither
-/// file exists.
+/// Returns None if neither file exists.
+/// If both files exist, hooks from both are merged.
 pub fn load_hooks_config(work_dir: &Path) -> Result<Option<HooksConfig>> {
-    let toml_path = work_dir.join(HOOKS_TOML_FILE);
-    let json_path = work_dir.join(HOOKS_JSON_FILE);
+    let toml_path = work_dir.join("hooks.toml");
+    let json_path = work_dir.join("hooks.json");
 
     let toml_exists = toml_path.exists();
     let json_exists = json_path.exists();
@@ -49,27 +53,29 @@ pub fn load_hooks_config(work_dir: &Path) -> Result<Option<HooksConfig>> {
         return Ok(None);
     }
 
-    let mut all_hooks = Vec::new();
+    let mut config = HooksConfig::default();
 
-    // Load TOML config if present
     if toml_exists {
-        let content = fs::read_to_string(&toml_path)
-            .map_err(|e| Error::Config(format!("failed to read hooks.toml: {}", e)))?;
-        let config: HooksConfig = toml::from_str(&content)
-            .map_err(|e| Error::Config(format!("failed to parse hooks.toml: {}", e)))?;
-        all_hooks.extend(config.hooks);
+        let content = fs::read_to_string(&toml_path)?;
+        let toml_config: HooksConfig = toml::from_str(&content).map_err(|e| {
+            crate::error::Error::Config(format!("failed to parse hooks.toml: {}", e))
+        })?;
+        config.merge(toml_config);
     }
 
-    // Load JSON config if present
     if json_exists {
-        let content = fs::read_to_string(&json_path)
-            .map_err(|e| Error::Config(format!("failed to read hooks.json: {}", e)))?;
-        let config: HooksConfig = serde_json::from_str(&content)
-            .map_err(|e| Error::Config(format!("failed to parse hooks.json: {}", e)))?;
-        all_hooks.extend(config.hooks);
+        let content = fs::read_to_string(&json_path)?;
+        let json_config: HooksConfig = serde_json::from_str(&content).map_err(|e| {
+            crate::error::Error::Config(format!("failed to parse hooks.json: {}", e))
+        })?;
+        config.merge(json_config);
     }
 
-    Ok(Some(HooksConfig { hooks: all_hooks }))
+    if config.hooks.is_empty() {
+        Ok(None)
+    } else {
+        Ok(Some(config))
+    }
 }
 
 #[cfg(test)]

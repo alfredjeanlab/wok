@@ -1,13 +1,18 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Alfred Jean LLC
 
-//! Issue hooks system for running scripts when issues change.
+//! Issue hooks system for running scripts on issue events.
 //!
-//! This module provides a hooks system that triggers shell scripts when issues
-//! are created, edited, or change state. Hooks are configured in `.wok/hooks.toml`
-//! and/or `.wok/hooks.json`.
+//! This module provides:
+//! - Configuration loading from `.wok/hooks.toml` and `.wok/hooks.json`
+//! - Event name mapping from `Action` enum to hook event names
+//! - Filter string parsing (e.g., "-t bug -l urgent")
+//! - Payload building for hook stdin
+//! - Fire-and-forget hook execution
 //!
-//! # Configuration
+//! # Configuration Format
+//!
+//! Hooks are configured in `.wok/hooks.toml`:
 //!
 //! ```toml
 //! [[hooks]]
@@ -17,32 +22,28 @@
 //! run = "./scripts/page-oncall.sh"
 //! ```
 //!
-//! # Event Types
+//! Or in `.wok/hooks.json`:
 //!
-//! - `issue.created`, `issue.edited`
-//! - `issue.started`, `issue.stopped`
-//! - `issue.done`, `issue.closed`, `issue.reopened`
-//! - `issue.labeled`, `issue.unlabeled`
-//! - `issue.assigned`, `issue.unassigned`
-//! - `issue.noted`, `issue.linked`, `issue.unlinked`
-//! - `issue.related`, `issue.unrelated`
-//! - `issue.blocked`, `issue.unblocked`
-//! - `issue.*` (wildcard matching all events)
+//! ```json
+//! {
+//!   "hooks": [{
+//!     "name": "urgent-bugs",
+//!     "events": ["issue.created"],
+//!     "filter": "-t bug -l urgent",
+//!     "run": "./scripts/page-oncall.sh"
+//!   }]
+//! }
+//! ```
 
-mod config;
-mod event;
-mod executor;
-mod filter;
-mod payload;
-mod runner;
+pub mod config;
+pub mod event;
+pub mod executor;
+pub mod filter;
+pub mod payload;
+pub mod runner;
 
 pub use config::{load_hooks_config, HookConfig, HooksConfig};
 pub use event::HookEvent;
-pub use executor::execute_hook;
 pub use filter::HookFilter;
-pub use payload::{ChangePayload, HookPayload, IssuePayload};
-pub use runner::run_hooks_for_event;
-
-#[cfg(test)]
-#[path = "mod_tests.rs"]
-mod tests;
+pub use payload::HookPayload;
+pub use runner::{run_hooks_for_event, test_hook};

@@ -290,10 +290,6 @@ pub fn run(command: Command) -> Result<()> {
             DaemonCommand::Start { foreground } => commands::daemon::start(foreground),
             DaemonCommand::Logs { follow } => commands::daemon::logs(follow),
         },
-        Command::Hook(cmd) => match cmd {
-            HookCommand::List { output } => commands::hook::list(output),
-            HookCommand::Test { name, id } => commands::hook::test(&name, &id),
-        },
         Command::Hooks(cmd) => match cmd {
             HooksCommand::Install {
                 scope,
@@ -302,6 +298,10 @@ pub fn run(command: Command) -> Result<()> {
             } => commands::hooks::install(scope, interactive, yes),
             HooksCommand::Uninstall { scope } => commands::hooks::uninstall(scope),
             HooksCommand::Status => commands::hooks::status(),
+        },
+        Command::Hook(cmd) => match cmd {
+            HookCommand::List { output } => commands::hook::list(output),
+            HookCommand::Test { name, id, event } => commands::hook::test(name, id, event),
         },
         Command::Config(cmd) => commands::config::run(cmd),
         Command::Schema(cmd) => commands::schema::run(cmd),
