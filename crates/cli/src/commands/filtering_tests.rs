@@ -6,6 +6,114 @@
 use super::*;
 use crate::models::Status;
 
+// =============================================================================
+// LabelMatcher tests
+// =============================================================================
+
+#[test]
+fn test_label_matcher_parse_positive() {
+    let matcher = LabelMatcher::parse("bug").unwrap();
+    assert_eq!(matcher, LabelMatcher::Has("bug".to_string()));
+}
+
+#[test]
+fn test_label_matcher_parse_negative() {
+    let matcher = LabelMatcher::parse("!wontfix").unwrap();
+    assert_eq!(matcher, LabelMatcher::NotHas("wontfix".to_string()));
+}
+
+#[test]
+fn test_label_matcher_parse_namespaced() {
+    let matcher = LabelMatcher::parse("priority:high").unwrap();
+    assert_eq!(matcher, LabelMatcher::Has("priority:high".to_string()));
+
+    let matcher = LabelMatcher::parse("!plan:needed").unwrap();
+    assert_eq!(matcher, LabelMatcher::NotHas("plan:needed".to_string()));
+}
+
+#[test]
+fn test_label_matcher_parse_empty_after_bang() {
+    let result = LabelMatcher::parse("!");
+    assert!(result.is_err());
+}
+
+#[test]
+fn test_label_matcher_matches_has() {
+    let matcher = LabelMatcher::Has("bug".to_string());
+    assert!(matcher.matches(&["bug".to_string(), "urgent".to_string()]));
+    assert!(!matcher.matches(&["feature".to_string()]));
+    assert!(!matcher.matches(&[]));
+}
+
+#[test]
+fn test_label_matcher_matches_not_has() {
+    let matcher = LabelMatcher::NotHas("wontfix".to_string());
+    assert!(matcher.matches(&["bug".to_string()]));
+    assert!(matcher.matches(&[]));
+    assert!(!matcher.matches(&["wontfix".to_string()]));
+    assert!(!matcher.matches(&["bug".to_string(), "wontfix".to_string()]));
+}
+
+// =============================================================================
+// matches_label_groups with LabelMatcher tests
+// =============================================================================
+
+#[test]
+fn test_matches_label_groups_with_negation() {
+    // -l '!wontfix' excludes issues with wontfix
+    let groups = Some(vec![vec![LabelMatcher::NotHas("wontfix".to_string())]]);
+    assert!(matches_label_groups(&groups, &["bug".to_string()]));
+    assert!(matches_label_groups(&groups, &[]));
+    assert!(!matches_label_groups(&groups, &["wontfix".to_string()]));
+}
+
+#[test]
+fn test_matches_label_groups_mixed_in_group() {
+    // -l 'bug,!wontfix' means "(has bug) OR (lacks wontfix)"
+    let groups = Some(vec![vec![
+        LabelMatcher::Has("bug".to_string()),
+        LabelMatcher::NotHas("wontfix".to_string()),
+    ]]);
+    // Has bug → matches
+    assert!(matches_label_groups(
+        &groups,
+        &["bug".to_string(), "wontfix".to_string()]
+    ));
+    // Lacks wontfix → matches
+    assert!(matches_label_groups(&groups, &["feature".to_string()]));
+    // Has neither bug nor wontfix → matches (lacks wontfix)
+    assert!(matches_label_groups(&groups, &[]));
+    // Has wontfix but not bug → doesn't match
+    // Wait, this SHOULD match because "lacks wontfix" is false, but "has bug" is also false
+    // Actually no: lacks wontfix is FALSE here, has bug is FALSE, so neither matcher matches → no match
+    assert!(!matches_label_groups(&groups, &["wontfix".to_string()]));
+}
+
+#[test]
+fn test_matches_label_groups_multiple_negations_and() {
+    // -l '!a' -l '!b' means "(lacks a) AND (lacks b)"
+    let groups = Some(vec![
+        vec![LabelMatcher::NotHas("a".to_string())],
+        vec![LabelMatcher::NotHas("b".to_string())],
+    ]);
+    // Has neither a nor b → matches both
+    assert!(matches_label_groups(&groups, &["c".to_string()]));
+    assert!(matches_label_groups(&groups, &[]));
+    // Has a → fails first group
+    assert!(!matches_label_groups(&groups, &["a".to_string()]));
+    // Has b → fails second group
+    assert!(!matches_label_groups(&groups, &["b".to_string()]));
+    // Has both → fails both groups
+    assert!(!matches_label_groups(
+        &groups,
+        &["a".to_string(), "b".to_string()]
+    ));
+}
+
+// =============================================================================
+// Original tests (updated to use LabelMatcher)
+// =============================================================================
+
 #[test]
 fn test_matches_prefix_none() {
     assert!(matches_prefix(&None, "oj-123"));
@@ -139,94 +247,4 @@ fn test_matches_label_groups_and_logic() {
         &["a".to_string(), "b".to_string()]
     )); // missing c
     assert!(!matches_label_groups(&groups, &["c".to_string()])); // missing a or b
-}
-
-// LabelMatcher tests
-
-#[test]
-fn test_label_matcher_parse_positive() {
-    let matcher = LabelMatcher::parse("bug").unwrap();
-    assert_eq!(matcher, LabelMatcher::Has("bug".to_string()));
-}
-
-#[test]
-fn test_label_matcher_parse_negative() {
-    let matcher = LabelMatcher::parse("!wontfix").unwrap();
-    assert_eq!(matcher, LabelMatcher::NotHas("wontfix".to_string()));
-}
-
-#[test]
-fn test_label_matcher_parse_namespaced() {
-    let positive = LabelMatcher::parse("plan:needed").unwrap();
-    assert_eq!(positive, LabelMatcher::Has("plan:needed".to_string()));
-
-    let negative = LabelMatcher::parse("!plan:needed").unwrap();
-    assert_eq!(negative, LabelMatcher::NotHas("plan:needed".to_string()));
-}
-
-#[test]
-fn test_label_matcher_parse_empty_after_bang_fails() {
-    let result = LabelMatcher::parse("!");
-    assert!(result.is_err());
-}
-
-#[test]
-fn test_label_matcher_matches_has() {
-    let matcher = LabelMatcher::Has("bug".to_string());
-    assert!(matcher.matches(&["bug".to_string(), "urgent".to_string()]));
-    assert!(!matcher.matches(&["feature".to_string()]));
-    assert!(!matcher.matches(&[]));
-}
-
-#[test]
-fn test_label_matcher_matches_not_has() {
-    let matcher = LabelMatcher::NotHas("wontfix".to_string());
-    assert!(matcher.matches(&["bug".to_string(), "urgent".to_string()]));
-    assert!(matcher.matches(&[]));
-    assert!(!matcher.matches(&["wontfix".to_string()]));
-    assert!(!matcher.matches(&["bug".to_string(), "wontfix".to_string()]));
-}
-
-#[test]
-fn test_matches_label_groups_with_negation() {
-    // -l '!wontfix' → excludes issues with wontfix
-    let groups = Some(vec![vec![LabelMatcher::NotHas("wontfix".to_string())]]);
-    assert!(matches_label_groups(&groups, &["bug".to_string()]));
-    assert!(matches_label_groups(&groups, &[]));
-    assert!(!matches_label_groups(&groups, &["wontfix".to_string()]));
-}
-
-#[test]
-fn test_matches_label_groups_mixed_positive_negative_or() {
-    // -l 'bug,!wontfix' → "(has bug) OR (lacks wontfix)"
-    let groups = Some(vec![vec![
-        LabelMatcher::Has("bug".to_string()),
-        LabelMatcher::NotHas("wontfix".to_string()),
-    ]]);
-    // has bug → matches
-    assert!(matches_label_groups(
-        &groups,
-        &["bug".to_string(), "wontfix".to_string()]
-    ));
-    // lacks wontfix → matches
-    assert!(matches_label_groups(&groups, &["feature".to_string()]));
-    // has wontfix but no bug → doesn't match
-    assert!(!matches_label_groups(&groups, &["wontfix".to_string()]));
-}
-
-#[test]
-fn test_matches_label_groups_multiple_negations_and() {
-    // -l '!a' -l '!b' → "(lacks a) AND (lacks b)"
-    let groups = Some(vec![
-        vec![LabelMatcher::NotHas("a".to_string())],
-        vec![LabelMatcher::NotHas("b".to_string())],
-    ]);
-    assert!(matches_label_groups(&groups, &["c".to_string()]));
-    assert!(matches_label_groups(&groups, &[]));
-    assert!(!matches_label_groups(&groups, &["a".to_string()]));
-    assert!(!matches_label_groups(&groups, &["b".to_string()]));
-    assert!(!matches_label_groups(
-        &groups,
-        &["a".to_string(), "b".to_string()]
-    ));
 }

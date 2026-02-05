@@ -150,16 +150,16 @@ wok list --status todo,in_progress              # todo OR in_progress
 wok list --label mod:wkrs,mod:wkgo              # wkrs OR wkgo module
 wok list --label mod:wkrs,mod:wkgo --label urgent   # (wkrs OR wkgo) AND urgent
 wok list --type task,bug --status todo          # (task OR bug) AND todo
+wok list --label '!wontfix'                     # exclude issues with wontfix
+wok list --label '!plan:needed'                 # exclude issues needing a plan
+wok list --label '!a' --label '!b'              # exclude issues with a AND b
+wok list --label 'bug,!wontfix'                 # (has bug) OR (lacks wontfix)
 wok list -a alice                               # issues assigned to alice
 wok list --unassigned                           # unassigned issues only
 wok list -q "age < 3d"                          # issues created in last 3 days
 wok list -q "updated > 1w"                      # issues not updated in 7+ days
 wok list --limit 10                             # first 10 results only
 wok list --all                                  # all issues (any status)
-wok list --label '!wontfix'                     # exclude issues with wontfix label
-wok list --label '!plan:needed'                 # exclude issues needing planning
-wok list --label 'bug,!wontfix'                 # (has bug) OR (lacks wontfix)
-wok list --label '!a' --label '!b'              # (lacks a) AND (lacks b)
 
 # Filter Expressions (-q/--filter):
 #   Syntax: FIELD [OPERATOR VALUE]

@@ -669,8 +669,6 @@ load '../../helpers/common'
     assert_success
     assert_output --partial "NegLabel Has bug"
     assert_output --partial "NegLabel No labels"
-    # Has wontfix but no bug, but matches '!wontfix' is false, 'bug' is false → no match... wait
-    # Actually: has wontfix has the label 'wontfix', so '!wontfix' is false, 'bug' is false → no match
     refute_output --partial "NegLabel Has wontfix"
 
     # Multiple flags: (lacks wontfix) AND (lacks bug)
