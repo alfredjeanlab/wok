@@ -247,6 +247,15 @@ fn start_single(db: &Database, id: &str) -> Result<()> {
         return Ok(()); // idempotent
     }
 
+    // Cannot start from terminal states (done, closed)
+    if issue.status == Status::Done || issue.status == Status::Closed {
+        return Err(Error::InvalidTransition {
+            from: issue.status.to_string(),
+            to: "in_progress".to_string(),
+            valid_targets: "todo".to_string(),
+        });
+    }
+
     db.update_issue_status(&resolved_id, Status::InProgress)?;
 
     apply_mutation(
@@ -409,8 +418,13 @@ fn reopen_single(db: &Database, id: &str, reason: Option<&str>) -> Result<()> {
     let resolved_id = db.resolve_id(id)?;
     let issue = db.get_issue(&resolved_id)?;
 
+    // Cannot reopen from todo - it's already open
     if issue.status == Status::Todo {
-        return Ok(()); // idempotent
+        return Err(Error::InvalidTransition {
+            from: "todo".to_string(),
+            to: "todo".to_string(),
+            valid_targets: "in_progress, done, closed".to_string(),
+        });
     }
 
     // Reason is required when reopening from done/closed, but not from in_progress
