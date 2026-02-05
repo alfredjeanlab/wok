@@ -10,5 +10,6 @@ mod help_examples;
 mod import;
 mod init;
 mod label;
+mod link;
 mod new;
 mod show;
