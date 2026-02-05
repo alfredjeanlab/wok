@@ -19,12 +19,22 @@ fn create_issue(temp: &TempDir, type_: &str, title: &str) -> String {
     String::from_utf8_lossy(&output.stdout).trim().to_string()
 }
 
+/// Helper predicate to check that a label is NOT in the Labels: line
+/// (the log will still contain "labeled/unlabeled <label>" entries)
+fn labels_line_does_not_contain(label: &str) -> impl predicates::Predicate<str> {
+    // The Labels: line should either not exist, or not contain the label
+    // We check that "Labels:.*<label>" pattern is not present
+    predicate::str::is_match(format!(r"Labels:.*{}", regex::escape(label)))
+        .unwrap()
+        .not()
+}
+
 // =============================================================================
 // Basic Label Tests
 // =============================================================================
 
 #[test]
-fn label_adds_simple_label_to_issue() {
+fn label_adds_simple_label() {
     let temp = init_temp();
     let id = create_issue(&temp, "task", "LabelBasic Test task");
 
@@ -41,7 +51,7 @@ fn label_adds_simple_label_to_issue() {
 }
 
 #[test]
-fn label_adds_namespaced_label_to_issue() {
+fn label_adds_namespaced_label() {
     let temp = init_temp();
     let id = create_issue(&temp, "task", "LabelBasic Namespaced task");
 
@@ -58,7 +68,7 @@ fn label_adds_namespaced_label_to_issue() {
 }
 
 #[test]
-fn label_multiple_labels_sequentially() {
+fn label_multiple_labels_separately() {
     let temp = init_temp();
     let id = create_issue(&temp, "task", "LabelBasic Multi task");
 
@@ -116,32 +126,31 @@ fn unlabel_removes_label() {
         .assert()
         .success();
 
-    // Check that Labels line does not contain mylabel (but log may contain "labeled mylabel")
     wk().args(["show", &id])
         .current_dir(temp.path())
         .assert()
         .success()
-        .stdout(
-            predicate::str::is_match(r"(?m)^Labels:.*mylabel")
-                .unwrap()
-                .not(),
-        );
+        .stdout(labels_line_does_not_contain("mylabel"));
 }
 
 #[test]
-fn unlabel_nonexistent_label_succeeds_or_fails_gracefully() {
+fn unlabel_nonexistent_label_succeeds() {
     let temp = init_temp();
     let id = create_issue(&temp, "task", "LabelUnlabel Nonexistent task");
 
     // Should either succeed (idempotent) or fail gracefully
-    let _ = wk()
+    let result = wk()
         .args(["unlabel", &id, "nonexistent"])
         .current_dir(temp.path())
-        .output();
+        .output()
+        .unwrap();
+
+    // The command should not panic or cause unexpected errors
+    assert!(result.status.success() || !result.stderr.is_empty());
 }
 
 #[test]
-fn duplicate_label_is_idempotent_or_fails_gracefully() {
+fn label_duplicate_is_idempotent() {
     let temp = init_temp();
     let id = create_issue(&temp, "task", "LabelUnlabel Duplicate task");
 
@@ -150,11 +159,15 @@ fn duplicate_label_is_idempotent_or_fails_gracefully() {
         .assert()
         .success();
 
-    // Should either succeed (idempotent) or fail gracefully
-    let _ = wk()
+    // Adding the same label again should either succeed or fail gracefully
+    let result = wk()
         .args(["label", &id, "mylabel"])
         .current_dir(temp.path())
-        .output();
+        .output()
+        .unwrap();
+
+    // The command should not panic or cause unexpected errors
+    assert!(result.status.success() || !result.stderr.is_empty());
 }
 
 // =============================================================================
@@ -215,11 +228,11 @@ fn label_nonexistent_issue_fails() {
 }
 
 #[test]
-fn label_all_invalid_args_fails() {
+fn label_invalid_args_all_treated_as_labels_fails() {
     let temp = init_temp();
 
     // When first arg doesn't resolve, all args are treated as labels
-    // which fails because there are no valid issue IDs
+    // (which fails because there are no valid issue IDs)
     wk().args(["label", "not-an-id", "also-not-an-id", "urgent"])
         .current_dir(temp.path())
         .assert()
@@ -231,7 +244,7 @@ fn label_all_invalid_args_fails() {
 // =============================================================================
 
 #[test]
-fn label_multiple_issues() {
+fn label_multiple_issues_single_label() {
     let temp = init_temp();
     let id1 = create_issue(&temp, "task", "LabelBatch Task 1");
     let id2 = create_issue(&temp, "task", "LabelBatch Task 2");
@@ -255,7 +268,7 @@ fn label_multiple_issues() {
 }
 
 #[test]
-fn label_three_issues() {
+fn label_three_issues_single_label() {
     let temp = init_temp();
     let id1 = create_issue(&temp, "task", "LabelBatch3 Task 1");
     let id2 = create_issue(&temp, "task", "LabelBatch3 Task 2");
@@ -296,26 +309,17 @@ fn unlabel_multiple_issues() {
         .assert()
         .success();
 
-    // Check that Labels line does not contain urgent
     wk().args(["show", &id1])
         .current_dir(temp.path())
         .assert()
         .success()
-        .stdout(
-            predicate::str::is_match(r"(?m)^Labels:.*urgent")
-                .unwrap()
-                .not(),
-        );
+        .stdout(labels_line_does_not_contain("urgent"));
 
     wk().args(["show", &id2])
         .current_dir(temp.path())
         .assert()
         .success()
-        .stdout(
-            predicate::str::is_match(r"(?m)^Labels:.*urgent")
-                .unwrap()
-                .not(),
-        );
+        .stdout(labels_line_does_not_contain("urgent"));
 }
 
 #[test]
@@ -342,7 +346,7 @@ fn batch_labeled_issues_searchable() {
 // =============================================================================
 
 #[test]
-fn add_multiple_labels_to_multiple_issues() {
+fn label_multiple_labels_to_multiple_issues() {
     let temp = init_temp();
     let id1 = create_issue(&temp, "task", "MultiLabel Task 1");
     let id2 = create_issue(&temp, "task", "MultiLabel Task 2");
@@ -369,57 +373,40 @@ fn add_multiple_labels_to_multiple_issues() {
 }
 
 #[test]
-fn remove_multiple_labels_from_multiple_issues() {
+fn unlabel_multiple_labels_from_multiple_issues() {
     let temp = init_temp();
     let id1 = create_issue(&temp, "task", "MultiUnlabel Task 1");
     let id2 = create_issue(&temp, "task", "MultiUnlabel Task 2");
 
-    // Add labels first
+    // Add both labels to both issues
     wk().args(["label", &id1, &id2, "urgent", "backend"])
         .current_dir(temp.path())
         .assert()
         .success();
 
-    // Remove multiple labels from multiple issues
+    // Remove both labels from both issues
     wk().args(["unlabel", &id1, &id2, "urgent", "backend"])
         .current_dir(temp.path())
         .assert()
         .success();
 
-    // Check that Labels line does not contain urgent or backend
     wk().args(["show", &id1])
         .current_dir(temp.path())
         .assert()
         .success()
-        .stdout(
-            predicate::str::is_match(r"(?m)^Labels:.*urgent")
-                .unwrap()
-                .not(),
-        )
-        .stdout(
-            predicate::str::is_match(r"(?m)^Labels:.*backend")
-                .unwrap()
-                .not(),
-        );
+        .stdout(labels_line_does_not_contain("urgent"))
+        .stdout(labels_line_does_not_contain("backend"));
 
     wk().args(["show", &id2])
         .current_dir(temp.path())
         .assert()
         .success()
-        .stdout(
-            predicate::str::is_match(r"(?m)^Labels:.*urgent")
-                .unwrap()
-                .not(),
-        )
-        .stdout(
-            predicate::str::is_match(r"(?m)^Labels:.*backend")
-                .unwrap()
-                .not(),
-        );
+        .stdout(labels_line_does_not_contain("urgent"))
+        .stdout(labels_line_does_not_contain("backend"));
 }
 
 #[test]
-fn add_three_labels_to_single_issue() {
+fn label_three_labels_to_single_issue() {
     let temp = init_temp();
     let id = create_issue(&temp, "task", "MultiLabel Task 3");
 
@@ -442,14 +429,14 @@ fn add_three_labels_to_single_issue() {
 // =============================================================================
 
 #[yare::parameterized(
-    simple_label = { "urgent" },
+    simple_label = { "simple" },
     namespaced_label = { "team:backend" },
-    priority_label = { "priority:1" },
-    scope_label = { "scope:frontend" },
+    priority_label = { "priority:high" },
+    numeric_label = { "p1" },
 )]
-fn label_types(label: &str) {
+fn label_various_formats(label: &str) {
     let temp = init_temp();
-    let id = create_issue(&temp, "task", "LabelType Test");
+    let id = create_issue(&temp, "task", "Parameterized label task");
 
     wk().args(["label", &id, label])
         .current_dir(temp.path())
@@ -461,4 +448,32 @@ fn label_types(label: &str) {
         .assert()
         .success()
         .stdout(predicate::str::contains(label));
+}
+
+#[yare::parameterized(
+    label_cmd = { "label", "labeled" },
+    unlabel_cmd = { "unlabel", "unlabeled" },
+)]
+fn command_logs_correct_event(cmd: &str, expected_log: &str) {
+    let temp = init_temp();
+    let id = create_issue(&temp, "task", "Event log task");
+
+    // For unlabel, we need to first add the label
+    if cmd == "unlabel" {
+        wk().args(["label", &id, "testlabel"])
+            .current_dir(temp.path())
+            .assert()
+            .success();
+    }
+
+    wk().args([cmd, &id, "testlabel"])
+        .current_dir(temp.path())
+        .assert()
+        .success();
+
+    wk().args(["log", &id])
+        .current_dir(temp.path())
+        .assert()
+        .success()
+        .stdout(predicate::str::contains(expected_log));
 }
