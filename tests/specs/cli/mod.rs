@@ -2,6 +2,7 @@
 // Copyright (c) 2026 Alfred Jean LLC
 
 mod common;
+mod consistency;
 mod edge_cases;
 mod edit;
 mod export;
