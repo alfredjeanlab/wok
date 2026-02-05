@@ -14,5 +14,6 @@ mod lifecycle;
 mod new;
 mod note;
 mod prefix_matching;
+mod prime;
 mod show;
 mod sync;
