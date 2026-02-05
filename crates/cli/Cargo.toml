@@ -53,6 +53,10 @@ serde_json = "1"
 name = "spec_list"
 path = "../../tests/specs/cli/list.rs"
 
+[[test]]
+name = "spec_prefix_tracking"
+path = "../../tests/specs/cli/prefix_tracking.rs"
+
 [[bench]]
 name = "filter"
 harness = false
