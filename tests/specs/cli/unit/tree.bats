@@ -72,3 +72,41 @@ load '../../helpers/common'
     assert_output --partial "Task 2"
     assert_output --partial "Task 3"
 }
+
+@test "tree accepts multiple issue IDs" {
+    f1=$(create_issue feature "Feature 1")
+    f2=$(create_issue feature "Feature 2")
+    run "$WK_BIN" tree "$f1" "$f2"
+    assert_success
+    assert_output --partial "Feature 1"
+    assert_output --partial "Feature 2"
+}
+
+@test "tree separates multiple issues with ---" {
+    f1=$(create_issue feature "Feature 1")
+    f2=$(create_issue feature "Feature 2")
+    run "$WK_BIN" tree "$f1" "$f2"
+    assert_success
+    assert_output --partial "---"
+}
+
+@test "tree with multiple IDs fails fast on invalid ID" {
+    f1=$(create_issue feature "Valid feature")
+    run "$WK_BIN" tree "$f1" "nonexistent-id"
+    assert_failure
+}
+
+@test "tree renders each issue with its own children" {
+    f1=$(create_issue feature "Feature 1")
+    f2=$(create_issue feature "Feature 2")
+    t1=$(create_issue task "Task for F1")
+    t2=$(create_issue task "Task for F2")
+    "$WK_BIN" dep "$f1" tracks "$t1"
+    "$WK_BIN" dep "$f2" tracks "$t2"
+    run "$WK_BIN" tree "$f1" "$f2"
+    assert_success
+    assert_output --partial "Feature 1"
+    assert_output --partial "Task for F1"
+    assert_output --partial "Feature 2"
+    assert_output --partial "Task for F2"
+}

@@ -76,7 +76,16 @@ fn test_show_command_multiple_ids_with_json() {
 fn test_tree_command() {
     let cli = parse(&["wok", "tree", "prj-1234"]).unwrap();
     match cli.command {
-        Command::Tree { id } => assert_eq!(id, "prj-1234"),
+        Command::Tree { ids } => assert_eq!(ids, vec!["prj-1234"]),
+        _ => panic!("Expected Tree command"),
+    }
+}
+
+#[test]
+fn test_tree_command_multiple_ids() {
+    let cli = parse(&["wok", "tree", "prj-1234", "prj-5678"]).unwrap();
+    match cli.command {
+        Command::Tree { ids } => assert_eq!(ids, vec!["prj-1234", "prj-5678"]),
         _ => panic!("Expected Tree command"),
     }
 }

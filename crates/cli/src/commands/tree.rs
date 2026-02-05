@@ -7,18 +7,34 @@ use crate::error::Result;
 
 use super::open_db;
 
-pub fn run(id: &str) -> Result<()> {
+pub fn run(ids: &[String]) -> Result<()> {
     let (db, _, _) = open_db()?;
-    run_impl(&db, id)
+    run_impl(&db, ids)
 }
 
 /// Internal implementation that accepts db for testing.
-pub(crate) fn run_impl(db: &Database, id: &str) -> Result<()> {
-    let resolved_id = db.resolve_id(id)?;
-    let issue = db.get_issue(&resolved_id)?;
+pub(crate) fn run_impl(db: &Database, ids: &[String]) -> Result<()> {
+    // Resolve all IDs first (fail fast if any is invalid)
+    let resolved_ids: Vec<String> = ids
+        .iter()
+        .map(|id| db.resolve_id(id))
+        .collect::<Result<Vec<_>>>()?;
+
+    for (i, resolved_id) in resolved_ids.iter().enumerate() {
+        if i > 0 {
+            println!("---");
+        }
+        output_single_tree(db, resolved_id)?;
+    }
+
+    Ok(())
+}
+
+fn output_single_tree(db: &Database, resolved_id: &str) -> Result<()> {
+    let issue = db.get_issue(resolved_id)?;
 
     // Get blockers for root issue
-    let blockers = db.get_transitive_blockers(&resolved_id)?;
+    let blockers = db.get_transitive_blockers(resolved_id)?;
     let blocked_by = if blockers.is_empty() {
         None
     } else {
@@ -29,8 +45,8 @@ pub(crate) fn run_impl(db: &Database, id: &str) -> Result<()> {
     println!("{}", format_tree_root(&issue, blocked_by));
 
     // Get tracked and blocking issues
-    let tracked = db.get_tracked(&resolved_id)?;
-    let blocking = db.get_blocking(&resolved_id)?;
+    let tracked = db.get_tracked(resolved_id)?;
+    let blocking = db.get_blocking(resolved_id)?;
 
     // Determine if we need relation labels (only if both types exist)
     let show_labels = !tracked.is_empty() && !blocking.is_empty();

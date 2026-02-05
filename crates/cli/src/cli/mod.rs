@@ -386,8 +386,9 @@ Filter Expressions (-q/--filter):
     /// Show dependency tree rooted at an issue
     #[command(arg_required_else_help = true)]
     Tree {
-        /// Issue ID
-        id: String,
+        /// Issue ID(s)
+        #[arg(num_args = 1..)]
+        ids: Vec<String>,
     },
 
     /// Add an external link to an issue

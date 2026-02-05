@@ -371,9 +371,9 @@ fn test_command_ready_construction() {
 #[test]
 fn test_command_tree_construction() {
     let cmd = Command::Tree {
-        id: "feature-1".to_string(),
+        ids: vec!["feature-1".to_string()],
     };
-    assert!(matches!(cmd, Command::Tree { id } if id == "feature-1"));
+    assert!(matches!(cmd, Command::Tree { ids } if ids == vec!["feature-1"]));
 }
 
 #[test]
