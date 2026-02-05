@@ -9,7 +9,7 @@ use crate::error::{Error, Result};
 
 /// A label matcher that can be positive (Has) or negative (NotHas).
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub(crate) enum LabelMatcher {
+pub enum LabelMatcher {
     /// Issue must have this label
     Has(String),
     /// Issue must NOT have this label
@@ -19,7 +19,7 @@ pub(crate) enum LabelMatcher {
 impl LabelMatcher {
     /// Parse a label matcher from a string.
     /// Strings starting with `!` are negated (NotHas), otherwise positive (Has).
-    pub(crate) fn parse(s: &str) -> Result<Self> {
+    pub fn parse(s: &str) -> Result<Self> {
         if let Some(label) = s.strip_prefix('!') {
             if label.is_empty() {
                 return Err(Error::FieldEmpty {
@@ -33,7 +33,7 @@ impl LabelMatcher {
     }
 
     /// Check if this matcher matches the given issue labels.
-    pub(crate) fn matches(&self, issue_labels: &[String]) -> bool {
+    pub fn matches(&self, issue_labels: &[String]) -> bool {
         match self {
             LabelMatcher::Has(label) => issue_labels.contains(label),
             LabelMatcher::NotHas(label) => !issue_labels.contains(label),
@@ -44,10 +44,7 @@ impl LabelMatcher {
 /// Parse filter values: comma-separated values within each Vec entry are OR'd,
 /// multiple Vec entries are AND'd together.
 /// Returns None if no filters provided, Some(groups) otherwise.
-pub(crate) fn parse_filter_groups<T, F>(
-    values: &[String],
-    parse_fn: F,
-) -> Result<Option<Vec<Vec<T>>>>
+pub fn parse_filter_groups<T, F>(values: &[String], parse_fn: F) -> Result<Option<Vec<Vec<T>>>>
 where
     F: Fn(&str) -> Result<T>,
 {
@@ -78,7 +75,7 @@ where
 
 /// Check if an issue matches the filter groups.
 /// Each group is OR'd internally, all groups must match (AND).
-pub(crate) fn matches_filter_groups<T, F>(groups: &Option<Vec<Vec<T>>>, get_value: F) -> bool
+pub fn matches_filter_groups<T, F>(groups: &Option<Vec<Vec<T>>>, get_value: F) -> bool
 where
     T: PartialEq,
     F: Fn() -> T,
@@ -95,7 +92,7 @@ where
 /// Check if an issue matches label filter groups.
 /// Each group is OR'd internally (at least one matcher in group must match),
 /// all groups must match (AND).
-pub(crate) fn matches_label_groups(
+pub fn matches_label_groups(
     groups: &Option<Vec<Vec<LabelMatcher>>>,
     issue_labels: &[String],
 ) -> bool {
@@ -109,7 +106,7 @@ pub(crate) fn matches_label_groups(
 
 /// Check if an issue ID matches the given prefix filter.
 /// The prefix is the portion of the ID before the first hyphen.
-pub(crate) fn matches_prefix(prefix: &Option<String>, issue_id: &str) -> bool {
+pub fn matches_prefix(prefix: &Option<String>, issue_id: &str) -> bool {
     match prefix {
         None => true,
         Some(p) => issue_id
