@@ -17,5 +17,6 @@ mod prefix_matching;
 mod prime;
 mod ready;
 mod schema;
+mod search;
 mod show;
 mod sync;
