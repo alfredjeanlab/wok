@@ -5,5 +5,6 @@ mod common;
 mod edit;
 mod export;
 mod init;
+mod log;
 mod new;
 mod show;
