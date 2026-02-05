@@ -55,7 +55,7 @@ fn edit_title_changes_issue_title() {
 }
 
 // =============================================================================
-// Type Change Tests (parameterized)
+// Type Edit Tests (parameterized)
 // =============================================================================
 
 #[parameterized(
@@ -64,7 +64,7 @@ fn edit_title_changes_issue_title() {
     task_to_idea = { "task", "idea", "[idea]" },
     idea_to_task = { "idea", "task", "[task]" },
 )]
-fn edit_type_changes_issue_type(from_type: &str, to_type: &str, expected_marker: &str) {
+fn edit_type_changes_issue_type(from_type: &str, to_type: &str, expected_tag: &str) {
     let temp = init_temp();
     let id = create_issue(&temp, from_type, "Test issue");
 
@@ -77,8 +77,12 @@ fn edit_type_changes_issue_type(from_type: &str, to_type: &str, expected_marker:
         .current_dir(temp.path())
         .assert()
         .success()
-        .stdout(predicate::str::contains(expected_marker));
+        .stdout(predicate::str::contains(expected_tag));
 }
+
+// =============================================================================
+// Sequential Edit Tests
+// =============================================================================
 
 #[test]
 fn edit_both_title_and_type_sequentially() {
@@ -104,7 +108,7 @@ fn edit_both_title_and_type_sequentially() {
 }
 
 // =============================================================================
-// Log Event Tests
+// Event Logging Tests
 // =============================================================================
 
 #[test]
@@ -131,24 +135,10 @@ fn edit_logs_event() {
 #[test]
 fn edit_nonexistent_issue_fails() {
     let temp = init_temp();
-
     wk().args(["edit", "test-nonexistent", "title", "New"])
         .current_dir(temp.path())
         .assert()
         .failure();
-}
-
-#[test]
-fn edit_without_options_fails_or_shows_help() {
-    let temp = init_temp();
-    let id = create_issue(&temp, "task", "Test task");
-
-    // Should either fail or show help - we just verify it doesn't crash
-    let _result = wk()
-        .args(["edit", &id])
-        .current_dir(temp.path())
-        .output()
-        .unwrap();
 }
 
 #[test]
@@ -165,12 +155,15 @@ fn edit_with_invalid_type_fails() {
 #[test]
 fn edit_requires_issue_id() {
     let temp = init_temp();
-
     wk().args(["edit", "title", "New"])
         .current_dir(temp.path())
         .assert()
         .failure();
 }
+
+// =============================================================================
+// Field Preservation Tests
+// =============================================================================
 
 #[test]
 fn edit_preserves_other_fields() {
