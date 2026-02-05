@@ -8,6 +8,6 @@ mod flags;
 mod help;
 mod help_examples;
 mod init;
-mod log;
+mod label;
 mod new;
 mod show;
