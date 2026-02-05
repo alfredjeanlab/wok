@@ -61,6 +61,10 @@ path = "../../tests/specs/cli/list.rs"
 name = "spec_completion"
 path = "../../tests/specs/cli/completion.rs"
 
+[[test]]
+name = "spec_sorting"
+path = "../../tests/specs/cli/sorting.rs"
+
 [[bench]]
 name = "filter"
 harness = false
