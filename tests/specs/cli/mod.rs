@@ -11,4 +11,5 @@ mod import;
 mod init;
 mod lifecycle;
 mod new;
+mod note;
 mod show;
