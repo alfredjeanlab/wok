@@ -596,6 +596,10 @@ Examples:
     #[command(subcommand)]
     Daemon(DaemonCommand),
 
+    /// Manage issue hooks
+    #[command(subcommand)]
+    Hook(HookCommand),
+
     /// Manage Claude Code hooks integration
     #[command(subcommand)]
     Hooks(HooksCommand),
@@ -689,7 +693,7 @@ pub enum SchemaCommand {
     Search,
 }
 
-/// Hooks management commands.
+/// Hooks management commands (Claude Code hooks).
 #[derive(Subcommand)]
 pub enum HooksCommand {
     /// Install Claude Code hooks
@@ -720,6 +724,36 @@ Examples:
 
     /// Show hooks installation status
     Status,
+}
+
+/// Issue hook management commands.
+#[derive(Subcommand)]
+pub enum HookCommand {
+    /// List configured issue hooks
+    #[command(after_help = colors::examples("\
+Examples:
+  wok hook list                  List all configured hooks
+  wok hook list -o json          Output as JSON"))]
+    List {
+        /// Output format
+        #[arg(long = "output", short = 'o', value_enum, default_value = "text")]
+        output: OutputFormat,
+    },
+
+    /// Test a hook by simulating an event
+    #[command(
+        arg_required_else_help = true,
+        after_help = colors::examples("\
+Examples:
+  wok hook test urgent-bugs proj-1234     Test 'urgent-bugs' hook with issue proj-1234
+  wok hook test audit-hook abc            Test 'audit-hook' with issue abc")
+    )]
+    Test {
+        /// Hook name to test
+        name: String,
+        /// Issue ID to use
+        id: String,
+    },
 }
 
 #[cfg(test)]
