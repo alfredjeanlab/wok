@@ -7,6 +7,7 @@ mod export;
 mod flags;
 mod help;
 mod init;
+mod integration;
 mod log;
 mod new;
 mod show;
