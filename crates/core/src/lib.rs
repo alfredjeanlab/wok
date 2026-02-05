@@ -14,12 +14,14 @@ pub mod hooks;
 pub mod identity;
 pub mod issue;
 pub mod jsonl;
+pub mod link;
 pub mod merge;
 pub mod op;
 
 pub use db::Database;
 pub use error::{Error, Result};
 pub use hlc::{ClockSource, Hlc, HlcClock, SystemClock};
-pub use issue::{Event, Issue, IssueType, Status};
+pub use issue::{Action, Dependency, Event, Issue, IssueType, Note, Relation, Status};
+pub use link::{Link, LinkRel, LinkType, PrefixInfo};
 pub use merge::Merge;
 pub use op::{Op, OpId, OpPayload};

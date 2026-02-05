@@ -21,12 +21,16 @@ CREATE TABLE IF NOT EXISTS issues (
     id TEXT PRIMARY KEY,
     type TEXT NOT NULL,
     title TEXT NOT NULL,
+    description TEXT,
     status TEXT NOT NULL DEFAULT 'todo',
+    assignee TEXT,
     created_at TEXT NOT NULL,
     updated_at TEXT NOT NULL,
     last_status_hlc TEXT,
     last_title_hlc TEXT,
-    last_type_hlc TEXT
+    last_type_hlc TEXT,
+    last_description_hlc TEXT,
+    last_assignee_hlc TEXT
 );
 
 -- Dependencies with relationship types
@@ -71,6 +75,25 @@ CREATE TABLE IF NOT EXISTS events (
     FOREIGN KEY (issue_id) REFERENCES issues(id)
 );
 
+-- External links to issue trackers
+CREATE TABLE IF NOT EXISTS links (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    issue_id TEXT NOT NULL,
+    link_type TEXT,              -- github|jira|gitlab|confluence|NULL
+    url TEXT,                    -- full URL (may be NULL for shorthand)
+    external_id TEXT,            -- external issue ID (e.g., "PE-5555")
+    rel TEXT,                    -- import|blocks|tracks|tracked-by|NULL
+    created_at TEXT NOT NULL,
+    FOREIGN KEY (issue_id) REFERENCES issues(id)
+);
+
+-- Prefix registry (auto-populated)
+CREATE TABLE IF NOT EXISTS prefixes (
+    prefix TEXT PRIMARY KEY,
+    created_at TEXT NOT NULL,
+    issue_count INTEGER NOT NULL DEFAULT 0
+);
+
 -- Indexes
 CREATE INDEX IF NOT EXISTS idx_issues_status ON issues(status);
 CREATE INDEX IF NOT EXISTS idx_issues_type ON issues(type);
@@ -78,6 +101,8 @@ CREATE INDEX IF NOT EXISTS idx_deps_to ON deps(to_id);
 CREATE INDEX IF NOT EXISTS idx_deps_rel ON deps(rel);
 CREATE INDEX IF NOT EXISTS idx_labels_label ON labels(label);
 CREATE INDEX IF NOT EXISTS idx_events_issue ON events(issue_id);
+CREATE INDEX IF NOT EXISTS idx_links_issue ON links(issue_id);
+CREATE INDEX IF NOT EXISTS idx_prefixes_count ON prefixes(issue_count DESC);
 "#;
 
 /// Parse a string value from the database, returning a rusqlite error on parse failure.
@@ -176,19 +201,24 @@ impl Database {
     /// Create a new issue.
     pub fn create_issue(&self, issue: &Issue) -> Result<()> {
         self.conn.execute(
-            "INSERT INTO issues (id, type, title, status, created_at, updated_at,
-             last_status_hlc, last_title_hlc, last_type_hlc)
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)",
+            "INSERT INTO issues (id, type, title, description, status, assignee,
+             created_at, updated_at, last_status_hlc, last_title_hlc, last_type_hlc,
+             last_description_hlc, last_assignee_hlc)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13)",
             params![
                 issue.id,
                 issue.issue_type.as_str(),
                 issue.title,
+                issue.description,
                 issue.status.as_str(),
+                issue.assignee,
                 issue.created_at.to_rfc3339(),
                 issue.updated_at.to_rfc3339(),
                 issue.last_status_hlc.map(|h| h.to_string()),
                 issue.last_title_hlc.map(|h| h.to_string()),
                 issue.last_type_hlc.map(|h| h.to_string()),
+                issue.last_description_hlc.map(|h| h.to_string()),
+                issue.last_assignee_hlc.map(|h| h.to_string()),
             ],
         )?;
         Ok(())
@@ -199,29 +229,36 @@ impl Database {
         let issue = self
             .conn
             .query_row(
-                "SELECT id, type, title, status, created_at, updated_at,
-                        last_status_hlc, last_title_hlc, last_type_hlc
+                "SELECT id, type, title, description, status, assignee,
+                        created_at, updated_at, last_status_hlc, last_title_hlc,
+                        last_type_hlc, last_description_hlc, last_assignee_hlc
                  FROM issues WHERE id = ?1",
                 params![id],
                 |row| {
                     let type_str: String = row.get(1)?;
-                    let status_str: String = row.get(3)?;
-                    let created_str: String = row.get(4)?;
-                    let updated_str: String = row.get(5)?;
-                    let status_hlc: Option<String> = row.get(6)?;
-                    let title_hlc: Option<String> = row.get(7)?;
-                    let type_hlc: Option<String> = row.get(8)?;
+                    let status_str: String = row.get(4)?;
+                    let created_str: String = row.get(6)?;
+                    let updated_str: String = row.get(7)?;
+                    let status_hlc: Option<String> = row.get(8)?;
+                    let title_hlc: Option<String> = row.get(9)?;
+                    let type_hlc: Option<String> = row.get(10)?;
+                    let desc_hlc: Option<String> = row.get(11)?;
+                    let assignee_hlc: Option<String> = row.get(12)?;
 
                     Ok(Issue {
                         id: row.get(0)?,
                         issue_type: parse_db(&type_str, "type")?,
                         title: row.get(2)?,
+                        description: row.get(3)?,
                         status: parse_db(&status_str, "status")?,
+                        assignee: row.get(5)?,
                         created_at: parse_timestamp(&created_str, "created_at")?,
                         updated_at: parse_timestamp(&updated_str, "updated_at")?,
                         last_status_hlc: parse_hlc_opt(status_hlc)?,
                         last_title_hlc: parse_hlc_opt(title_hlc)?,
                         last_type_hlc: parse_hlc_opt(type_hlc)?,
+                        last_description_hlc: parse_hlc_opt(desc_hlc)?,
+                        last_assignee_hlc: parse_hlc_opt(assignee_hlc)?,
                     })
                 },
             )
@@ -314,8 +351,9 @@ impl Database {
         label: Option<&str>,
     ) -> Result<Vec<Issue>> {
         let mut sql = String::from(
-            "SELECT DISTINCT i.id, i.type, i.title, i.status, i.created_at, i.updated_at,
-             i.last_status_hlc, i.last_title_hlc, i.last_type_hlc
+            "SELECT DISTINCT i.id, i.type, i.title, i.description, i.status, i.assignee,
+             i.created_at, i.updated_at, i.last_status_hlc, i.last_title_hlc,
+             i.last_type_hlc, i.last_description_hlc, i.last_assignee_hlc
              FROM issues i",
         );
 
@@ -358,23 +396,29 @@ impl Database {
         let issues = stmt
             .query_map(params_refs.as_slice(), |row| {
                 let type_str: String = row.get(1)?;
-                let status_str: String = row.get(3)?;
-                let created_str: String = row.get(4)?;
-                let updated_str: String = row.get(5)?;
-                let status_hlc: Option<String> = row.get(6)?;
-                let title_hlc: Option<String> = row.get(7)?;
-                let type_hlc: Option<String> = row.get(8)?;
+                let status_str: String = row.get(4)?;
+                let created_str: String = row.get(6)?;
+                let updated_str: String = row.get(7)?;
+                let status_hlc: Option<String> = row.get(8)?;
+                let title_hlc: Option<String> = row.get(9)?;
+                let type_hlc: Option<String> = row.get(10)?;
+                let desc_hlc: Option<String> = row.get(11)?;
+                let assignee_hlc: Option<String> = row.get(12)?;
 
                 Ok(Issue {
                     id: row.get(0)?,
                     issue_type: parse_db(&type_str, "type")?,
                     title: row.get(2)?,
+                    description: row.get(3)?,
                     status: parse_db(&status_str, "status")?,
+                    assignee: row.get(5)?,
                     created_at: parse_timestamp(&created_str, "created_at")?,
                     updated_at: parse_timestamp(&updated_str, "updated_at")?,
                     last_status_hlc: parse_hlc_opt(status_hlc)?,
                     last_title_hlc: parse_hlc_opt(title_hlc)?,
                     last_type_hlc: parse_hlc_opt(type_hlc)?,
+                    last_description_hlc: parse_hlc_opt(desc_hlc)?,
+                    last_assignee_hlc: parse_hlc_opt(assignee_hlc)?,
                 })
             })?
             .collect::<std::result::Result<Vec<_>, _>>()?;

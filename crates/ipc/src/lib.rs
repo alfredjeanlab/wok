@@ -135,6 +135,146 @@ impl From<wk_core::Status> for Status {
     }
 }
 
+impl From<LinkType> for wk_core::LinkType {
+    fn from(lt: LinkType) -> Self {
+        match lt {
+            LinkType::Github => wk_core::LinkType::Github,
+            LinkType::Jira => wk_core::LinkType::Jira,
+            LinkType::Gitlab => wk_core::LinkType::Gitlab,
+            LinkType::Confluence => wk_core::LinkType::Confluence,
+        }
+    }
+}
+
+impl From<wk_core::LinkType> for LinkType {
+    fn from(lt: wk_core::LinkType) -> Self {
+        match lt {
+            wk_core::LinkType::Github => LinkType::Github,
+            wk_core::LinkType::Jira => LinkType::Jira,
+            wk_core::LinkType::Gitlab => LinkType::Gitlab,
+            wk_core::LinkType::Confluence => LinkType::Confluence,
+        }
+    }
+}
+
+impl From<LinkRel> for wk_core::LinkRel {
+    fn from(lr: LinkRel) -> Self {
+        match lr {
+            LinkRel::Import => wk_core::LinkRel::Import,
+            LinkRel::Blocks => wk_core::LinkRel::Blocks,
+            LinkRel::Tracks => wk_core::LinkRel::Tracks,
+            LinkRel::TrackedBy => wk_core::LinkRel::TrackedBy,
+        }
+    }
+}
+
+impl From<wk_core::LinkRel> for LinkRel {
+    fn from(lr: wk_core::LinkRel) -> Self {
+        match lr {
+            wk_core::LinkRel::Import => LinkRel::Import,
+            wk_core::LinkRel::Blocks => LinkRel::Blocks,
+            wk_core::LinkRel::Tracks => LinkRel::Tracks,
+            wk_core::LinkRel::TrackedBy => LinkRel::TrackedBy,
+        }
+    }
+}
+
+impl From<Link> for wk_core::Link {
+    fn from(link: Link) -> Self {
+        wk_core::Link {
+            id: link.id,
+            issue_id: link.issue_id,
+            link_type: link.link_type.map(Into::into),
+            url: link.url,
+            external_id: link.external_id,
+            rel: link.rel.map(Into::into),
+            created_at: link.created_at,
+        }
+    }
+}
+
+impl From<wk_core::Link> for Link {
+    fn from(link: wk_core::Link) -> Self {
+        Link {
+            id: link.id,
+            issue_id: link.issue_id,
+            link_type: link.link_type.map(Into::into),
+            url: link.url,
+            external_id: link.external_id,
+            rel: link.rel.map(Into::into),
+            created_at: link.created_at,
+        }
+    }
+}
+
+impl From<PrefixInfo> for wk_core::PrefixInfo {
+    fn from(pi: PrefixInfo) -> Self {
+        wk_core::PrefixInfo {
+            prefix: pi.prefix,
+            issue_count: pi.issue_count,
+            created_at: pi.created_at,
+        }
+    }
+}
+
+impl From<wk_core::PrefixInfo> for PrefixInfo {
+    fn from(pi: wk_core::PrefixInfo) -> Self {
+        PrefixInfo {
+            prefix: pi.prefix,
+            issue_count: pi.issue_count,
+            created_at: pi.created_at,
+        }
+    }
+}
+
+impl From<Action> for wk_core::Action {
+    fn from(action: Action) -> Self {
+        match action {
+            Action::Created => wk_core::Action::Created,
+            Action::Edited => wk_core::Action::Edited,
+            Action::Started => wk_core::Action::Started,
+            Action::Stopped => wk_core::Action::Stopped,
+            Action::Done => wk_core::Action::Done,
+            Action::Closed => wk_core::Action::Closed,
+            Action::Reopened => wk_core::Action::Reopened,
+            Action::Labeled => wk_core::Action::Labeled,
+            Action::Unlabeled => wk_core::Action::Unlabeled,
+            Action::Related => wk_core::Action::Related,
+            Action::Unrelated => wk_core::Action::Unrelated,
+            Action::Linked => wk_core::Action::Linked,
+            Action::Unlinked => wk_core::Action::Unlinked,
+            Action::Noted => wk_core::Action::Noted,
+            Action::Unblocked => wk_core::Action::Unblocked,
+            Action::Assigned => wk_core::Action::Assigned,
+            Action::Unassigned => wk_core::Action::Unassigned,
+        }
+    }
+}
+
+impl From<wk_core::Action> for Action {
+    fn from(action: wk_core::Action) -> Self {
+        match action {
+            wk_core::Action::Created => Action::Created,
+            wk_core::Action::Edited => Action::Edited,
+            wk_core::Action::Started => Action::Started,
+            wk_core::Action::Stopped => Action::Stopped,
+            wk_core::Action::Done => Action::Done,
+            wk_core::Action::Closed => Action::Closed,
+            wk_core::Action::Reopened => Action::Reopened,
+            wk_core::Action::Labeled => Action::Labeled,
+            wk_core::Action::Unlabeled => Action::Unlabeled,
+            wk_core::Action::Related => Action::Related,
+            wk_core::Action::Unrelated => Action::Unrelated,
+            wk_core::Action::Linked => Action::Linked,
+            wk_core::Action::Unlinked => Action::Unlinked,
+            wk_core::Action::Noted => Action::Noted,
+            wk_core::Action::Unblocked => Action::Unblocked,
+            wk_core::Action::Assigned => Action::Assigned,
+            wk_core::Action::Unassigned => Action::Unassigned,
+        }
+    }
+}
+
 /// Types of actions that can be recorded in the event log.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]

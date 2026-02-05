@@ -150,8 +150,14 @@ pub struct Issue {
     pub issue_type: IssueType,
     /// Short description of the work.
     pub title: String,
+    /// Longer description providing context.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub description: Option<String>,
     /// Current workflow state.
     pub status: Status,
+    /// Person or queue this issue is assigned to.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub assignee: Option<String>,
     /// When the issue was created.
     pub created_at: DateTime<Utc>,
     /// When the issue was last modified.
@@ -165,6 +171,12 @@ pub struct Issue {
     /// HLC timestamp of last type change (for conflict resolution).
     #[serde(skip_serializing_if = "Option::is_none")]
     pub last_type_hlc: Option<Hlc>,
+    /// HLC timestamp of last description change (for conflict resolution).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub last_description_hlc: Option<Hlc>,
+    /// HLC timestamp of last assignee change (for conflict resolution).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub last_assignee_hlc: Option<Hlc>,
 }
 
 impl Issue {
@@ -179,12 +191,16 @@ impl Issue {
             id,
             issue_type,
             title,
+            description: None,
             status: Status::Todo,
+            assignee: None,
             created_at,
             updated_at: created_at,
             last_status_hlc: None,
             last_title_hlc: None,
             last_type_hlc: None,
+            last_description_hlc: None,
+            last_assignee_hlc: None,
         }
     }
 }
@@ -211,10 +227,14 @@ pub enum Action {
     Labeled,
     /// A label was removed.
     Unlabeled,
-    /// A dependency was added.
+    /// A dependency was added (internal issue relationship).
     Related,
-    /// A dependency was removed.
+    /// A dependency was removed (internal issue relationship).
     Unrelated,
+    /// An external link was added.
+    Linked,
+    /// An external link was removed.
+    Unlinked,
     /// A note was added.
     Noted,
     /// A blocking issue was resolved.
@@ -240,6 +260,8 @@ impl Action {
             Action::Unlabeled => "unlabeled",
             Action::Related => "related",
             Action::Unrelated => "unrelated",
+            Action::Linked => "linked",
+            Action::Unlinked => "unlinked",
             Action::Noted => "noted",
             Action::Unblocked => "unblocked",
             Action::Assigned => "assigned",
@@ -270,6 +292,8 @@ impl FromStr for Action {
             "unlabeled" => Ok(Action::Unlabeled),
             "related" => Ok(Action::Related),
             "unrelated" => Ok(Action::Unrelated),
+            "linked" => Ok(Action::Linked),
+            "unlinked" => Ok(Action::Unlinked),
             "noted" => Ok(Action::Noted),
             "unblocked" => Ok(Action::Unblocked),
             "assigned" => Ok(Action::Assigned),

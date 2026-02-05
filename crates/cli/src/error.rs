@@ -239,6 +239,8 @@ impl From<wk_core::Error> for Error {
             wk_core::Error::InvalidAction(s) => {
                 Error::InvalidInput(format!("invalid action: {}", s))
             }
+            wk_core::Error::InvalidLinkType(s) => Error::InvalidLinkType(s),
+            wk_core::Error::InvalidLinkRel(s) => Error::InvalidLinkRel(s),
             wk_core::Error::InvalidInput(s) => Error::InvalidInput(s),
             wk_core::Error::Database(e) => Error::Database(e),
             wk_core::Error::Io(e) => Error::Io(e),

@@ -47,6 +47,12 @@ pub enum Error {
     #[error("invalid action: '{0}'")]
     InvalidAction(String),
 
+    #[error("invalid link type: '{0}'\n  hint: valid types are: github, jira, gitlab, confluence")]
+    InvalidLinkType(String),
+
+    #[error("invalid link relation: '{0}'\n  hint: valid relations are: import, blocks, tracks, tracked-by")]
+    InvalidLinkRel(String),
+
     #[error("{0}")]
     InvalidInput(String),
 

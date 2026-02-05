@@ -57,12 +57,16 @@ impl Merge for Database {
                     id: id.clone(),
                     issue_type: *issue_type,
                     title: title.clone(),
+                    description: None,
                     status: Status::Todo,
+                    assignee: None,
                     created_at: chrono::Utc::now(),
                     updated_at: chrono::Utc::now(),
                     last_status_hlc: None,
                     last_title_hlc: None,
                     last_type_hlc: None,
+                    last_description_hlc: None,
+                    last_assignee_hlc: None,
                 };
                 self.create_issue(&issue)?;
 
