@@ -28,12 +28,13 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
         with:
           targets: ${{ matrix.target }}
+      - uses: mozilla-actions/sccache-action@v0.0.9
       - name: Build
         run: cargo build --release --target ${{ matrix.target }}
       - name: Package
         run: |
           cd target/${{ matrix.target }}/release
-          tar czf ../../../${{ matrix.name }}.tar.gz wk wk-remote
+          tar czf ../../../${{ matrix.name }}.tar.gz wok wokd
       - uses: actions/upload-artifact@v6
         with:
           name: ${{ matrix.name }}
