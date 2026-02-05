@@ -443,7 +443,7 @@ fn test_format_tree_root_empty_blockers() {
 #[test]
 fn test_format_tree_child_not_last() {
     let issue = create_test_issue("prj-1234", "Child issue", IssueType::Task, Status::Todo);
-    let lines = format_tree_child(&issue, "", false, None);
+    let lines = format_tree_child(&issue, "", false, None, None);
     assert_eq!(lines.len(), 1);
     assert!(lines[0].starts_with("├── "));
     assert!(lines[0].contains("prj-1234"));
@@ -452,7 +452,7 @@ fn test_format_tree_child_not_last() {
 #[test]
 fn test_format_tree_child_last() {
     let issue = create_test_issue("prj-1234", "Child issue", IssueType::Task, Status::Todo);
-    let lines = format_tree_child(&issue, "", true, None);
+    let lines = format_tree_child(&issue, "", true, None, None);
     assert_eq!(lines.len(), 1);
     assert!(lines[0].starts_with("└── "));
 }
@@ -460,14 +460,14 @@ fn test_format_tree_child_last() {
 #[test]
 fn test_format_tree_child_with_prefix() {
     let issue = create_test_issue("prj-1234", "Child issue", IssueType::Task, Status::Todo);
-    let lines = format_tree_child(&issue, "│   ", false, None);
+    let lines = format_tree_child(&issue, "│   ", false, None, None);
     assert!(lines[0].starts_with("│   ├── "));
 }
 
 #[test]
 fn test_format_tree_child_with_status() {
     let issue = create_test_issue("prj-1234", "Child issue", IssueType::Task, Status::Done);
-    let lines = format_tree_child(&issue, "", false, None);
+    let lines = format_tree_child(&issue, "", false, None, None);
     assert!(lines[0].contains("[done]"));
 }
 
@@ -475,7 +475,7 @@ fn test_format_tree_child_with_status() {
 fn test_format_tree_child_with_blockers_not_last() {
     let issue = create_test_issue("prj-1234", "Child issue", IssueType::Task, Status::Todo);
     let blockers = vec!["prj-aaaa".to_string()];
-    let lines = format_tree_child(&issue, "", false, Some(&blockers));
+    let lines = format_tree_child(&issue, "", false, Some(&blockers), None);
     assert_eq!(lines.len(), 2);
     assert!(lines[1].contains("blocked by prj-aaaa"));
     assert!(lines[1].starts_with("│   └── "));
@@ -485,10 +485,35 @@ fn test_format_tree_child_with_blockers_not_last() {
 fn test_format_tree_child_with_blockers_last() {
     let issue = create_test_issue("prj-1234", "Child issue", IssueType::Task, Status::Todo);
     let blockers = vec!["prj-aaaa".to_string()];
-    let lines = format_tree_child(&issue, "", true, Some(&blockers));
+    let lines = format_tree_child(&issue, "", true, Some(&blockers), None);
     assert_eq!(lines.len(), 2);
     assert!(lines[1].contains("blocked by prj-aaaa"));
     assert!(lines[1].starts_with("    └── "));
+}
+
+#[test]
+fn test_format_tree_child_with_tracks_label() {
+    let issue = create_test_issue("prj-1234", "Tracked issue", IssueType::Task, Status::Todo);
+    let lines = format_tree_child(&issue, "", false, None, Some(RelationType::Tracks));
+    assert_eq!(lines.len(), 1);
+    assert!(lines[0].ends_with("(tracks)"));
+}
+
+#[test]
+fn test_format_tree_child_with_blocks_label() {
+    let issue = create_test_issue("prj-1234", "Blocked issue", IssueType::Task, Status::Todo);
+    let lines = format_tree_child(&issue, "", false, None, Some(RelationType::Blocks));
+    assert_eq!(lines.len(), 1);
+    assert!(lines[0].ends_with("(blocks)"));
+}
+
+#[test]
+fn test_format_tree_child_label_with_status() {
+    let issue = create_test_issue("prj-1234", "Done issue", IssueType::Task, Status::Done);
+    let lines = format_tree_child(&issue, "", false, None, Some(RelationType::Tracks));
+    assert_eq!(lines.len(), 1);
+    assert!(lines[0].contains("[done]"));
+    assert!(lines[0].ends_with("(tracks)"));
 }
 
 // note_section_label tests

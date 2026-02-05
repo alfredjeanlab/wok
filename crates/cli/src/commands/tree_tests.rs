@@ -180,3 +180,45 @@ fn test_run_impl_deep_hierarchy() {
     let result = run_impl(&ctx.db, "l1");
     assert!(result.is_ok());
 }
+
+#[test]
+fn test_run_impl_with_tracked_and_blocked() {
+    let ctx = TestContext::new();
+    ctx.create_issue("epic", IssueType::Epic, "Epic")
+        .create_issue("feature", IssueType::Feature, "Feature under epic")
+        .create_issue("dependent", IssueType::Feature, "Dependent feature")
+        .tracks("epic", "feature")
+        .blocks("epic", "dependent");
+
+    // Epic has both tracked and blocking relationships
+    let tracked = ctx.db.get_tracked("epic").unwrap();
+    assert_eq!(tracked.len(), 1);
+    assert_eq!(tracked[0], "feature");
+
+    let blocking = ctx.db.get_blocking("epic").unwrap();
+    assert_eq!(blocking.len(), 1);
+    assert_eq!(blocking[0], "dependent");
+
+    let result = run_impl(&ctx.db, "epic");
+    assert!(result.is_ok());
+}
+
+#[test]
+fn test_run_impl_blocks_only() {
+    let ctx = TestContext::new();
+    ctx.create_issue("blocker", IssueType::Task, "Blocker task")
+        .create_issue("dependent1", IssueType::Task, "Dependent 1")
+        .create_issue("dependent2", IssueType::Task, "Dependent 2")
+        .blocks("blocker", "dependent1")
+        .blocks("blocker", "dependent2");
+
+    // Blocker has only blocking relationships, no tracked
+    let tracked = ctx.db.get_tracked("blocker").unwrap();
+    assert!(tracked.is_empty());
+
+    let blocking = ctx.db.get_blocking("blocker").unwrap();
+    assert_eq!(blocking.len(), 2);
+
+    let result = run_impl(&ctx.db, "blocker");
+    assert!(result.is_ok());
+}

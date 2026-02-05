@@ -199,3 +199,140 @@ fn ready_with_all_blocked() {
         .success()
         .stdout(predicate::str::contains("No ready issues"));
 }
+
+#[test]
+fn tree_shows_blocked_issues() {
+    let temp = init_temp();
+
+    // Create blocker and dependent issues
+    let blocker_id = create_issue(&temp, "Blocker task");
+    let dependent_id = create_issue(&temp, "Dependent task");
+
+    // Set up: blocker blocks dependent
+    wk().arg("dep")
+        .arg(&blocker_id)
+        .arg("blocks")
+        .arg(&dependent_id)
+        .current_dir(temp.path())
+        .assert()
+        .success();
+
+    // Tree of blocker should show the dependent (issue it blocks)
+    wk().arg("tree")
+        .arg(&blocker_id)
+        .current_dir(temp.path())
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("Dependent task"));
+}
+
+#[test]
+fn tree_shows_labels_when_both_tracked_and_blocked() {
+    let temp = init_temp();
+
+    // Create parent, tracked child, and dependent
+    let parent_id = create_issue(&temp, "Parent feature");
+    let tracked_id = create_issue(&temp, "Tracked child");
+    let dependent_id = create_issue(&temp, "Blocked by parent");
+
+    // Parent tracks child
+    wk().arg("dep")
+        .arg(&parent_id)
+        .arg("tracks")
+        .arg(&tracked_id)
+        .current_dir(temp.path())
+        .assert()
+        .success();
+
+    // Parent blocks dependent
+    wk().arg("dep")
+        .arg(&parent_id)
+        .arg("blocks")
+        .arg(&dependent_id)
+        .current_dir(temp.path())
+        .assert()
+        .success();
+
+    // Tree should show labels to distinguish relationship types
+    wk().arg("tree")
+        .arg(&parent_id)
+        .current_dir(temp.path())
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("(tracks)"))
+        .stdout(predicate::str::contains("(blocks)"));
+}
+
+#[test]
+fn tree_omits_labels_when_only_tracked() {
+    let temp = init_temp();
+
+    let parent_id = create_issue(&temp, "Parent feature");
+    let tracked_id = create_issue(&temp, "Tracked child");
+
+    wk().arg("dep")
+        .arg(&parent_id)
+        .arg("tracks")
+        .arg(&tracked_id)
+        .current_dir(temp.path())
+        .assert()
+        .success();
+
+    // Tree should NOT show labels when only one relationship type
+    let output = wk()
+        .arg("tree")
+        .arg(&parent_id)
+        .current_dir(temp.path())
+        .assert()
+        .success()
+        .get_output()
+        .stdout
+        .clone();
+
+    let stdout = String::from_utf8_lossy(&output);
+    assert!(
+        !stdout.contains("(tracks)"),
+        "Should not show (tracks) label when only tracked children exist"
+    );
+    assert!(
+        !stdout.contains("(blocks)"),
+        "Should not show (blocks) label when only tracked children exist"
+    );
+}
+
+#[test]
+fn tree_omits_labels_when_only_blocked() {
+    let temp = init_temp();
+
+    let blocker_id = create_issue(&temp, "Blocker task");
+    let dependent_id = create_issue(&temp, "Dependent task");
+
+    wk().arg("dep")
+        .arg(&blocker_id)
+        .arg("blocks")
+        .arg(&dependent_id)
+        .current_dir(temp.path())
+        .assert()
+        .success();
+
+    // Tree should NOT show labels when only one relationship type
+    let output = wk()
+        .arg("tree")
+        .arg(&blocker_id)
+        .current_dir(temp.path())
+        .assert()
+        .success()
+        .get_output()
+        .stdout
+        .clone();
+
+    let stdout = String::from_utf8_lossy(&output);
+    assert!(
+        !stdout.contains("(tracks)"),
+        "Should not show (tracks) label when only blocked children exist"
+    );
+    assert!(
+        !stdout.contains("(blocks)"),
+        "Should not show (blocks) label when only blocked children exist"
+    );
+}

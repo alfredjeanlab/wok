@@ -2,7 +2,7 @@
 // Copyright (c) 2026 Alfred Jean LLC
 
 use crate::db::Database;
-use crate::display::{format_tree_child, format_tree_root};
+use crate::display::{format_tree_child, format_tree_root, RelationType};
 use crate::error::Result;
 
 use super::open_db;
@@ -28,16 +28,41 @@ pub(crate) fn run_impl(db: &Database, id: &str) -> Result<()> {
     // Print root issue
     println!("{}", format_tree_root(&issue, blocked_by));
 
-    // Get and print children
-    let children = db.get_tracked(&resolved_id)?;
-    print_children(db, &children, "")?;
+    // Get tracked and blocking issues
+    let tracked = db.get_tracked(&resolved_id)?;
+    let blocking = db.get_blocking(&resolved_id)?;
+
+    // Determine if we need relation labels (only if both types exist)
+    let show_labels = !tracked.is_empty() && !blocking.is_empty();
+
+    // Print tracked children first
+    let tracked_is_last_group = blocking.is_empty();
+    print_children(
+        db,
+        &tracked,
+        "",
+        RelationType::Tracks,
+        show_labels,
+        tracked_is_last_group,
+    )?;
+
+    // Print blocking children (issues this one blocks)
+    print_children(db, &blocking, "", RelationType::Blocks, show_labels, true)?;
 
     Ok(())
 }
 
-fn print_children(db: &crate::db::Database, children: &[String], prefix: &str) -> Result<()> {
+fn print_children(
+    db: &crate::db::Database,
+    children: &[String],
+    prefix: &str,
+    relation: RelationType,
+    show_labels: bool,
+    is_last_group: bool,
+) -> Result<()> {
     for (i, child_id) in children.iter().enumerate() {
-        let is_last = i == children.len() - 1;
+        let is_last_in_group = i == children.len() - 1;
+        let is_last = is_last_in_group && is_last_group;
         let issue = db.get_issue(child_id)?;
 
         // Get transitive blockers for this issue (already filtered for open status)
@@ -49,19 +74,40 @@ fn print_children(db: &crate::db::Database, children: &[String], prefix: &str) -
             Some(blockers.as_slice())
         };
 
-        for line in format_tree_child(&issue, prefix, is_last, blocked_by) {
+        let label = if show_labels { Some(relation) } else { None };
+        for line in format_tree_child(&issue, prefix, is_last, blocked_by, label) {
             println!("{}", line);
         }
 
-        // Recursively print grandchildren
-        let grandchildren = db.get_tracked(child_id)?;
-        if !grandchildren.is_empty() {
-            let child_prefix = if is_last {
-                format!("{}    ", prefix)
-            } else {
-                format!("{}│   ", prefix)
-            };
-            print_children(db, &grandchildren, &child_prefix)?;
+        // Recursively print grandchildren (only for tracked relations)
+        if relation == RelationType::Tracks {
+            let grandchildren = db.get_tracked(child_id)?;
+            let grandblocking = db.get_blocking(child_id)?;
+            if !grandchildren.is_empty() || !grandblocking.is_empty() {
+                let child_prefix = if is_last {
+                    format!("{}    ", prefix)
+                } else {
+                    format!("{}│   ", prefix)
+                };
+                let show_grandlabels = !grandchildren.is_empty() && !grandblocking.is_empty();
+                let tracked_is_last = grandblocking.is_empty();
+                print_children(
+                    db,
+                    &grandchildren,
+                    &child_prefix,
+                    RelationType::Tracks,
+                    show_grandlabels,
+                    tracked_is_last,
+                )?;
+                print_children(
+                    db,
+                    &grandblocking,
+                    &child_prefix,
+                    RelationType::Blocks,
+                    show_grandlabels,
+                    true,
+                )?;
+            }
         }
     }
 

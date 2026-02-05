@@ -330,6 +330,25 @@ pub fn format_event_with_id(event: &Event) -> String {
     line
 }
 
+/// Type of relationship for tree display
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum RelationType {
+    /// Issue is tracked by the parent
+    Tracks,
+    /// Issue is blocked by the parent
+    Blocks,
+}
+
+impl RelationType {
+    /// Returns the display label for this relation type
+    pub fn label(&self) -> &'static str {
+        match self {
+            RelationType::Tracks => "tracks",
+            RelationType::Blocks => "blocks",
+        }
+    }
+}
+
 /// Format tree output for root node
 pub fn format_tree_root(issue: &Issue, blocked_by: Option<&[String]>) -> String {
     let status_str = if issue.status != Status::Todo {
@@ -356,6 +375,7 @@ pub fn format_tree_child(
     prefix: &str,
     is_last: bool,
     blocked_by: Option<&[String]>,
+    relation_label: Option<RelationType>,
 ) -> Vec<String> {
     let mut lines = Vec::new();
 
@@ -367,9 +387,14 @@ pub fn format_tree_child(
         String::new()
     };
 
+    let label_str = match relation_label {
+        Some(rel) => format!(" ({})", rel.label()),
+        None => String::new(),
+    };
+
     lines.push(format!(
-        "{}{}{}: {}{}",
-        prefix, connector, issue.id, issue.title, status_str
+        "{}{}{}: {}{}{}",
+        prefix, connector, issue.id, issue.title, status_str, label_str
     ));
 
     // Show blockers if any
