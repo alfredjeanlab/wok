@@ -26,7 +26,7 @@ queue "merges" {
   defaults = { base = "main" }
 }
 
-queue "merge-conflict" {
+queue "merge-conflicts" {
   type     = "persisted"
   vars     = ["branch", "title", "base"]
   defaults = { base = "main" }
@@ -39,7 +39,7 @@ worker "merge" {
 }
 
 worker "merge-conflict" {
-  source      = { queue = "merge-conflict" }
+  source      = { queue = "merge-conflicts" }
   handler     = { job = "merge-conflict" }
   concurrency = 1
 }
@@ -84,7 +84,7 @@ job "merge" {
   step "queue-conflicts" {
     run = <<-SHELL
       git merge --abort 2>/dev/null || true
-      oj queue push merge-conflict --var branch="${var.mr.branch}" --var title="${var.mr.title}" --var base="${var.mr.base}"
+      oj queue push merge-conflicts --var branch="${var.mr.branch}" --var title="${var.mr.title}" --var base="${var.mr.base}"
     SHELL
     on_done = { step = "cleanup" }
   }
