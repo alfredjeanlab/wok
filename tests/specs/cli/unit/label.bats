@@ -70,13 +70,13 @@ load '../../helpers/common'
 }
 
 @test "label error handling" {
-    # Label with nonexistent issue fails
+    # Label with nonexistent issue fails (no valid IDs at all)
     run "$WK_BIN" label "test-nonexistent" "mylabel"
     assert_failure
 
-    # Batch label fails on nonexistent issue
-    id1=$(create_issue task "LabelErr Task 1")
-    run "$WK_BIN" label "$id1" "test-nonexistent" "urgent"
+    # When first arg doesn't resolve, all args are treated as labels (which fails
+    # because there are no valid issue IDs)
+    run "$WK_BIN" label "not-an-id" "also-not-an-id" "urgent"
     assert_failure
 }
 
@@ -122,4 +122,39 @@ load '../../helpers/common'
     assert_success
     assert_output --partial "LabelBatchSearch Task 1"
     assert_output --partial "LabelBatchSearch Task 2"
+}
+
+@test "multiple labels can be added/removed in single command" {
+    # Add multiple labels to multiple issues
+    id1=$(create_issue task "MultiLabel Task 1")
+    id2=$(create_issue task "MultiLabel Task 2")
+    run "$WK_BIN" label "$id1" "$id2" "urgent" "backend"
+    assert_success
+
+    # Verify both issues have both labels
+    run "$WK_BIN" show "$id1"
+    assert_output --partial "urgent"
+    assert_output --partial "backend"
+    run "$WK_BIN" show "$id2"
+    assert_output --partial "urgent"
+    assert_output --partial "backend"
+
+    # Remove multiple labels from multiple issues
+    run "$WK_BIN" unlabel "$id1" "$id2" "urgent" "backend"
+    assert_success
+    run "$WK_BIN" show "$id1"
+    refute_line --regexp '^Labels:.*urgent'
+    refute_line --regexp '^Labels:.*backend'
+    run "$WK_BIN" show "$id2"
+    refute_line --regexp '^Labels:.*urgent'
+    refute_line --regexp '^Labels:.*backend'
+
+    # Add three labels to single issue
+    id3=$(create_issue task "MultiLabel Task 3")
+    run "$WK_BIN" label "$id3" "p0" "urgent" "backend"
+    assert_success
+    run "$WK_BIN" show "$id3"
+    assert_output --partial "p0"
+    assert_output --partial "urgent"
+    assert_output --partial "backend"
 }
