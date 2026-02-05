@@ -218,11 +218,11 @@ fn closed_to_todo_via_reopen_with_reason() {
 }
 
 // =============================================================================
-// Invalid Transitions
+// Permissive Transitions (lenient state machine)
 // =============================================================================
 
 #[test]
-fn cannot_reopen_from_todo() {
+fn reopen_from_todo_is_idempotent() {
     let temp = init_temp();
     let id = create_issue(&temp, "task", "SM Test");
 
@@ -230,7 +230,9 @@ fn cannot_reopen_from_todo() {
         .arg(&id)
         .current_dir(temp.path())
         .assert()
-        .failure();
+        .success();
+
+    assert_eq!(get_status(&temp, &id), "todo");
 }
 
 #[test]
@@ -249,7 +251,7 @@ fn cannot_done_from_todo_without_reason() {
     from_done = { "done" },
     from_closed = { "closed" },
 )]
-fn cannot_start_from_terminal_state(terminal_state: &str) {
+fn start_from_terminal_state_succeeds(terminal_state: &str) {
     let temp = init_temp();
     let id = create_issue(&temp, "task", "SM Test");
 
@@ -275,16 +277,18 @@ fn cannot_start_from_terminal_state(terminal_state: &str) {
             .success();
     }
 
-    // Attempt to start should fail
+    // Start should succeed (permissive transitions)
     wk().arg("start")
         .arg(&id)
         .current_dir(temp.path())
         .assert()
-        .failure();
+        .success();
+
+    assert_eq!(get_status(&temp, &id), "in_progress");
 }
 
 #[test]
-fn cannot_done_from_closed() {
+fn done_from_closed_succeeds_with_reason() {
     let temp = init_temp();
     let id = create_issue(&temp, "task", "SM Test");
 
@@ -298,9 +302,13 @@ fn cannot_done_from_closed() {
 
     wk().arg("done")
         .arg(&id)
+        .arg("--reason")
+        .arg("actually completed")
         .current_dir(temp.path())
         .assert()
-        .failure();
+        .success();
+
+    assert_eq!(get_status(&temp, &id), "done");
 }
 
 // =============================================================================
