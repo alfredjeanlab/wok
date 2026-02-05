@@ -13,3 +13,4 @@ mod lifecycle;
 mod new;
 mod note;
 mod show;
+mod sync;
