@@ -53,6 +53,10 @@ serde_json = "1"
 name = "spec_list"
 path = "../../tests/specs/cli/list.rs"
 
+[[test]]
+name = "spec_completion"
+path = "../../tests/specs/cli/completion.rs"
+
 [[bench]]
 name = "filter"
 harness = false
