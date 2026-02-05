@@ -227,9 +227,7 @@ pub(crate) fn run_impl(
                     labels,
                 ));
             }
-            let output = ReadyOutputJson {
-                issues: json_issues,
-            };
+            let output = ReadyOutputJson(json_issues);
             println!("{}", serde_json::to_string_pretty(&output)?);
         }
         OutputFormat::Id => {

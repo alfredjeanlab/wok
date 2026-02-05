@@ -9,8 +9,8 @@ use serde::Serialize;
 use super::IssueJson;
 
 /// JSON output structure for the ready command.
+///
+/// The ready command returns an array of issue summaries directly.
 #[derive(JsonSchema, Serialize)]
-pub struct ReadyOutputJson {
-    /// List of ready (unblocked todo) issues.
-    pub issues: Vec<IssueJson>,
-}
+#[serde(transparent)]
+pub struct ReadyOutputJson(pub Vec<IssueJson>);

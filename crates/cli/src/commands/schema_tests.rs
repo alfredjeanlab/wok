@@ -41,8 +41,16 @@ fn schema_ready_produces_valid_json() {
     let json = serde_json::to_string_pretty(&schema).unwrap();
 
     assert!(json.contains("\"$schema\""));
-    assert!(json.contains("\"ReadyOutputJson\""));
-    assert!(json.contains("\"issues\""));
+    assert!(json.contains("\"IssueJson\""));
+}
+
+#[test]
+fn schema_ready_is_array_schema() {
+    let schema = schemars::schema_for!(ready::ReadyOutputJson);
+    let json = serde_json::to_string(&schema).unwrap();
+
+    // Should be an array type (transparent wrapper around Vec)
+    assert!(json.contains("\"array\""));
 }
 
 #[test]
