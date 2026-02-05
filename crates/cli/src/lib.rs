@@ -39,6 +39,7 @@ mod display;
 pub mod env;
 pub mod filter;
 pub mod help;
+pub mod hooks;
 mod normalize;
 mod schema;
 pub mod timings;
@@ -51,7 +52,7 @@ pub mod id;
 pub mod models;
 
 pub use cli::{
-    AssigneeArgs, Cli, Command, ConfigCommand, DaemonCommand, HooksCommand, LimitArgs,
+    AssigneeArgs, Cli, Command, ConfigCommand, DaemonCommand, HookCommand, HooksCommand, LimitArgs,
     OutputFormat, SchemaCommand, TypeLabelArgs,
 };
 pub use config::{find_work_dir, get_db_path, init_work_dir, Config};
@@ -297,6 +298,10 @@ pub fn run(command: Command) -> Result<()> {
             } => commands::hooks::install(scope, interactive, yes),
             HooksCommand::Uninstall { scope } => commands::hooks::uninstall(scope),
             HooksCommand::Status => commands::hooks::status(),
+        },
+        Command::Hook(cmd) => match cmd {
+            HookCommand::List { output } => commands::hook::list(output),
+            HookCommand::Test { name, id, event } => commands::hook::test(name, id, event),
         },
         Command::Config(cmd) => commands::config::run(cmd),
         Command::Schema(cmd) => commands::schema::run(cmd),

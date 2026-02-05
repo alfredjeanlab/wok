@@ -9,6 +9,7 @@ pub mod export;
 pub mod filtering;
 #[cfg(test)]
 pub mod hlc_persistence;
+pub mod hook;
 pub mod hooks;
 pub mod import;
 pub mod init;
@@ -48,8 +49,17 @@ pub fn open_db() -> Result<(Database, Config, PathBuf)> {
 /// Apply a mutation by logging an event to the local database.
 ///
 /// This helper handles the common pattern of logging an event for all
-/// issue mutations to ensure a consistent audit trail.
+/// issue mutations to ensure a consistent audit trail. After logging,
+/// it triggers any configured issue hooks.
 pub fn apply_mutation(db: &Database, event: Event) -> Result<()> {
     db.log_event(&event)?;
+
+    // Trigger hooks (fire-and-forget, errors are logged but don't fail the mutation)
+    if let Ok(work_dir) = find_work_dir() {
+        if let Err(e) = crate::hooks::run_hooks_for_event(db, &work_dir, &event) {
+            eprintln!("warning: hook error: {}", e);
+        }
+    }
+
     Ok(())
 }

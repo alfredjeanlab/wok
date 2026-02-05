@@ -600,6 +600,10 @@ Examples:
     #[command(subcommand)]
     Hooks(HooksCommand),
 
+    /// Manage issue hooks (scripts triggered on events)
+    #[command(subcommand)]
+    Hook(HookCommand),
+
     /// Manage configuration settings
     #[command(subcommand)]
     Config(ConfigCommand),
@@ -689,7 +693,7 @@ pub enum SchemaCommand {
     Search,
 }
 
-/// Hooks management commands.
+/// Claude Code hooks management commands.
 #[derive(Subcommand)]
 pub enum HooksCommand {
     /// Install Claude Code hooks
@@ -720,6 +724,36 @@ Examples:
 
     /// Show hooks installation status
     Status,
+}
+
+/// Issue hooks management commands.
+#[derive(Subcommand)]
+pub enum HookCommand {
+    /// List configured issue hooks
+    #[command(after_help = colors::examples("\
+Examples:
+  wok hook list                  List all configured hooks
+  wok hook list -o json          Output as JSON"))]
+    List {
+        /// Output format (text, json)
+        #[arg(long = "output", short = 'o', value_enum, default_value = "text")]
+        output: OutputFormat,
+    },
+
+    /// Test if a hook would fire for an issue
+    #[command(after_help = colors::examples("\
+Examples:
+  wok hook test my-hook prj-1              Test with default event (created)
+  wok hook test my-hook prj-1 --event done Test with specific event"))]
+    Test {
+        /// Hook name to test
+        name: String,
+        /// Issue ID to use
+        id: String,
+        /// Event to simulate (default: created)
+        #[arg(long)]
+        event: Option<String>,
+    },
 }
 
 #[cfg(test)]
