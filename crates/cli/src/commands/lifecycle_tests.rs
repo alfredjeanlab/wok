@@ -150,28 +150,32 @@ fn test_start_impl_from_in_progress_idempotent() {
 }
 
 #[test]
-fn test_start_impl_from_done_fails() {
+fn test_start_impl_from_done() {
     let ctx = TestContext::new();
     ctx.create_completed("test-1", IssueType::Task, "Completed task");
 
     let result = start_impl(&ctx.db, &["test-1".to_string()]);
 
-    // Cannot start from terminal state (done)
-    assert!(result.is_err());
-    assert_eq!(ctx.db.get_issue("test-1").unwrap().status, Status::Done);
+    assert!(result.is_ok());
+    assert_eq!(
+        ctx.db.get_issue("test-1").unwrap().status,
+        Status::InProgress
+    );
 }
 
 #[test]
-fn test_start_impl_from_closed_fails() {
+fn test_start_impl_from_closed() {
     let ctx = TestContext::new();
     ctx.create_issue("test-1", IssueType::Task, "Closed task")
         .close_issue("test-1");
 
     let result = start_impl(&ctx.db, &["test-1".to_string()]);
 
-    // Cannot start from terminal state (closed)
-    assert!(result.is_err());
-    assert_eq!(ctx.db.get_issue("test-1").unwrap().status, Status::Closed);
+    assert!(result.is_ok());
+    assert_eq!(
+        ctx.db.get_issue("test-1").unwrap().status,
+        Status::InProgress
+    );
 }
 
 #[test]
@@ -330,14 +334,14 @@ fn test_reopen_impl_from_in_progress_succeeds() {
 }
 
 #[test]
-fn test_reopen_impl_from_todo_fails() {
-    // Cannot reopen an issue that's already in todo state
+fn test_reopen_impl_from_todo_idempotent() {
+    // Reopen from todo is idempotent - already in todo state
     let ctx = TestContext::new();
     ctx.create_issue("test-1", IssueType::Task, "Todo task");
 
     let result = reopen_impl(&ctx.db, &["test-1".to_string()], None);
 
-    assert!(result.is_err());
+    assert!(result.is_ok());
     assert_eq!(ctx.db.get_issue("test-1").unwrap().status, Status::Todo);
 }
 

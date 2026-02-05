@@ -73,12 +73,13 @@ load '../../helpers/common'
     [ "$(get_status "$id")" = "(todo)" ]
 }
 
-# Invalid transitions
+# Permissive transitions (lenient state machine)
 
-@test "cannot reopen from todo" {
+@test "reopen from todo is idempotent" {
     id=$(create_issue task "Test")
     run "$WK_BIN" reopen "$id"
-    assert_failure
+    assert_success
+    [ "$(get_status "$id")" = "(todo)" ]
 }
 
 @test "cannot done from todo without reason" {
@@ -87,26 +88,29 @@ load '../../helpers/common'
     assert_failure
 }
 
-@test "cannot start from done" {
+@test "start from done succeeds" {
     id=$(create_issue task "Test")
     "$WK_BIN" start "$id"
     "$WK_BIN" done "$id"
     run "$WK_BIN" start "$id"
-    assert_failure
+    assert_success
+    [ "$(get_status "$id")" = "(in_progress)" ]
 }
 
-@test "cannot start from closed" {
+@test "start from closed succeeds" {
     id=$(create_issue task "Test")
     "$WK_BIN" close "$id" --reason "skip"
     run "$WK_BIN" start "$id"
-    assert_failure
+    assert_success
+    [ "$(get_status "$id")" = "(in_progress)" ]
 }
 
-@test "cannot done from closed" {
+@test "done from closed succeeds with reason" {
     id=$(create_issue task "Test")
     "$WK_BIN" close "$id" --reason "skip"
-    run "$WK_BIN" done "$id"
-    assert_failure
+    run "$WK_BIN" done "$id" --reason "actually completed"
+    assert_success
+    [ "$(get_status "$id")" = "(done)" ]
 }
 
 # Reason requirements
