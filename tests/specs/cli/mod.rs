@@ -9,4 +9,5 @@ mod help;
 mod init;
 mod log;
 mod new;
+mod search;
 mod show;
