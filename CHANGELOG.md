@@ -4,6 +4,42 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [0.4.1]
+
+### Added
+
+- **Negative label filter**: Filter issues with `!label` prefix to exclude labels (e.g., `wok list --label '!blocked'`).
+- **Built-in `epic` issue type**: Epics are now a first-class issue type.
+- **`-p/--prefix` filter**: Filter issues by ID prefix in `list`, `ready`, and `search` commands.
+- **`-C <path>` flag**: Change directory before running any command, like `git -C`.
+- **Shell completions in install scripts**: Completions are now installed automatically.
+- **Hidden edit flags**: `--title`, `--description`, `--type`, `--assignee` flags for non-interactive editing.
+- **Multiple labels in label/unlabel**: Pass multiple labels to `label` and `unlabel` commands in a single invocation.
+- **Blocked issues in tree output**: `wok tree` now shows blocked issues.
+- **Database IPC infrastructure**: Added IPC infrastructure for user-level daemon mode.
+- **Centralized env module**: Runtime environment variable access via `env.rs`.
+
+### Changed
+
+- **Unified domain types**: Domain types are now shared across core, CLI, and daemon crates.
+- **Extracted `wk-ipc` crate**: Shared IPC types and framing extracted into a dedicated crate.
+- **Sync architecture rewrite**: Two-mode model (user-level + private) for sync.
+- **Max description length**: Increased from 10K to 1M characters.
+- **Max note size**: Increased from 10KB to 200KB.
+- **Flexible state transitions**: Lifecycle commands now work from any status.
+- **Auto-filter by project prefix**: Issues are automatically filtered by the configured project prefix.
+
+### Fixed
+
+- **`ready` JSON output**: Now returns an array like `list` and `search`.
+- **Reverted strict state transitions**: Rolled back overly strict lifecycle validation.
+
+### Chores
+
+- **Test migration**: Migrated all BATS specs to Rust integration tests.
+- **Removed dead daemon-routing infrastructure**.
+- **Binary renamed from `wk` to `wok`** (completed in this cycle).
+
 ## [0.4.0]
 
 ### Changed
