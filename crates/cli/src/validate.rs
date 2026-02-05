@@ -8,7 +8,7 @@ use crate::normalize::{normalize_title, trim_field, NormalizedTitle};
 pub const MAX_TITLE_LENGTH: usize = 500;
 pub const MAX_DESCRIPTION_LENGTH: usize = 1_000_000;
 pub const MAX_LABEL_LENGTH: usize = 100;
-pub const MAX_NOTE_LENGTH: usize = 10_000;
+pub const MAX_NOTE_LENGTH: usize = 200_000;
 pub const MAX_REASON_LENGTH: usize = 500;
 pub const MAX_LABELS_PER_ISSUE: usize = 20;
 pub const MAX_ASSIGNEE_LENGTH: usize = 100;
