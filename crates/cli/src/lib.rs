@@ -194,7 +194,7 @@ pub fn run(command: Command) -> Result<()> {
             output,
         ),
         Command::Show { ids, output } => commands::show::run(&ids, &output),
-        Command::Tree { id } => commands::tree::run(&id),
+        Command::Tree { ids } => commands::tree::run(&ids),
         Command::Link { id, url, reason } => commands::link::add(&id, &url, reason),
         Command::Unlink { id, url } => commands::link::remove(&id, &url),
         Command::Dep {
