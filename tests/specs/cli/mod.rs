@@ -3,5 +3,6 @@
 
 mod common;
 mod init;
+mod log;
 mod new;
 mod show;
