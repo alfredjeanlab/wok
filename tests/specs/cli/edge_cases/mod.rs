@@ -2,6 +2,4 @@
 // Copyright (c) 2026 Alfred Jean LLC
 
 mod collisions;
-mod import_edge;
-mod limits;
-mod no_aliases;
+mod special_chars;
