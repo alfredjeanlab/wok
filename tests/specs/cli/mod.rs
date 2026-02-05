@@ -8,4 +8,5 @@ mod help;
 mod init;
 mod log;
 mod new;
+mod ready;
 mod show;
