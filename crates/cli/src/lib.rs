@@ -61,20 +61,43 @@ pub use error::{Error, Result};
 use clap::CommandFactory;
 use clap_complete::generate;
 
-/// Split label command arguments into (ids, label).
-/// The label is always the last argument, with all preceding arguments being IDs.
-fn split_ids_and_label(args: &[String]) -> Result<(Vec<String>, String)> {
+/// Split label command arguments into (ids, labels) by trying to resolve each argument as an issue ID.
+/// Once an argument fails to resolve as an issue ID, treat it and all subsequent arguments as labels.
+fn split_ids_and_labels(db: &Database, args: &[String]) -> Result<(Vec<String>, Vec<String>)> {
     if args.len() < 2 {
         return Err(Error::FieldRequired {
             field: "At least one ID and a label",
         });
     }
-    let label = args
-        .last()
-        .ok_or_else(|| Error::FieldRequired { field: "Label" })?
-        .clone();
-    let ids = args[..args.len() - 1].to_vec();
-    Ok((ids, label))
+
+    let mut ids = Vec::new();
+    let mut labels_start = args.len();
+
+    for (i, arg) in args.iter().enumerate() {
+        match db.resolve_id(arg) {
+            Ok(resolved_id) => ids.push(resolved_id),
+            Err(_) => {
+                // This arg doesn't resolve to an issue ID, treat it and rest as labels
+                labels_start = i;
+                break;
+            }
+        }
+    }
+
+    let labels: Vec<String> = args[labels_start..].to_vec();
+
+    if ids.is_empty() {
+        return Err(Error::FieldRequired {
+            field: "At least one valid issue ID",
+        });
+    }
+    if labels.is_empty() {
+        return Err(Error::FieldRequired {
+            field: "At least one label",
+        });
+    }
+
+    Ok((ids, labels))
 }
 
 /// Execute a CLI command. This is the main entry point for library users
@@ -185,12 +208,14 @@ pub fn run(command: Command) -> Result<()> {
             to_ids,
         } => commands::dep::remove(&from_id, &rel, &to_ids),
         Command::Label { args } => {
-            let (ids, label) = split_ids_and_label(&args)?;
-            commands::label::add(&ids, &label)
+            let (db, _config, _work_dir) = commands::open_db()?;
+            let (ids, labels) = split_ids_and_labels(&db, &args)?;
+            commands::label::add_with_db(&db, &ids, &labels)
         }
         Command::Unlabel { args } => {
-            let (ids, label) = split_ids_and_label(&args)?;
-            commands::label::remove(&ids, &label)
+            let (db, _config, _work_dir) = commands::open_db()?;
+            let (ids, labels) = split_ids_and_labels(&db, &args)?;
+            commands::label::remove_with_db(&db, &ids, &labels)
         }
         Command::Note {
             id,

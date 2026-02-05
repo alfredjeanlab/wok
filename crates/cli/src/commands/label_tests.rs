@@ -263,3 +263,77 @@ fn test_remove_impl_multiple_issues() {
         .unwrap()
         .contains(&"urgent".to_string()));
 }
+
+// === Multi-label Tests ===
+
+use crate::commands::label::{add_with_db, remove_with_db};
+
+#[test]
+fn test_add_with_db_multiple_labels() {
+    let ctx = TestContext::new();
+    ctx.create_issue("test-1", IssueType::Task, "Task 1");
+    ctx.create_issue("test-2", IssueType::Task, "Task 2");
+
+    let result = add_with_db(
+        &ctx.db,
+        &["test-1".to_string(), "test-2".to_string()],
+        &["urgent".to_string(), "backend".to_string()],
+    );
+
+    assert!(result.is_ok());
+
+    // Both issues should have both labels
+    let labels1 = ctx.db.get_labels("test-1").unwrap();
+    assert!(labels1.contains(&"urgent".to_string()));
+    assert!(labels1.contains(&"backend".to_string()));
+
+    let labels2 = ctx.db.get_labels("test-2").unwrap();
+    assert!(labels2.contains(&"urgent".to_string()));
+    assert!(labels2.contains(&"backend".to_string()));
+}
+
+#[test]
+fn test_remove_with_db_multiple_labels() {
+    let ctx = TestContext::new();
+    ctx.create_issue("test-1", IssueType::Task, "Task 1")
+        .add_label("test-1", "urgent")
+        .add_label("test-1", "backend");
+    ctx.create_issue("test-2", IssueType::Task, "Task 2")
+        .add_label("test-2", "urgent")
+        .add_label("test-2", "backend");
+
+    let result = remove_with_db(
+        &ctx.db,
+        &["test-1".to_string(), "test-2".to_string()],
+        &["urgent".to_string(), "backend".to_string()],
+    );
+
+    assert!(result.is_ok());
+
+    // Both issues should have no labels
+    let labels1 = ctx.db.get_labels("test-1").unwrap();
+    assert!(labels1.is_empty());
+
+    let labels2 = ctx.db.get_labels("test-2").unwrap();
+    assert!(labels2.is_empty());
+}
+
+#[test]
+fn test_add_with_db_invalid_label_fails_early() {
+    let ctx = TestContext::new();
+    ctx.create_issue("test-1", IssueType::Task, "Task 1");
+
+    // Label that is too long (over 100 chars - MAX_LABEL_LENGTH)
+    let long_label = "a".repeat(101);
+    let result = add_with_db(
+        &ctx.db,
+        &["test-1".to_string()],
+        &["valid".to_string(), long_label],
+    );
+
+    assert!(result.is_err());
+
+    // First (valid) label should not have been added since validation happens first
+    let labels = ctx.db.get_labels("test-1").unwrap();
+    assert!(labels.is_empty());
+}

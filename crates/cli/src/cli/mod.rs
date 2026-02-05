@@ -462,30 +462,32 @@ Examples:
         to_ids: Vec<String>,
     },
 
-    /// Add a label to issue(s)
+    /// Add label(s) to issue(s)
     #[command(
         arg_required_else_help = true,
         after_help = colors::examples("\
 Examples:
-  wok label prj-1 urgent              Add label to one issue
-  wok label prj-1 prj-2 prj-3 urgent  Add label to multiple issues")
+  wok label prj-1 urgent                     Add label to one issue
+  wok label prj-1 prj-2 prj-3 urgent         Add label to multiple issues
+  wok label prj-1 prj-2 urgent backend       Add multiple labels to multiple issues")
     )]
     Label {
-        /// Issue ID(s) followed by the label to add
+        /// Issue ID(s) followed by label(s) to add
         #[arg(required = true, num_args = 2..)]
         args: Vec<String>,
     },
 
-    /// Remove a label from issue(s)
+    /// Remove label(s) from issue(s)
     #[command(
         arg_required_else_help = true,
         after_help = colors::examples("\
 Examples:
-  wok unlabel prj-1 urgent              Remove label from one issue
-  wok unlabel prj-1 prj-2 prj-3 urgent  Remove label from multiple issues")
+  wok unlabel prj-1 urgent                   Remove label from one issue
+  wok unlabel prj-1 prj-2 prj-3 urgent       Remove label from multiple issues
+  wok unlabel prj-1 prj-2 urgent backend     Remove multiple labels from multiple issues")
     )]
     Unlabel {
-        /// Issue ID(s) followed by the label to remove
+        /// Issue ID(s) followed by label(s) to remove
         #[arg(required = true, num_args = 2..)]
         args: Vec<String>,
     },
