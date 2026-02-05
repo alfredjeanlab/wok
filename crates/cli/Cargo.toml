@@ -58,12 +58,8 @@ name = "spec_list"
 path = "../../tests/specs/cli/list.rs"
 
 [[test]]
-name = "spec_completion"
-path = "../../tests/specs/cli/completion.rs"
-
-[[test]]
-name = "spec_sorting"
-path = "../../tests/specs/cli/sorting.rs"
+name = "spec_prefix_tracking"
+path = "../../tests/specs/cli/prefix_tracking.rs"
 
 [[bench]]
 name = "filter"
