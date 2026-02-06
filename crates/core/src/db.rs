@@ -18,7 +18,7 @@ use crate::issue::{Dependency, Event, Issue, IssueType, Note, Relation, Status};
 use crate::link::{Link, LinkRel, LinkType};
 
 /// SQL schema for the issue tracker database.
-const SCHEMA: &str = r#"
+pub const SCHEMA: &str = r#"
 -- Core issue table with HLC columns for conflict resolution
 CREATE TABLE IF NOT EXISTS issues (
     id TEXT PRIMARY KEY,
@@ -264,6 +264,139 @@ fn row_to_link(row: &rusqlite::Row) -> rusqlite::Result<Link> {
     })
 }
 
+/// Run schema creation and all migrations on a database connection.
+///
+/// This is the single migration path for all crates (core, CLI, daemon).
+/// It applies the canonical schema and runs idempotent migrations to upgrade
+/// older databases that may be missing columns or data.
+pub fn run_migrations(conn: &Connection) -> Result<()> {
+    conn.execute_batch(SCHEMA)?;
+    migrate_add_assignee(conn)?;
+    migrate_add_hlc_columns(conn)?;
+    migrate_add_closed_at(conn)?;
+    migrate_backfill_prefixes(conn)?;
+    migrate_tracked_by_relation(conn)?;
+    Ok(())
+}
+
+/// Migration: Add assignee column to existing databases.
+fn migrate_add_assignee(conn: &Connection) -> Result<()> {
+    let has_assignee: bool = conn
+        .query_row(
+            "SELECT COUNT(*) > 0 FROM pragma_table_info('issues') WHERE name = 'assignee'",
+            [],
+            |row| row.get(0),
+        )
+        .unwrap_or(false);
+
+    if !has_assignee {
+        conn.execute("ALTER TABLE issues ADD COLUMN assignee TEXT", [])?;
+    }
+    Ok(())
+}
+
+/// Migration: Add HLC columns for CRDT sync compatibility.
+///
+/// Adds all HLC (Hybrid Logical Clock) columns used for conflict resolution
+/// during sync. Older databases may be missing some or all of these.
+fn migrate_add_hlc_columns(conn: &Connection) -> Result<()> {
+    let columns = [
+        "last_status_hlc",
+        "last_title_hlc",
+        "last_type_hlc",
+        "last_description_hlc",
+        "last_assignee_hlc",
+    ];
+
+    for column in columns {
+        let has_column: bool = conn
+            .query_row(
+                "SELECT COUNT(*) > 0 FROM pragma_table_info('issues') WHERE name = ?1",
+                [column],
+                |row| row.get(0),
+            )
+            .unwrap_or(false);
+
+        if !has_column {
+            let sql = format!("ALTER TABLE issues ADD COLUMN {column} TEXT");
+            conn.execute(&sql, [])?;
+        }
+    }
+
+    Ok(())
+}
+
+/// Migration: Add closed_at column and backfill from events.
+///
+/// Stores the timestamp when an issue was closed (done/closed status) directly
+/// on the issues table, replacing the correlated subquery that computed it.
+fn migrate_add_closed_at(conn: &Connection) -> Result<()> {
+    let has_col: bool = conn.query_row(
+        "SELECT COUNT(*) > 0 FROM pragma_table_info('issues') WHERE name = 'closed_at'",
+        [],
+        |row| row.get(0),
+    )?;
+
+    if !has_col {
+        conn.execute("ALTER TABLE issues ADD COLUMN closed_at TEXT", [])?;
+
+        // Backfill closed_at from events table
+        conn.execute(
+            "UPDATE issues SET closed_at = (
+                SELECT MAX(e.created_at) FROM events e
+                WHERE e.issue_id = issues.id AND e.action IN ('done', 'closed')
+                AND NOT EXISTS (
+                    SELECT 1 FROM events e2
+                    WHERE e2.issue_id = e.issue_id
+                    AND e2.action = 'reopened'
+                    AND e2.created_at > e.created_at
+                )
+            ) WHERE status IN ('done', 'closed')",
+            [],
+        )?;
+    }
+
+    Ok(())
+}
+
+/// Migration: Backfill prefixes table from existing issues.
+///
+/// Extracts prefixes from issue IDs and populates the prefixes table
+/// with correct issue counts. Only runs if the table is empty but
+/// issues exist.
+fn migrate_backfill_prefixes(conn: &Connection) -> Result<()> {
+    let prefix_count: i64 = conn
+        .query_row("SELECT COUNT(*) FROM prefixes", [], |row| row.get(0))
+        .unwrap_or(0);
+
+    if prefix_count == 0 {
+        conn.execute(
+            "INSERT OR IGNORE INTO prefixes (prefix, created_at, issue_count)
+             SELECT
+                 substr(id, 1, instr(id, '-') - 1) as prefix,
+                 MIN(created_at) as created_at,
+                 COUNT(*) as issue_count
+             FROM issues
+             WHERE id LIKE '%-%'
+             GROUP BY prefix",
+            [],
+        )?;
+    }
+    Ok(())
+}
+
+/// Migration: Rewrite "tracked_by" to "tracked-by" in deps table.
+///
+/// Early versions serialized TrackedBy as "tracked_by" (underscore).
+/// The canonical form is "tracked-by" (kebab-case).
+fn migrate_tracked_by_relation(conn: &Connection) -> Result<()> {
+    conn.execute(
+        "UPDATE deps SET rel = 'tracked-by' WHERE rel = 'tracked_by'",
+        [],
+    )?;
+    Ok(())
+}
+
 /// SQLite database connection with issue tracker operations.
 pub struct Database {
     /// The underlying SQLite connection.
@@ -290,7 +423,7 @@ impl Database {
         )?;
 
         let db = Database { conn };
-        db.migrate()?;
+        run_migrations(&db.conn)?;
         Ok(db)
     }
 
@@ -299,56 +432,8 @@ impl Database {
         let conn = Connection::open_in_memory()?;
         conn.execute_batch("PRAGMA foreign_keys = ON;")?;
         let db = Database { conn };
-        db.migrate()?;
+        run_migrations(&db.conn)?;
         Ok(db)
-    }
-
-    /// Run database migrations.
-    fn migrate(&self) -> Result<()> {
-        self.conn.execute_batch(SCHEMA)?;
-        self.migrate_relation_kebab_case()?;
-        self.migrate_add_closed_at()?;
-        Ok(())
-    }
-
-    /// Migrate relation values from snake_case to kebab-case.
-    fn migrate_relation_kebab_case(&self) -> Result<()> {
-        self.conn.execute(
-            "UPDATE deps SET rel = 'tracked-by' WHERE rel = 'tracked_by'",
-            [],
-        )?;
-        Ok(())
-    }
-
-    /// Add closed_at column and backfill from events.
-    fn migrate_add_closed_at(&self) -> Result<()> {
-        let has_col: bool = self.conn.query_row(
-            "SELECT COUNT(*) > 0 FROM pragma_table_info('issues') WHERE name = 'closed_at'",
-            [],
-            |row| row.get(0),
-        )?;
-
-        if !has_col {
-            self.conn
-                .execute("ALTER TABLE issues ADD COLUMN closed_at TEXT", [])?;
-
-            // Backfill closed_at from events table
-            self.conn.execute(
-                "UPDATE issues SET closed_at = (
-                    SELECT MAX(e.created_at) FROM events e
-                    WHERE e.issue_id = issues.id AND e.action IN ('done', 'closed')
-                    AND NOT EXISTS (
-                        SELECT 1 FROM events e2
-                        WHERE e2.issue_id = e.issue_id
-                        AND e2.action = 'reopened'
-                        AND e2.created_at > e.created_at
-                    )
-                ) WHERE status IN ('done', 'closed')",
-                [],
-            )?;
-        }
-
-        Ok(())
     }
 
     /// Create a new issue.
