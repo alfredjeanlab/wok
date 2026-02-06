@@ -15,7 +15,7 @@ use crate::hlc::Hlc;
 use crate::issue::{Dependency, Event, Issue, IssueType, Note, Relation, Status};
 
 /// SQL schema for the issue tracker database.
-const SCHEMA: &str = r#"
+pub const SCHEMA: &str = r#"
 -- Core issue table with HLC columns for conflict resolution
 CREATE TABLE IF NOT EXISTS issues (
     id TEXT PRIMARY KEY,
@@ -153,6 +153,92 @@ fn parse_hlc_opt(value: Option<String>) -> std::result::Result<Option<Hlc>, rusq
     }
 }
 
+/// Run schema creation and all migrations on a database connection.
+///
+/// This is the single migration path for all crates (core, CLI, daemon).
+/// It applies the canonical schema and runs idempotent migrations to upgrade
+/// older databases that may be missing columns or data.
+pub fn run_migrations(conn: &Connection) -> Result<()> {
+    conn.execute_batch(SCHEMA)?;
+    migrate_add_assignee(conn)?;
+    migrate_add_hlc_columns(conn)?;
+    migrate_backfill_prefixes(conn)?;
+    Ok(())
+}
+
+/// Migration: Add assignee column to existing databases.
+fn migrate_add_assignee(conn: &Connection) -> Result<()> {
+    let has_assignee: bool = conn
+        .query_row(
+            "SELECT COUNT(*) > 0 FROM pragma_table_info('issues') WHERE name = 'assignee'",
+            [],
+            |row| row.get(0),
+        )
+        .unwrap_or(false);
+
+    if !has_assignee {
+        conn.execute("ALTER TABLE issues ADD COLUMN assignee TEXT", [])?;
+    }
+    Ok(())
+}
+
+/// Migration: Add HLC columns for CRDT sync compatibility.
+///
+/// Adds all HLC (Hybrid Logical Clock) columns used for conflict resolution
+/// during sync. Older databases may be missing some or all of these.
+fn migrate_add_hlc_columns(conn: &Connection) -> Result<()> {
+    let columns = [
+        "last_status_hlc",
+        "last_title_hlc",
+        "last_type_hlc",
+        "last_description_hlc",
+        "last_assignee_hlc",
+    ];
+
+    for column in columns {
+        let has_column: bool = conn
+            .query_row(
+                "SELECT COUNT(*) > 0 FROM pragma_table_info('issues') WHERE name = ?1",
+                [column],
+                |row| row.get(0),
+            )
+            .unwrap_or(false);
+
+        if !has_column {
+            let sql = format!("ALTER TABLE issues ADD COLUMN {column} TEXT");
+            conn.execute(&sql, [])?;
+        }
+    }
+
+    Ok(())
+}
+
+/// Migration: Backfill prefixes table from existing issues.
+///
+/// Extracts prefixes from issue IDs and populates the prefixes table
+/// with correct issue counts. Only runs if the table is empty but
+/// issues exist.
+fn migrate_backfill_prefixes(conn: &Connection) -> Result<()> {
+    let prefix_count: i64 = conn
+        .query_row("SELECT COUNT(*) FROM prefixes", [], |row| row.get(0))
+        .unwrap_or(0);
+
+    if prefix_count == 0 {
+        conn.execute(
+            "INSERT OR IGNORE INTO prefixes (prefix, created_at, issue_count)
+             SELECT
+                 substr(id, 1, instr(id, '-') - 1) as prefix,
+                 MIN(created_at) as created_at,
+                 COUNT(*) as issue_count
+             FROM issues
+             WHERE id LIKE '%-%'
+             GROUP BY prefix",
+            [],
+        )?;
+    }
+    Ok(())
+}
+
 /// SQLite database connection with issue tracker operations.
 pub struct Database {
     /// The underlying SQLite connection.
@@ -179,7 +265,7 @@ impl Database {
         )?;
 
         let db = Database { conn };
-        db.migrate()?;
+        run_migrations(&db.conn)?;
         Ok(db)
     }
 
@@ -188,14 +274,8 @@ impl Database {
         let conn = Connection::open_in_memory()?;
         conn.execute_batch("PRAGMA foreign_keys = ON;")?;
         let db = Database { conn };
-        db.migrate()?;
+        run_migrations(&db.conn)?;
         Ok(db)
-    }
-
-    /// Run database migrations.
-    fn migrate(&self) -> Result<()> {
-        self.conn.execute_batch(SCHEMA)?;
-        Ok(())
     }
 
     /// Create a new issue.
