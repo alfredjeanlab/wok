@@ -75,7 +75,7 @@ pub(crate) fn expand_labels(labels: &[String]) -> Vec<String> {
 
 /// Expand comma-separated IDs into individual IDs.
 /// For example, ["a,b", "c"] becomes ["a", "b", "c"].
-fn expand_ids(ids: &[String]) -> Vec<String> {
+pub(crate) fn expand_ids(ids: &[String]) -> Vec<String> {
     ids.iter()
         .flat_map(|id| id.split(','))
         .map(|s| s.trim().to_string())

@@ -8,8 +8,9 @@ use crate::error::Result;
 use super::open_db;
 
 pub fn run(ids: &[String]) -> Result<()> {
+    let ids = super::new::expand_ids(ids);
     let (db, _, _) = open_db()?;
-    run_impl(&db, ids)
+    run_impl(&db, &ids)
 }
 
 /// Internal implementation that accepts db for testing.

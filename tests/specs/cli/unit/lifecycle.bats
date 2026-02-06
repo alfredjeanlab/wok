@@ -300,3 +300,38 @@ load '../../helpers/common'
     assert_output --partial "issue not found: unknown-single"
     refute_output --partial "Started 0 of 1"
 }
+
+@test "comma-separated IDs in start" {
+    id1=$(create_issue task "CommaStart Task 1")
+    id2=$(create_issue task "CommaStart Task 2")
+    run "$WK_BIN" start "$id1,$id2"
+    assert_success
+    run "$WK_BIN" show "$id1"
+    assert_output --partial "Status: in_progress"
+    run "$WK_BIN" show "$id2"
+    assert_output --partial "Status: in_progress"
+}
+
+@test "comma-separated IDs in done" {
+    id1=$(create_issue task "CommaDone Task 1")
+    id2=$(create_issue task "CommaDone Task 2")
+    "$WK_BIN" start "$id1"
+    "$WK_BIN" start "$id2"
+    run "$WK_BIN" done "$id1,$id2"
+    assert_success
+    run "$WK_BIN" show "$id1"
+    assert_output --partial "Status: done"
+    run "$WK_BIN" show "$id2"
+    assert_output --partial "Status: done"
+}
+
+@test "comma-separated IDs in close" {
+    id1=$(create_issue task "CommaClose Task 1")
+    id2=$(create_issue task "CommaClose Task 2")
+    run "$WK_BIN" close "$id1,$id2" --reason "duplicate"
+    assert_success
+    run "$WK_BIN" show "$id1"
+    assert_output --partial "Status: closed"
+    run "$WK_BIN" show "$id2"
+    assert_output --partial "Status: closed"
+}

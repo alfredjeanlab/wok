@@ -71,10 +71,21 @@ fn split_ids_and_labels(db: &Database, args: &[String]) -> Result<(Vec<String>, 
         });
     }
 
-    let mut ids = Vec::new();
-    let mut labels_start = args.len();
+    // Expand comma-separated values in all args first
+    let expanded: Vec<String> = args
+        .iter()
+        .flat_map(|arg| {
+            arg.split(',')
+                .map(|s| s.trim())
+                .filter(|s| !s.is_empty())
+                .map(String::from)
+        })
+        .collect();
 
-    for (i, arg) in args.iter().enumerate() {
+    let mut ids = Vec::new();
+    let mut labels_start = expanded.len();
+
+    for (i, arg) in expanded.iter().enumerate() {
         match db.resolve_id(arg) {
             Ok(resolved_id) => ids.push(resolved_id),
             Err(_) => {
@@ -85,7 +96,7 @@ fn split_ids_and_labels(db: &Database, args: &[String]) -> Result<(Vec<String>, 
         }
     }
 
-    let labels: Vec<String> = args[labels_start..].to_vec();
+    let labels: Vec<String> = expanded[labels_start..].to_vec();
 
     if ids.is_empty() {
         return Err(Error::FieldRequired {

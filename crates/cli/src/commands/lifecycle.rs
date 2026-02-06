@@ -230,8 +230,9 @@ where
 }
 
 pub fn start(ids: &[String]) -> Result<()> {
+    let ids = super::new::expand_ids(ids);
     let (db, _config, _work_dir) = open_db()?;
-    start_impl(&db, ids)
+    start_impl(&db, &ids)
 }
 
 /// Internal implementation that accepts db for testing.
@@ -263,6 +264,7 @@ fn start_single(db: &Database, id: &str) -> Result<()> {
 }
 
 pub fn done(ids: &[String], reason: Option<&str>) -> Result<()> {
+    let ids = super::new::expand_ids(ids);
     // Validate and trim reason if provided
     let trimmed_reason = if let Some(r) = reason {
         Some(validate_and_trim_reason(r)?)
@@ -271,7 +273,7 @@ pub fn done(ids: &[String], reason: Option<&str>) -> Result<()> {
     };
 
     let (db, _config, _work_dir) = open_db()?;
-    done_impl(&db, ids, trimmed_reason.as_deref())
+    done_impl(&db, &ids, trimmed_reason.as_deref())
 }
 
 /// Internal implementation that accepts db for testing.
@@ -349,10 +351,11 @@ fn done_single_with_reason(
 }
 
 pub fn close(ids: &[String], reason: Option<&str>) -> Result<()> {
+    let ids = super::new::expand_ids(ids);
     let effective_reason = resolve_reason(reason, "closed")?;
 
     let (db, _config, _work_dir) = open_db()?;
-    close_impl(&db, ids, &effective_reason)
+    close_impl(&db, &ids, &effective_reason)
 }
 
 /// Internal implementation that accepts db for testing.
@@ -389,6 +392,7 @@ fn close_single(db: &Database, id: &str, reason: &str) -> Result<()> {
 }
 
 pub fn reopen(ids: &[String], reason: Option<&str>) -> Result<()> {
+    let ids = super::new::expand_ids(ids);
     // Validate and trim reason if provided
     let trimmed_reason = if let Some(r) = reason {
         Some(validate_and_trim_reason(r)?)
@@ -397,7 +401,7 @@ pub fn reopen(ids: &[String], reason: Option<&str>) -> Result<()> {
     };
 
     let (db, _config, _work_dir) = open_db()?;
-    reopen_impl(&db, ids, trimmed_reason.as_deref())
+    reopen_impl(&db, &ids, trimmed_reason.as_deref())
 }
 
 /// Internal implementation that accepts db for testing.

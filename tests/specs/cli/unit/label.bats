@@ -158,3 +158,45 @@ load '../../helpers/common'
     assert_output --partial "urgent"
     assert_output --partial "backend"
 }
+
+@test "comma-separated IDs in label and unlabel" {
+    # Comma-separated IDs
+    id1=$(create_issue task "CommaLabel Task 1")
+    id2=$(create_issue task "CommaLabel Task 2")
+    run "$WK_BIN" label "$id1,$id2" "urgent"
+    assert_success
+    run "$WK_BIN" show "$id1"
+    assert_output --partial "urgent"
+    run "$WK_BIN" show "$id2"
+    assert_output --partial "urgent"
+
+    # Comma-separated labels
+    id3=$(create_issue task "CommaLabel Task 3")
+    run "$WK_BIN" label "$id3" "urgent,backend"
+    assert_success
+    run "$WK_BIN" show "$id3"
+    assert_output --partial "urgent"
+    assert_output --partial "backend"
+
+    # Both comma-separated IDs and labels
+    id4=$(create_issue task "CommaLabel Task 4")
+    id5=$(create_issue task "CommaLabel Task 5")
+    run "$WK_BIN" label "$id4,$id5" "p0,frontend"
+    assert_success
+    run "$WK_BIN" show "$id4"
+    assert_output --partial "p0"
+    assert_output --partial "frontend"
+    run "$WK_BIN" show "$id5"
+    assert_output --partial "p0"
+    assert_output --partial "frontend"
+
+    # Comma-separated unlabel
+    run "$WK_BIN" unlabel "$id4,$id5" "p0,frontend"
+    assert_success
+    run "$WK_BIN" show "$id4"
+    refute_line --regexp '^Labels:.*p0'
+    refute_line --regexp '^Labels:.*frontend'
+    run "$WK_BIN" show "$id5"
+    refute_line --regexp '^Labels:.*p0'
+    refute_line --regexp '^Labels:.*frontend'
+}

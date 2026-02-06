@@ -8,8 +8,9 @@ use crate::error::Result;
 use crate::models::{Action, Event, Relation, UserRelation};
 
 pub fn add(from_id: &str, rel: &str, to_ids: &[String]) -> Result<()> {
+    let to_ids = super::new::expand_ids(to_ids);
     let (db, _config, _work_dir) = open_db()?;
-    add_impl(&db, from_id, rel, to_ids)
+    add_impl(&db, from_id, rel, &to_ids)
 }
 
 /// Internal implementation that accepts db for testing.
@@ -84,8 +85,9 @@ pub(crate) fn add_impl(db: &Database, from_id: &str, rel: &str, to_ids: &[String
 }
 
 pub fn remove(from_id: &str, rel: &str, to_ids: &[String]) -> Result<()> {
+    let to_ids = super::new::expand_ids(to_ids);
     let (db, _config, _work_dir) = open_db()?;
-    remove_impl(&db, from_id, rel, to_ids)
+    remove_impl(&db, from_id, rel, &to_ids)
 }
 
 /// Internal implementation that accepts db for testing.
