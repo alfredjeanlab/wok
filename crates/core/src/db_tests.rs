@@ -450,6 +450,28 @@ fn get_link_by_url() {
 }
 
 #[test]
+fn remove_link() {
+    let db = Database::open_in_memory().unwrap();
+    let issue = test_issue("test-1", "Test issue");
+    db.create_issue(&issue).unwrap();
+
+    let link = Link {
+        id: 0,
+        issue_id: "test-1".to_string(),
+        link_type: Some(LinkType::Github),
+        url: Some("https://github.com/org/repo/issues/1".to_string()),
+        external_id: Some("1".to_string()),
+        rel: None,
+        created_at: Utc::now(),
+    };
+    let link_id = db.add_link(&link).unwrap();
+
+    assert_eq!(db.get_links("test-1").unwrap().len(), 1);
+    db.remove_link(link_id).unwrap();
+    assert_eq!(db.get_links("test-1").unwrap().len(), 0);
+}
+
+#[test]
 fn remove_all_links() {
     let db = Database::open_in_memory().unwrap();
     let issue = test_issue("test-1", "Test issue");
@@ -479,4 +501,99 @@ fn remove_all_links() {
     assert_eq!(db.get_links("test-1").unwrap().len(), 2);
     db.remove_all_links("test-1").unwrap();
     assert_eq!(db.get_links("test-1").unwrap().len(), 0);
+}
+
+#[test]
+fn ensure_prefix_creates_new() {
+    let db = Database::open_in_memory().unwrap();
+    db.ensure_prefix("proj").unwrap();
+
+    let prefixes = db.list_prefixes().unwrap();
+    assert_eq!(prefixes.len(), 1);
+    assert_eq!(prefixes[0].prefix, "proj");
+    assert_eq!(prefixes[0].issue_count, 0);
+}
+
+#[test]
+fn ensure_prefix_idempotent() {
+    let db = Database::open_in_memory().unwrap();
+    db.ensure_prefix("proj").unwrap();
+    db.ensure_prefix("proj").unwrap();
+
+    let prefixes = db.list_prefixes().unwrap();
+    assert_eq!(prefixes.len(), 1);
+}
+
+#[test]
+fn increment_and_decrement_prefix_count() {
+    let db = Database::open_in_memory().unwrap();
+    db.ensure_prefix("proj").unwrap();
+
+    db.increment_prefix_count("proj").unwrap();
+    db.increment_prefix_count("proj").unwrap();
+    let prefixes = db.list_prefixes().unwrap();
+    assert_eq!(prefixes[0].issue_count, 2);
+
+    db.decrement_prefix_count("proj").unwrap();
+    let prefixes = db.list_prefixes().unwrap();
+    assert_eq!(prefixes[0].issue_count, 1);
+}
+
+#[test]
+fn list_prefixes_ordered_by_count() {
+    let db = Database::open_in_memory().unwrap();
+    db.ensure_prefix("alpha").unwrap();
+    db.ensure_prefix("beta").unwrap();
+
+    db.increment_prefix_count("alpha").unwrap();
+    db.increment_prefix_count("beta").unwrap();
+    db.increment_prefix_count("beta").unwrap();
+
+    let prefixes = db.list_prefixes().unwrap();
+    assert_eq!(prefixes.len(), 2);
+    assert_eq!(prefixes[0].prefix, "beta");
+    assert_eq!(prefixes[0].issue_count, 2);
+    assert_eq!(prefixes[1].prefix, "alpha");
+    assert_eq!(prefixes[1].issue_count, 1);
+}
+
+#[test]
+fn rename_prefix_no_conflict() {
+    let db = Database::open_in_memory().unwrap();
+    db.ensure_prefix("old").unwrap();
+    db.increment_prefix_count("old").unwrap();
+
+    db.rename_prefix("old", "new").unwrap();
+
+    let prefixes = db.list_prefixes().unwrap();
+    assert_eq!(prefixes.len(), 1);
+    assert_eq!(prefixes[0].prefix, "new");
+    assert_eq!(prefixes[0].issue_count, 1);
+}
+
+#[test]
+fn rename_prefix_merges_counts() {
+    let db = Database::open_in_memory().unwrap();
+    db.ensure_prefix("old").unwrap();
+    db.ensure_prefix("new").unwrap();
+
+    db.increment_prefix_count("old").unwrap();
+    db.increment_prefix_count("old").unwrap();
+    db.increment_prefix_count("new").unwrap();
+
+    db.rename_prefix("old", "new").unwrap();
+
+    let prefixes = db.list_prefixes().unwrap();
+    assert_eq!(prefixes.len(), 1);
+    assert_eq!(prefixes[0].prefix, "new");
+    assert_eq!(prefixes[0].issue_count, 3);
+}
+
+#[test]
+fn rename_nonexistent_prefix_is_noop() {
+    let db = Database::open_in_memory().unwrap();
+    db.rename_prefix("ghost", "new").unwrap();
+
+    let prefixes = db.list_prefixes().unwrap();
+    assert!(prefixes.is_empty());
 }
