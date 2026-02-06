@@ -3,16 +3,18 @@
 
 //! Database adapter for the daemon.
 //!
-//! Thin wrapper over [`wk_core::Database`] that dispatches IPC query and
-//! mutation operations, converting types at the boundary.
+//! Thin adapter dispatching IPC [`QueryOp`]/[`MutateOp`] to the core
+//! [`Database`](wk_core::Database) with IPC type conversions.
 
 use std::path::Path;
 
 use chrono::Utc;
 
-use crate::ipc::{MutateOp, MutateResult, QueryOp, QueryResult};
+use crate::ipc::{
+    DependencyRef, Issue as IpcIssue, Link, MutateOp, MutateResult, QueryOp, QueryResult, Relation,
+};
 
-/// Database adapter that delegates to core.
+/// Database adapter wrapping core Database for IPC operations.
 pub struct Database {
     core: wk_core::Database,
 }
@@ -28,20 +30,17 @@ impl Database {
     pub fn execute_query(&self, op: QueryOp) -> Result<QueryResult, String> {
         match op {
             QueryOp::ResolveId { partial_id } => {
-                let id = self
-                    .core
-                    .resolve_id(&partial_id)
-                    .map_err(|e| e.to_string())?;
+                let id = q(self.core.resolve_id(&partial_id))?;
                 Ok(QueryResult::ResolvedId { id })
             }
             QueryOp::IssueExists { id } => {
-                let value = self.core.issue_exists(&id).map_err(|e| e.to_string())?;
+                let value = q(self.core.issue_exists(&id))?;
                 Ok(QueryResult::Bool { value })
             }
             QueryOp::GetIssue { id } => {
-                let issue = self.core.get_issue(&id).map_err(|e| e.to_string())?;
+                let issue = q(self.core.get_issue(&id))?;
                 Ok(QueryResult::Issue {
-                    issue: issue.into(),
+                    issue: core_to_ipc(issue),
                 })
             }
             QueryOp::ListIssues {
@@ -49,181 +48,125 @@ impl Database {
                 issue_type,
                 label,
             } => {
-                let issues = self
-                    .core
-                    .list_issues(status, issue_type, label.as_deref())
-                    .map_err(|e| e.to_string())?;
+                let issues = q(self.core.list_issues(status, issue_type, label.as_deref()))?;
                 Ok(QueryResult::Issues {
-                    issues: issues.into_iter().map(|i| i.into()).collect(),
+                    issues: issues.into_iter().map(core_to_ipc).collect(),
                 })
             }
             QueryOp::SearchIssues { query } => {
-                let issues = self.core.search_issues(&query).map_err(|e| e.to_string())?;
+                let issues = q(self.core.search_issues(&query))?;
                 Ok(QueryResult::Issues {
-                    issues: issues.into_iter().map(|i| i.into()).collect(),
+                    issues: issues.into_iter().map(core_to_ipc).collect(),
                 })
             }
             QueryOp::GetBlockedIssueIds => {
-                let ids = self
-                    .core
-                    .get_blocked_issue_ids()
-                    .map_err(|e| e.to_string())?;
+                let ids = q(self.core.get_blocked_issue_ids())?;
                 Ok(QueryResult::Ids { ids })
             }
             QueryOp::GetLabels { id } => {
-                let labels = self.core.get_labels(&id).map_err(|e| e.to_string())?;
+                let labels = q(self.core.get_labels(&id))?;
                 Ok(QueryResult::Labels { labels })
             }
             QueryOp::GetLabelsBatch { ids } => {
-                let id_refs: Vec<&str> = ids.iter().map(|s| s.as_str()).collect();
-                let labels = self
-                    .core
-                    .get_labels_batch(&id_refs)
-                    .map_err(|e| e.to_string())?;
+                let refs: Vec<&str> = ids.iter().map(String::as_str).collect();
+                let labels = q(self.core.get_labels_batch(&refs))?;
                 Ok(QueryResult::LabelsBatch { labels })
             }
             QueryOp::GetNotes { id } => {
-                let notes = self.core.get_notes(&id).map_err(|e| e.to_string())?;
+                let mut notes = q(self.core.get_notes(&id))?;
+                notes.reverse();
                 Ok(QueryResult::Notes { notes })
             }
             QueryOp::GetEvents { id } => {
-                let events = self.core.get_events(&id).map_err(|e| e.to_string())?;
+                let mut events = q(self.core.get_events(&id))?;
+                events.reverse();
                 Ok(QueryResult::Events { events })
             }
             QueryOp::GetAllEvents { limit } => {
-                let events = match limit {
-                    Some(n) => self.core.get_recent_events(n),
-                    None => self.core.get_recent_events(usize::MAX),
-                }
-                .map_err(|e| e.to_string())?;
+                let events = q(self.core.get_recent_events(limit.unwrap_or(usize::MAX)))?;
                 Ok(QueryResult::Events { events })
             }
             QueryOp::GetDepsFrom { id } => {
-                let deps = self.core.get_deps_from(&id).map_err(|e| e.to_string())?;
+                let deps = q(self.core.get_deps_from(&id))?;
                 Ok(QueryResult::Dependencies { deps })
             }
             QueryOp::GetBlockers { id } => {
-                let deps = self.query_deps(
-                    "SELECT from_id, to_id, rel, created_at FROM deps
-                     WHERE to_id = ?1 AND rel = 'blocks' ORDER BY created_at DESC",
-                    &id,
-                )?;
+                let mut deps = q(self.core.get_deps_to(&id))?;
+                deps.retain(|d| d.relation == Relation::Blocks);
                 Ok(QueryResult::Dependencies { deps })
             }
             QueryOp::GetBlocking { id } => {
-                let deps = self.query_deps(
-                    "SELECT from_id, to_id, rel, created_at FROM deps
-                     WHERE from_id = ?1 AND rel = 'blocks' ORDER BY created_at DESC",
-                    &id,
-                )?;
+                let mut deps = q(self.core.get_deps_from(&id))?;
+                deps.retain(|d| d.relation == Relation::Blocks);
                 Ok(QueryResult::Dependencies { deps })
             }
             QueryOp::GetTracked { id } => {
-                let deps = self.query_deps(
-                    "SELECT from_id, to_id, rel, created_at FROM deps
-                     WHERE from_id = ?1 AND rel = 'tracks' ORDER BY created_at DESC",
-                    &id,
-                )?;
+                let mut deps = q(self.core.get_deps_from(&id))?;
+                deps.retain(|d| d.relation == Relation::Tracks);
                 Ok(QueryResult::Dependencies { deps })
             }
             QueryOp::GetTracking { id } => {
-                let deps = self.query_deps(
-                    "SELECT from_id, to_id, rel, created_at FROM deps
-                     WHERE to_id = ?1 AND rel = 'tracks' ORDER BY created_at DESC",
-                    &id,
-                )?;
+                let mut deps = q(self.core.get_deps_to(&id))?;
+                deps.retain(|d| d.relation == Relation::Tracks);
                 Ok(QueryResult::Dependencies { deps })
             }
             QueryOp::GetTransitiveBlockers { id } => {
-                let deps = self.query_deps(
-                    "WITH RECURSIVE blockers(id) AS (
-                        SELECT from_id FROM deps WHERE to_id = ?1 AND rel = 'blocks'
-                        UNION
-                        SELECT d.from_id FROM deps d
-                        JOIN blockers b ON d.to_id = b.id
-                        WHERE d.rel = 'blocks'
-                    )
-                    SELECT b.id as from_id, ?1 as to_id, 'blocks' as rel, i.created_at
-                    FROM blockers b
-                    JOIN issues i ON i.id = b.id
-                    WHERE i.status IN ('todo', 'in_progress')",
-                    &id,
-                )?;
+                let deps = q(self.core.get_transitive_blocker_deps(&id))?;
                 Ok(QueryResult::Dependencies { deps })
             }
             QueryOp::GetLinks { id } => {
-                let links = self.core.get_links(&id).map_err(|e| e.to_string())?;
+                let mut links = q(self.core.get_links(&id))?;
+                links.reverse();
                 Ok(QueryResult::Links { links })
             }
             QueryOp::GetLinkByUrl { id, url } => {
-                let link = self
-                    .core
-                    .get_link_by_url(&id, &url)
-                    .map_err(|e| e.to_string())?;
+                let link = q(self.core.get_link_by_url(&id, &url))?;
                 Ok(QueryResult::Link { link })
             }
             QueryOp::ListPrefixes => {
-                let prefixes = self.core.list_prefixes().map_err(|e| e.to_string())?;
+                let prefixes = q(self.core.list_prefixes())?;
                 Ok(QueryResult::Prefixes { prefixes })
             }
         }
     }
 
     /// Execute a mutation operation and return the result.
-    pub fn execute_mutate(&self, op: MutateOp) -> Result<MutateResult, String> {
+    pub fn execute_mutate(&mut self, op: MutateOp) -> Result<MutateResult, String> {
         match op {
             MutateOp::CreateIssue { issue } => {
-                let core_issue: wk_core::Issue = issue.into();
-                self.core
-                    .create_issue(&core_issue)
-                    .map_err(|e| e.to_string())?;
+                q(self.core.create_issue(&ipc_to_core(issue)))?;
                 Ok(MutateResult::Ok)
             }
             MutateOp::UpdateIssueStatus { id, status } => {
-                self.core
-                    .update_issue_status(&id, status)
-                    .map_err(|e| e.to_string())?;
+                q(self.core.update_issue_status(&id, status))?;
                 Ok(MutateResult::Ok)
             }
             MutateOp::UpdateIssueTitle { id, title } => {
-                self.core
-                    .update_issue_title(&id, &title)
-                    .map_err(|e| e.to_string())?;
+                q(self.core.update_issue_title(&id, &title))?;
                 Ok(MutateResult::Ok)
             }
             MutateOp::UpdateIssueDescription { id, description } => {
-                self.core
-                    .update_issue_description(&id, &description)
-                    .map_err(|e| e.to_string())?;
+                q(self.core.update_issue_description(&id, &description))?;
                 Ok(MutateResult::Ok)
             }
             MutateOp::UpdateIssueType { id, issue_type } => {
-                self.core
-                    .update_issue_type(&id, issue_type)
-                    .map_err(|e| e.to_string())?;
+                q(self.core.update_issue_type(&id, issue_type))?;
                 Ok(MutateResult::Ok)
             }
             MutateOp::SetAssignee { id, assignee } => {
-                self.core
-                    .set_assignee(&id, &assignee)
-                    .map_err(|e| e.to_string())?;
+                q(self.core.set_assignee(&id, &assignee))?;
                 Ok(MutateResult::Ok)
             }
             MutateOp::ClearAssignee { id } => {
-                self.core.clear_assignee(&id).map_err(|e| e.to_string())?;
+                q(self.core.clear_assignee(&id))?;
                 Ok(MutateResult::Ok)
             }
             MutateOp::AddLabel { id, label } => {
-                self.core
-                    .add_label(&id, &label)
-                    .map_err(|e| e.to_string())?;
+                q(self.core.add_label(&id, &label))?;
                 Ok(MutateResult::Ok)
             }
             MutateOp::RemoveLabel { id, label } => {
-                let removed = self
-                    .core
-                    .remove_label(&id, &label)
-                    .map_err(|e| e.to_string())?;
+                let removed = q(self.core.remove_label(&id, &label))?;
                 Ok(MutateResult::LabelRemoved { removed })
             }
             MutateOp::AddNote {
@@ -231,33 +174,27 @@ impl Database {
                 status,
                 content,
             } => {
-                self.core
-                    .add_note(&id, status, &content)
-                    .map_err(|e| e.to_string())?;
+                q(self.core.add_note(&id, status, &content))?;
                 Ok(MutateResult::Ok)
             }
             MutateOp::LogEvent { event } => {
-                self.core.log_event(&event).map_err(|e| e.to_string())?;
+                q(self.core.log_event(&event))?;
                 Ok(MutateResult::Ok)
             }
-            MutateOp::AddDependency(crate::ipc::DependencyRef {
+            MutateOp::AddDependency(DependencyRef {
                 from_id,
                 to_id,
                 relation,
             }) => {
-                self.core
-                    .add_dependency(&from_id, &to_id, relation)
-                    .map_err(|e| e.to_string())?;
+                q(self.core.add_dependency(&from_id, &to_id, relation))?;
                 Ok(MutateResult::Ok)
             }
-            MutateOp::RemoveDependency(crate::ipc::DependencyRef {
+            MutateOp::RemoveDependency(DependencyRef {
                 from_id,
                 to_id,
                 relation,
             }) => {
-                self.core
-                    .remove_dependency(&from_id, &to_id, relation)
-                    .map_err(|e| e.to_string())?;
+                q(self.core.remove_dependency(&from_id, &to_id, relation))?;
                 Ok(MutateResult::Ok)
             }
             MutateOp::AddLink {
@@ -267,7 +204,7 @@ impl Database {
                 external_id,
                 rel,
             } => {
-                let core_link = wk_core::Link {
+                let link = Link {
                     id: 0,
                     issue_id: id,
                     link_type,
@@ -276,51 +213,61 @@ impl Database {
                     rel,
                     created_at: Utc::now(),
                 };
-                self.core.add_link(&core_link).map_err(|e| e.to_string())?;
+                q(self.core.add_link(&link))?;
                 Ok(MutateResult::Ok)
             }
             MutateOp::RemoveLink { id, url } => {
-                if let Some(link) = self
-                    .core
-                    .get_link_by_url(&id, &url)
-                    .map_err(|e| e.to_string())?
-                {
-                    self.core.remove_link(link.id).map_err(|e| e.to_string())?;
-                }
+                q(self.core.remove_link_by_url(&id, &url))?;
                 Ok(MutateResult::Ok)
             }
             MutateOp::EnsurePrefix { prefix } => {
-                self.core
-                    .ensure_prefix(&prefix)
-                    .map_err(|e| e.to_string())?;
+                q(self.core.ensure_prefix(&prefix))?;
                 Ok(MutateResult::Ok)
             }
             MutateOp::IncrementPrefixCount { prefix } => {
-                self.core
-                    .increment_prefix_count(&prefix)
-                    .map_err(|e| e.to_string())?;
+                q(self.core.increment_prefix_count(&prefix))?;
                 Ok(MutateResult::Ok)
             }
         }
     }
+}
 
-    /// Helper: query dependency rows and convert to IPC Dependency.
-    fn query_deps(&self, sql: &str, id: &str) -> Result<Vec<crate::ipc::Dependency>, String> {
-        let mut stmt = self.core.conn.prepare(sql).map_err(|e| e.to_string())?;
-        let deps = stmt
-            .query_map([id], |row| {
-                let rel_str: String = row.get(2)?;
-                let created_str: String = row.get(3)?;
-                Ok(crate::ipc::Dependency {
-                    from_id: row.get(0)?,
-                    to_id: row.get(1)?,
-                    relation: rel_str.parse().unwrap_or(crate::ipc::Relation::Blocks),
-                    created_at: wk_core::db::parse_timestamp(&created_str, "created_at")?,
-                })
-            })
-            .map_err(|e| e.to_string())?
-            .collect::<Result<Vec<_>, _>>()
-            .map_err(|e| e.to_string())?;
-        Ok(deps)
+/// Map core errors to IPC error strings.
+fn q<T>(result: wk_core::Result<T>) -> Result<T, String> {
+    result.map_err(|e| e.to_string())
+}
+
+/// Convert a core Issue to an IPC Issue (strip HLC fields).
+fn core_to_ipc(issue: wk_core::Issue) -> IpcIssue {
+    IpcIssue {
+        id: issue.id,
+        issue_type: issue.issue_type,
+        title: issue.title,
+        description: issue.description,
+        status: issue.status,
+        assignee: issue.assignee,
+        created_at: issue.created_at,
+        updated_at: issue.updated_at,
+        closed_at: issue.closed_at,
+    }
+}
+
+/// Convert an IPC Issue to a core Issue (add None HLC fields).
+fn ipc_to_core(issue: IpcIssue) -> wk_core::Issue {
+    wk_core::Issue {
+        id: issue.id,
+        issue_type: issue.issue_type,
+        title: issue.title,
+        description: issue.description,
+        status: issue.status,
+        assignee: issue.assignee,
+        created_at: issue.created_at,
+        updated_at: issue.updated_at,
+        closed_at: issue.closed_at,
+        last_status_hlc: None,
+        last_title_hlc: None,
+        last_type_hlc: None,
+        last_description_hlc: None,
+        last_assignee_hlc: None,
     }
 }
