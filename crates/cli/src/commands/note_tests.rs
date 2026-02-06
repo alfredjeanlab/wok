@@ -9,7 +9,7 @@ use crate::models::{Action, IssueType, Status};
 
 #[test]
 fn test_add_note_to_issue() {
-    let ctx = TestContext::new();
+    let mut ctx = TestContext::new();
     ctx.create_issue("test-1", IssueType::Task, "Test issue");
 
     // Add note like the command does
@@ -30,7 +30,7 @@ fn test_add_note_to_issue() {
 
 #[test]
 fn test_note_captures_current_status() {
-    let ctx = TestContext::new();
+    let mut ctx = TestContext::new();
     ctx.create_issue("test-1", IssueType::Task, "Test issue")
         .set_status("test-1", Status::InProgress);
 
@@ -46,7 +46,7 @@ fn test_note_captures_current_status() {
 
 #[test]
 fn test_multiple_notes_at_different_statuses() {
-    let ctx = TestContext::new();
+    let mut ctx = TestContext::new();
     ctx.create_issue("test-1", IssueType::Task, "Test issue");
 
     // Note in todo
@@ -66,7 +66,7 @@ fn test_multiple_notes_at_different_statuses() {
 
 #[test]
 fn test_note_logs_event() {
-    let ctx = TestContext::new();
+    let mut ctx = TestContext::new();
     ctx.create_issue("test-1", IssueType::Task, "Test issue")
         .add_note("test-1", "Test note");
 
@@ -79,7 +79,7 @@ fn test_note_logs_event() {
 
 #[test]
 fn test_note_on_nonexistent_issue_fails() {
-    let ctx = TestContext::new();
+    let mut ctx = TestContext::new();
 
     let result = ctx.db.get_issue("nonexistent");
     assert!(result.is_err());
@@ -87,7 +87,7 @@ fn test_note_on_nonexistent_issue_fails() {
 
 #[test]
 fn test_empty_note_content() {
-    let ctx = TestContext::new();
+    let mut ctx = TestContext::new();
     ctx.create_issue("test-1", IssueType::Task, "Test issue");
 
     // Empty content is allowed by DB
@@ -100,7 +100,7 @@ fn test_empty_note_content() {
 
 #[test]
 fn test_multiline_note() {
-    let ctx = TestContext::new();
+    let mut ctx = TestContext::new();
     ctx.create_issue("test-1", IssueType::Task, "Test issue");
 
     let multiline = "Line 1\nLine 2\nLine 3";
@@ -112,7 +112,7 @@ fn test_multiline_note() {
 
 #[test]
 fn test_get_notes_by_status_groups_correctly() {
-    let ctx = TestContext::new();
+    let mut ctx = TestContext::new();
     ctx.create_issue("test-1", IssueType::Task, "Test issue");
 
     // Add notes at different statuses
@@ -138,7 +138,7 @@ use crate::commands::note::run_impl;
 
 #[test]
 fn test_run_impl_add_note() {
-    let ctx = TestContext::new();
+    let mut ctx = TestContext::new();
     ctx.create_issue("test-1", IssueType::Task, "Test issue");
 
     let result = run_impl(&ctx.db, "test-1", "A new note", false);
@@ -150,7 +150,7 @@ fn test_run_impl_add_note() {
 
 #[test]
 fn test_run_impl_replace_note() {
-    let ctx = TestContext::new();
+    let mut ctx = TestContext::new();
     ctx.create_issue("test-1", IssueType::Task, "Test issue")
         .add_note("test-1", "Original note");
 
@@ -164,7 +164,7 @@ fn test_run_impl_replace_note() {
 
 #[test]
 fn test_run_impl_nonexistent_issue() {
-    let ctx = TestContext::new();
+    let mut ctx = TestContext::new();
 
     let result = run_impl(&ctx.db, "nonexistent", "A note", false);
     assert!(result.is_err());
@@ -172,7 +172,7 @@ fn test_run_impl_nonexistent_issue() {
 
 #[test]
 fn test_run_impl_replace_no_existing_note() {
-    let ctx = TestContext::new();
+    let mut ctx = TestContext::new();
     ctx.create_issue("test-1", IssueType::Task, "Test issue");
 
     // Try to replace when there's no note
@@ -182,7 +182,7 @@ fn test_run_impl_replace_no_existing_note() {
 
 #[test]
 fn test_run_impl_closed_issue_rejected() {
-    let ctx = TestContext::new();
+    let mut ctx = TestContext::new();
     ctx.create_issue("test-1", IssueType::Task, "Test issue")
         .set_status("test-1", Status::Closed);
 
@@ -200,7 +200,7 @@ fn test_run_impl_closed_issue_rejected() {
 
 #[test]
 fn test_run_impl_closed_issue_replace_rejected() {
-    let ctx = TestContext::new();
+    let mut ctx = TestContext::new();
     ctx.create_issue("test-1", IssueType::Task, "Test issue")
         .add_note("test-1", "Original note")
         .set_status("test-1", Status::Closed);

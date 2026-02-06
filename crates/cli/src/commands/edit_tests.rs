@@ -11,10 +11,10 @@ use crate::validate::MAX_DESCRIPTION_LENGTH;
 
 #[test]
 fn test_update_title() {
-    let ctx = TestContext::new();
+    let mut ctx = TestContext::new();
     ctx.create_issue("test-1", IssueType::Task, "Original title");
 
-    let result = run_impl(&ctx.db, "test-1", "title", "Updated title");
+    let result = run_impl(&mut ctx.db, "test-1", "title", "Updated title");
     assert!(result.is_ok());
 
     let issue = ctx.db.get_issue("test-1").unwrap();
@@ -26,10 +26,10 @@ fn test_update_title() {
 
 #[test]
 fn test_update_description() {
-    let ctx = TestContext::new();
+    let mut ctx = TestContext::new();
     ctx.create_issue("test-1", IssueType::Task, "My issue");
 
-    let result = run_impl(&ctx.db, "test-1", "description", "New description");
+    let result = run_impl(&mut ctx.db, "test-1", "description", "New description");
     assert!(result.is_ok());
 
     let issue = ctx.db.get_issue("test-1").unwrap();
@@ -45,19 +45,19 @@ fn test_update_description() {
 
 #[test]
 fn test_edit_nonexistent_issue_fails() {
-    let ctx = TestContext::new();
+    let mut ctx = TestContext::new();
 
-    let result = run_impl(&ctx.db, "nonexistent", "title", "New title");
+    let result = run_impl(&mut ctx.db, "nonexistent", "title", "New title");
     assert!(result.is_err());
 }
 
 #[test]
 fn test_edit_preserves_status() {
-    let ctx = TestContext::new();
+    let mut ctx = TestContext::new();
     ctx.create_issue("test-1", IssueType::Task, "Original")
         .set_status("test-1", Status::InProgress);
 
-    run_impl(&ctx.db, "test-1", "title", "Updated").unwrap();
+    run_impl(&mut ctx.db, "test-1", "title", "Updated").unwrap();
 
     let issue = ctx.db.get_issue("test-1").unwrap();
     assert_eq!(issue.status, Status::InProgress);
@@ -65,12 +65,12 @@ fn test_edit_preserves_status() {
 
 #[test]
 fn test_edit_preserves_labels() {
-    let ctx = TestContext::new();
+    let mut ctx = TestContext::new();
     ctx.create_issue("test-1", IssueType::Task, "Original")
         .add_label("test-1", "important")
         .add_label("test-1", "backend");
 
-    run_impl(&ctx.db, "test-1", "title", "Updated").unwrap();
+    run_impl(&mut ctx.db, "test-1", "title", "Updated").unwrap();
 
     let labels = ctx.db.get_labels("test-1").unwrap();
     assert_eq!(labels.len(), 2);
@@ -80,32 +80,32 @@ fn test_edit_preserves_labels() {
 
 #[test]
 fn test_empty_title_rejected() {
-    let ctx = TestContext::new();
+    let mut ctx = TestContext::new();
     ctx.create_issue("test-1", IssueType::Task, "Original");
 
-    let result = run_impl(&ctx.db, "test-1", "title", "");
+    let result = run_impl(&mut ctx.db, "test-1", "title", "");
     assert!(result.is_err());
 }
 
 #[test]
 fn test_whitespace_title_rejected() {
-    let ctx = TestContext::new();
+    let mut ctx = TestContext::new();
     ctx.create_issue("test-1", IssueType::Task, "Original");
 
-    let result = run_impl(&ctx.db, "test-1", "title", "   ");
+    let result = run_impl(&mut ctx.db, "test-1", "title", "   ");
     assert!(result.is_err());
 }
 
 #[test]
 fn test_description_replaces_existing() {
-    let ctx = TestContext::new();
+    let mut ctx = TestContext::new();
     ctx.create_issue("test-1", IssueType::Task, "My issue");
 
     ctx.db
         .update_issue_description("test-1", "Old description")
         .unwrap();
 
-    let result = run_impl(&ctx.db, "test-1", "description", "New description");
+    let result = run_impl(&mut ctx.db, "test-1", "description", "New description");
     assert!(result.is_ok());
 
     let issue = ctx.db.get_issue("test-1").unwrap();
@@ -114,24 +114,24 @@ fn test_description_replaces_existing() {
 
 #[test]
 fn test_description_too_long() {
-    let ctx = TestContext::new();
+    let mut ctx = TestContext::new();
     ctx.create_issue("test-1", IssueType::Task, "My issue");
 
     let long_desc = "x".repeat(MAX_DESCRIPTION_LENGTH + 1);
-    let result = run_impl(&ctx.db, "test-1", "description", &long_desc);
+    let result = run_impl(&mut ctx.db, "test-1", "description", &long_desc);
     assert!(result.is_err());
 }
 
 #[test]
 fn test_empty_description_allowed() {
-    let ctx = TestContext::new();
+    let mut ctx = TestContext::new();
     ctx.create_issue("test-1", IssueType::Task, "My issue");
 
     ctx.db
         .update_issue_description("test-1", "Has desc")
         .unwrap();
 
-    let result = run_impl(&ctx.db, "test-1", "description", "");
+    let result = run_impl(&mut ctx.db, "test-1", "description", "");
     assert!(result.is_ok());
 
     let issue = ctx.db.get_issue("test-1").unwrap();
@@ -140,10 +140,10 @@ fn test_empty_description_allowed() {
 
 #[test]
 fn test_description_events_logged() {
-    let ctx = TestContext::new();
+    let mut ctx = TestContext::new();
     ctx.create_issue("test-1", IssueType::Task, "My issue");
 
-    run_impl(&ctx.db, "test-1", "description", "Description").unwrap();
+    run_impl(&mut ctx.db, "test-1", "description", "Description").unwrap();
 
     let events = ctx.db.get_events("test-1").unwrap();
     let edit_events: Vec<_> = events
@@ -159,12 +159,12 @@ fn test_description_events_logged() {
 
 #[test]
 fn test_description_preserves_other_fields() {
-    let ctx = TestContext::new();
+    let mut ctx = TestContext::new();
     ctx.create_issue("test-1", IssueType::Bug, "Original")
         .set_status("test-1", Status::InProgress)
         .add_label("test-1", "urgent");
 
-    run_impl(&ctx.db, "test-1", "description", "New desc").unwrap();
+    run_impl(&mut ctx.db, "test-1", "description", "New desc").unwrap();
 
     let issue = ctx.db.get_issue("test-1").unwrap();
     assert_eq!(issue.issue_type, IssueType::Bug);
@@ -177,10 +177,10 @@ fn test_description_preserves_other_fields() {
 
 #[test]
 fn test_update_type() {
-    let ctx = TestContext::new();
+    let mut ctx = TestContext::new();
     ctx.create_issue("test-1", IssueType::Task, "My task");
 
-    let result = run_impl(&ctx.db, "test-1", "type", "bug");
+    let result = run_impl(&mut ctx.db, "test-1", "type", "bug");
     assert!(result.is_ok());
 
     let issue = ctx.db.get_issue("test-1").unwrap();
@@ -192,19 +192,19 @@ fn test_update_type() {
 
 #[test]
 fn test_update_type_invalid() {
-    let ctx = TestContext::new();
+    let mut ctx = TestContext::new();
     ctx.create_issue("test-1", IssueType::Task, "My task");
 
-    let result = run_impl(&ctx.db, "test-1", "type", "invalid");
+    let result = run_impl(&mut ctx.db, "test-1", "type", "invalid");
     assert!(result.is_err());
 }
 
 #[test]
 fn test_update_type_same_no_event() {
-    let ctx = TestContext::new();
+    let mut ctx = TestContext::new();
     ctx.create_issue("test-1", IssueType::Task, "My task");
 
-    let result = run_impl(&ctx.db, "test-1", "type", "task");
+    let result = run_impl(&mut ctx.db, "test-1", "type", "task");
     assert!(result.is_ok());
 
     let events = ctx.db.get_events("test-1").unwrap();
@@ -214,7 +214,7 @@ fn test_update_type_same_no_event() {
 
 #[test]
 fn test_update_type_preserves_other_fields() {
-    let ctx = TestContext::new();
+    let mut ctx = TestContext::new();
     ctx.create_issue("test-1", IssueType::Task, "Original title")
         .set_status("test-1", Status::InProgress)
         .add_label("test-1", "urgent");
@@ -223,7 +223,7 @@ fn test_update_type_preserves_other_fields() {
         .update_issue_description("test-1", "Description")
         .unwrap();
 
-    run_impl(&ctx.db, "test-1", "type", "feature").unwrap();
+    run_impl(&mut ctx.db, "test-1", "type", "feature").unwrap();
 
     let issue = ctx.db.get_issue("test-1").unwrap();
     assert_eq!(issue.issue_type, IssueType::Feature);
@@ -237,20 +237,20 @@ fn test_update_type_preserves_other_fields() {
 
 #[test]
 fn test_unknown_attribute_fails() {
-    let ctx = TestContext::new();
+    let mut ctx = TestContext::new();
     ctx.create_issue("test-1", IssueType::Task, "My task");
 
-    let result = run_impl(&ctx.db, "test-1", "unknown", "value");
+    let result = run_impl(&mut ctx.db, "test-1", "unknown", "value");
     assert!(result.is_err());
 }
 
 #[test]
 fn test_attribute_case_insensitive() {
-    let ctx = TestContext::new();
+    let mut ctx = TestContext::new();
     ctx.create_issue("test-1", IssueType::Task, "Original");
 
     // Test uppercase
-    let result = run_impl(&ctx.db, "test-1", "TITLE", "New title");
+    let result = run_impl(&mut ctx.db, "test-1", "TITLE", "New title");
     assert!(result.is_ok());
 
     let issue = ctx.db.get_issue("test-1").unwrap();
@@ -259,12 +259,12 @@ fn test_attribute_case_insensitive() {
 
 #[test]
 fn test_title_with_double_newline_normalized() {
-    let ctx = TestContext::new();
+    let mut ctx = TestContext::new();
     ctx.create_issue("test-1", IssueType::Task, "Original");
 
     // Title with double-newline after threshold should be split
     let result = run_impl(
-        &ctx.db,
+        &mut ctx.db,
         "test-1",
         "title",
         "New title here\n\nThis is extra content",
@@ -287,12 +287,12 @@ fn test_title_with_double_newline_normalized() {
 
 #[test]
 fn test_title_long_normalized_and_noted() {
-    let ctx = TestContext::new();
+    let mut ctx = TestContext::new();
     ctx.create_issue("test-1", IssueType::Task, "Original");
 
     // Title exceeding 120 chars should be truncated, full content added as note
     let long_title = "x".repeat(130);
-    let result = run_impl(&ctx.db, "test-1", "title", &long_title);
+    let result = run_impl(&mut ctx.db, "test-1", "title", &long_title);
     assert!(result.is_ok());
 
     let issue = ctx.db.get_issue("test-1").unwrap();
@@ -308,13 +308,13 @@ fn test_title_long_normalized_and_noted() {
 
 #[test]
 fn test_title_normalized_no_note_on_closed_issue() {
-    let ctx = TestContext::new();
+    let mut ctx = TestContext::new();
     ctx.create_issue("test-1", IssueType::Task, "Original")
         .set_status("test-1", Status::Closed);
 
     // Title with extractable content on closed issue: title updates, no note added
     let result = run_impl(
-        &ctx.db,
+        &mut ctx.db,
         "test-1",
         "title",
         "New title here\n\nThis is extra content",

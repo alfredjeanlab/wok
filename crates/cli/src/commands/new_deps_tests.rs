@@ -13,7 +13,7 @@ use crate::models::{IssueType, Relation};
 
 #[test]
 fn test_run_impl_with_blocks() {
-    let ctx = TestContext::new();
+    let mut ctx = TestContext::new();
 
     // Create target issue first
     ctx.create_issue("test-target", IssueType::Task, "Target task");
@@ -53,7 +53,7 @@ fn test_run_impl_with_blocks() {
 
 #[test]
 fn test_run_impl_with_blocked_by() {
-    let ctx = TestContext::new();
+    let mut ctx = TestContext::new();
 
     // Create blocker issue first
     ctx.create_issue("test-blocker", IssueType::Task, "Blocker task");
@@ -91,7 +91,7 @@ fn test_run_impl_with_blocked_by() {
 
 #[test]
 fn test_run_impl_with_tracks() {
-    let ctx = TestContext::new();
+    let mut ctx = TestContext::new();
 
     // Create subtask first
     ctx.create_issue("test-subtask", IssueType::Task, "Subtask");
@@ -136,7 +136,7 @@ fn test_run_impl_with_tracks() {
 
 #[test]
 fn test_run_impl_with_tracked_by() {
-    let ctx = TestContext::new();
+    let mut ctx = TestContext::new();
 
     // Create feature first
     ctx.create_issue("test-feature", IssueType::Feature, "Feature");
@@ -181,7 +181,7 @@ fn test_run_impl_with_tracked_by() {
 
 #[test]
 fn test_run_impl_with_comma_separated_blocks() {
-    let ctx = TestContext::new();
+    let mut ctx = TestContext::new();
 
     // Create target issues
     ctx.create_issue("target-1", IssueType::Task, "Target 1");
@@ -225,7 +225,7 @@ fn test_run_impl_with_comma_separated_blocks() {
 
 #[test]
 fn test_run_impl_with_invalid_target_fails() {
-    let ctx = TestContext::new();
+    let mut ctx = TestContext::new();
 
     // Create new issue that blocks nonexistent target
     let result = run_impl(

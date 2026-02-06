@@ -1,6 +1,3 @@
-// SPDX-License-Identifier: MIT
-// Copyright (c) 2026 Alfred Jean LLC
-
 #![allow(clippy::unwrap_used)]
 #![allow(clippy::expect_used)]
 
@@ -13,7 +10,6 @@ fn test_open_in_memory() {
 
     // Verify tables exist
     let mut stmt = db
-        .core()
         .conn
         .prepare("SELECT name FROM sqlite_master WHERE type='table' ORDER BY name")
         .unwrap();
@@ -40,7 +36,6 @@ fn test_wal_mode_enabled_for_file_db() {
 
     // Check WAL mode is enabled
     let journal_mode: String = db
-        .core()
         .conn
         .query_row("PRAGMA journal_mode;", [], |row| row.get(0))
         .unwrap();
@@ -48,7 +43,6 @@ fn test_wal_mode_enabled_for_file_db() {
 
     // Check busy_timeout is set
     let busy_timeout: i32 = db
-        .core()
         .conn
         .query_row("PRAGMA busy_timeout;", [], |row| row.get(0))
         .unwrap();
@@ -61,7 +55,6 @@ fn test_busy_timeout_for_in_memory_db() {
 
     // Check busy_timeout is set (WAL not supported in memory)
     let busy_timeout: i32 = db
-        .core()
         .conn
         .query_row("PRAGMA busy_timeout;", [], |row| row.get(0))
         .unwrap();

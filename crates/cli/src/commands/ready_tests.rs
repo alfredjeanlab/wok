@@ -11,7 +11,7 @@ use std::collections::HashSet;
 
 #[test]
 fn test_ready_returns_unblocked_todo_issues() {
-    let ctx = TestContext::new();
+    let mut ctx = TestContext::new();
     ctx.create_issue("test-1", IssueType::Task, "Ready task")
         .create_issue("test-2", IssueType::Task, "Another ready task");
 
@@ -33,7 +33,7 @@ fn test_ready_returns_unblocked_todo_issues() {
 
 #[test]
 fn test_ready_excludes_blocked_issues() {
-    let ctx = TestContext::new();
+    let mut ctx = TestContext::new();
     ctx.create_issue("blocker", IssueType::Task, "Blocker")
         .create_issue("blocked", IssueType::Task, "Blocked task")
         .create_issue("ready", IssueType::Task, "Ready task")
@@ -61,7 +61,7 @@ fn test_ready_excludes_blocked_issues() {
 
 #[test]
 fn test_ready_excludes_non_todo_issues() {
-    let ctx = TestContext::new();
+    let mut ctx = TestContext::new();
     ctx.create_issue("todo", IssueType::Task, "Todo task")
         .create_issue_with_status(
             "in_progress",
@@ -78,7 +78,7 @@ fn test_ready_excludes_non_todo_issues() {
 
 #[test]
 fn test_ready_empty_when_all_blocked() {
-    let ctx = TestContext::new();
+    let mut ctx = TestContext::new();
     ctx.create_issue_with_status("blocker", IssueType::Task, "Blocker", Status::InProgress)
         .create_issue("blocked", IssueType::Task, "Blocked task")
         .blocks("blocker", "blocked");
@@ -103,7 +103,7 @@ fn test_ready_empty_when_all_blocked() {
 
 #[test]
 fn test_ready_unblocked_after_blocker_completes() {
-    let ctx = TestContext::new();
+    let mut ctx = TestContext::new();
     ctx.create_issue("blocker", IssueType::Task, "Blocker")
         .create_issue("blocked", IssueType::Task, "Was blocked")
         .blocks("blocker", "blocked")
@@ -126,7 +126,7 @@ use crate::commands::ready::run_impl;
 
 #[test]
 fn test_run_impl_default() {
-    let ctx = TestContext::new();
+    let mut ctx = TestContext::new();
     ctx.create_issue("test-1", IssueType::Task, "Test task");
 
     let result = run_impl(
@@ -145,7 +145,7 @@ fn test_run_impl_default() {
 
 #[test]
 fn test_run_impl_with_label() {
-    let ctx = TestContext::new();
+    let mut ctx = TestContext::new();
     ctx.create_issue("test-1", IssueType::Task, "Test task")
         .add_label("test-1", "backend");
 
@@ -165,7 +165,7 @@ fn test_run_impl_with_label() {
 
 #[test]
 fn test_run_impl_empty() {
-    let ctx = TestContext::new();
+    let mut ctx = TestContext::new();
 
     let result = run_impl(
         &ctx.db,
@@ -183,7 +183,7 @@ fn test_run_impl_empty() {
 
 #[test]
 fn test_run_impl_all_blocked() {
-    let ctx = TestContext::new();
+    let mut ctx = TestContext::new();
     ctx.create_issue("blocker", IssueType::Task, "Blocker")
         .create_issue("blocked", IssueType::Task, "Blocked")
         .blocks("blocker", "blocked")
@@ -207,7 +207,7 @@ fn test_run_impl_all_blocked() {
 
 #[test]
 fn test_run_impl_with_type_filter() {
-    let ctx = TestContext::new();
+    let mut ctx = TestContext::new();
     ctx.create_issue("task-1", IssueType::Task, "Test task")
         .create_issue("bug-1", IssueType::Bug, "Test bug")
         .create_issue("feature-1", IssueType::Feature, "Test feature");
@@ -228,7 +228,7 @@ fn test_run_impl_with_type_filter() {
 
 #[test]
 fn test_run_impl_with_label_filter() {
-    let ctx = TestContext::new();
+    let mut ctx = TestContext::new();
     ctx.create_issue("test-1", IssueType::Task, "Backend task")
         .create_issue("test-2", IssueType::Task, "Frontend task")
         .add_label("test-1", "backend")
@@ -250,7 +250,7 @@ fn test_run_impl_with_label_filter() {
 
 #[test]
 fn test_run_impl_with_combined_filters() {
-    let ctx = TestContext::new();
+    let mut ctx = TestContext::new();
     ctx.create_issue("bug-1", IssueType::Bug, "Urgent bug")
         .create_issue("task-1", IssueType::Task, "Urgent task")
         .create_issue("bug-2", IssueType::Bug, "Other bug")
@@ -273,7 +273,7 @@ fn test_run_impl_with_combined_filters() {
 
 #[test]
 fn test_run_impl_invalid_type_filter() {
-    let ctx = TestContext::new();
+    let mut ctx = TestContext::new();
     ctx.create_issue("test-1", IssueType::Task, "Test task");
 
     let result = run_impl(
@@ -292,7 +292,7 @@ fn test_run_impl_invalid_type_filter() {
 
 #[test]
 fn test_run_impl_comma_separated_types() {
-    let ctx = TestContext::new();
+    let mut ctx = TestContext::new();
     ctx.create_issue("bug-1", IssueType::Bug, "Test bug")
         .create_issue("task-1", IssueType::Task, "Test task")
         .create_issue("feature-1", IssueType::Feature, "Test feature");
@@ -314,7 +314,7 @@ fn test_run_impl_comma_separated_types() {
 
 #[test]
 fn test_run_impl_multiple_label_groups() {
-    let ctx = TestContext::new();
+    let mut ctx = TestContext::new();
     ctx.create_issue("test-1", IssueType::Task, "Backend urgent")
         .create_issue("test-2", IssueType::Task, "Frontend urgent")
         .create_issue("test-3", IssueType::Task, "Backend normal")
@@ -341,7 +341,7 @@ fn test_run_impl_multiple_label_groups() {
 
 #[test]
 fn test_run_impl_filters_exclude_blocked() {
-    let ctx = TestContext::new();
+    let mut ctx = TestContext::new();
     ctx.create_issue("blocker", IssueType::Bug, "Blocker bug")
         .create_issue("blocked", IssueType::Bug, "Blocked bug")
         .add_label("blocker", "team:alpha")
@@ -367,7 +367,7 @@ fn test_run_impl_filters_exclude_blocked() {
 
 #[test]
 fn test_run_impl_json_format_outputs_valid_json() {
-    let ctx = TestContext::new();
+    let mut ctx = TestContext::new();
     ctx.create_issue("test-1", IssueType::Task, "Test task");
 
     let result = run_impl(
@@ -386,7 +386,7 @@ fn test_run_impl_json_format_outputs_valid_json() {
 
 #[test]
 fn test_run_impl_json_format_with_label() {
-    let ctx = TestContext::new();
+    let mut ctx = TestContext::new();
     ctx.create_issue("test-1", IssueType::Task, "Test task")
         .add_label("test-1", "backend");
 
@@ -406,7 +406,7 @@ fn test_run_impl_json_format_with_label() {
 
 #[test]
 fn test_run_impl_json_format_empty() {
-    let ctx = TestContext::new();
+    let mut ctx = TestContext::new();
 
     let result = run_impl(
         &ctx.db,
@@ -424,7 +424,7 @@ fn test_run_impl_json_format_empty() {
 
 #[test]
 fn test_run_impl_json_format_excludes_blocked() {
-    let ctx = TestContext::new();
+    let mut ctx = TestContext::new();
     ctx.create_issue("blocker", IssueType::Task, "Blocker")
         .create_issue("blocked", IssueType::Task, "Blocked")
         .blocks("blocker", "blocked");
@@ -448,7 +448,7 @@ fn test_run_impl_json_format_excludes_blocked() {
 #[test]
 fn test_ready_only_shows_todo() {
     // Ready should only show todo items, never in_progress even if unblocked
-    let ctx = TestContext::new();
+    let mut ctx = TestContext::new();
     ctx.create_issue("todo-task", IssueType::Task, "Todo task")
         .create_issue_with_status(
             "in-progress-task",
@@ -466,7 +466,7 @@ fn test_ready_only_shows_todo() {
 
 #[test]
 fn test_ready_with_type_filter_works() {
-    let ctx = TestContext::new();
+    let mut ctx = TestContext::new();
     ctx.create_issue("bug-1", IssueType::Bug, "Bug issue")
         .create_issue("task-1", IssueType::Task, "Task issue")
         .create_issue("feature-1", IssueType::Feature, "Feature issue");
@@ -488,7 +488,7 @@ fn test_ready_with_type_filter_works() {
 
 #[test]
 fn test_ready_with_label_filter_works() {
-    let ctx = TestContext::new();
+    let mut ctx = TestContext::new();
     ctx.create_issue("task-1", IssueType::Task, "Labeled task")
         .create_issue("task-2", IssueType::Task, "Unlabeled task")
         .add_label("task-1", "important");
@@ -516,7 +516,7 @@ use chrono::{Duration, Utc};
 
 #[test]
 fn test_ready_sorts_recent_by_priority() {
-    let ctx = TestContext::new();
+    let mut ctx = TestContext::new();
     // Create recent issues with different priorities
     ctx.create_issue("low", IssueType::Task, "Low priority task")
         .add_label("low", "priority:3")
@@ -549,8 +549,8 @@ fn test_ready_sorts_recent_by_priority() {
             (true, true) => {
                 let tags_a = ctx.db.get_labels(&a.id).unwrap_or_default();
                 let tags_b = ctx.db.get_labels(&b.id).unwrap_or_default();
-                let priority_a = Database::priority_from_tags(&tags_a);
-                let priority_b = Database::priority_from_tags(&tags_b);
+                let priority_a = crate::db::priority_from_tags(&tags_a);
+                let priority_b = crate::db::priority_from_tags(&tags_b);
                 match priority_a.cmp(&priority_b) {
                     std::cmp::Ordering::Equal => a.created_at.cmp(&b.created_at),
                     other => other,
@@ -568,7 +568,7 @@ fn test_ready_sorts_recent_by_priority() {
 
 #[test]
 fn test_ready_priority_tag_precedence() {
-    let ctx = TestContext::new();
+    let mut ctx = TestContext::new();
     // Create issue with both p: and priority: tags
     ctx.create_issue("dual", IssueType::Task, "Dual tagged")
         .add_label("dual", "p:0")
@@ -597,8 +597,8 @@ fn test_ready_priority_tag_precedence() {
             (true, true) => {
                 let tags_a = ctx.db.get_labels(&a.id).unwrap_or_default();
                 let tags_b = ctx.db.get_labels(&b.id).unwrap_or_default();
-                let priority_a = Database::priority_from_tags(&tags_a);
-                let priority_b = Database::priority_from_tags(&tags_b);
+                let priority_a = crate::db::priority_from_tags(&tags_a);
+                let priority_b = crate::db::priority_from_tags(&tags_b);
                 priority_a.cmp(&priority_b)
             }
             _ => std::cmp::Ordering::Equal,
@@ -624,6 +624,11 @@ fn test_ready_sorts_recent_before_old() {
         created_at: Utc::now() - Duration::hours(72),
         updated_at: Utc::now(),
         closed_at: None,
+        last_status_hlc: None,
+        last_title_hlc: None,
+        last_type_hlc: None,
+        last_description_hlc: None,
+        last_assignee_hlc: None,
     };
     db.create_issue(&old_issue).unwrap();
 
@@ -638,6 +643,11 @@ fn test_ready_sorts_recent_before_old() {
         created_at: Utc::now(),
         updated_at: Utc::now(),
         closed_at: None,
+        last_status_hlc: None,
+        last_title_hlc: None,
+        last_type_hlc: None,
+        last_description_hlc: None,
+        last_assignee_hlc: None,
     };
     db.create_issue(&recent_issue).unwrap();
 
@@ -673,6 +683,11 @@ fn test_ready_sorts_old_by_created_at_asc() {
         created_at: Utc::now() - Duration::hours(96), // 4 days ago
         updated_at: Utc::now(),
         closed_at: None,
+        last_status_hlc: None,
+        last_title_hlc: None,
+        last_type_hlc: None,
+        last_description_hlc: None,
+        last_assignee_hlc: None,
     };
     db.create_issue(&older_issue).unwrap();
 
@@ -686,6 +701,11 @@ fn test_ready_sorts_old_by_created_at_asc() {
         created_at: Utc::now() - Duration::hours(72), // 3 days ago
         updated_at: Utc::now(),
         closed_at: None,
+        last_status_hlc: None,
+        last_title_hlc: None,
+        last_type_hlc: None,
+        last_description_hlc: None,
+        last_assignee_hlc: None,
     };
     db.create_issue(&less_old_issue).unwrap();
 

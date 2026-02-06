@@ -17,6 +17,11 @@ fn make_test_issue(issue_type: IssueType, status: Status, assignee: Option<&str>
         created_at: Utc::now(),
         updated_at: Utc::now(),
         closed_at: None,
+        last_status_hlc: None,
+        last_title_hlc: None,
+        last_type_hlc: None,
+        last_description_hlc: None,
+        last_assignee_hlc: None,
     }
 }
 

@@ -19,6 +19,11 @@ fn create_test_issue(id: &str, title: &str, issue_type: IssueType, status: Statu
         created_at: Utc.with_ymd_and_hms(2024, 1, 10, 12, 0, 0).unwrap(),
         updated_at: Utc.with_ymd_and_hms(2024, 1, 10, 12, 0, 0).unwrap(),
         closed_at: None,
+        last_status_hlc: None,
+        last_title_hlc: None,
+        last_type_hlc: None,
+        last_description_hlc: None,
+        last_assignee_hlc: None,
     }
 }
 

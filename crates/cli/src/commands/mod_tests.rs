@@ -17,7 +17,7 @@
 //!
 //! #[test]
 //! fn test_some_command() {
-//!     let ctx = TestContext::new();
+//!     let mut ctx = TestContext::new();
 //!     ctx.create_issue("test-1", IssueType::Task, "My task");
 //!
 //!     // Test command logic using ctx.db and ctx.config
@@ -66,18 +66,18 @@ impl TestContext {
     }
 
     /// Create an issue with the given parameters.
-    pub fn create_issue(&self, id: &str, issue_type: IssueType, title: &str) -> &Self {
+    pub fn create_issue(&mut self, id: &str, issue_type: IssueType, title: &str) -> &mut Self {
         self.create_issue_with_status(id, issue_type, title, Status::Todo)
     }
 
     /// Create an issue with a specific status.
     pub fn create_issue_with_status(
-        &self,
+        &mut self,
         id: &str,
         issue_type: IssueType,
         title: &str,
         status: Status,
-    ) -> &Self {
+    ) -> &mut Self {
         let now = Utc::now();
         let issue = Issue {
             id: id.to_string(),
@@ -89,6 +89,11 @@ impl TestContext {
             created_at: now,
             updated_at: now,
             closed_at: None,
+            last_status_hlc: None,
+            last_title_hlc: None,
+            last_type_hlc: None,
+            last_description_hlc: None,
+            last_assignee_hlc: None,
         };
         self.db
             .create_issue(&issue)
@@ -102,7 +107,7 @@ impl TestContext {
     }
 
     /// Add a label to an issue.
-    pub fn add_label(&self, id: &str, label: &str) -> &Self {
+    pub fn add_label(&mut self, id: &str, label: &str) -> &mut Self {
         self.db.add_label(id, label).expect("Failed to add label");
 
         let event =
@@ -113,7 +118,7 @@ impl TestContext {
     }
 
     /// Add a note to an issue.
-    pub fn add_note(&self, id: &str, content: &str) -> &Self {
+    pub fn add_note(&mut self, id: &str, content: &str) -> &mut Self {
         let issue = self.db.get_issue(id).expect("Issue not found");
         self.db
             .add_note(id, issue.status, content)
@@ -127,7 +132,7 @@ impl TestContext {
     }
 
     /// Add a dependency between issues.
-    pub fn add_dependency(&self, from: &str, to: &str, relation: Relation) -> &Self {
+    pub fn add_dependency(&mut self, from: &str, to: &str, relation: Relation) -> &mut Self {
         self.db
             .add_dependency(from, to, relation)
             .expect("Failed to add dependency");
@@ -135,18 +140,18 @@ impl TestContext {
     }
 
     /// Add a blocking relationship (from blocks to).
-    pub fn blocks(&self, blocker: &str, blocked: &str) -> &Self {
+    pub fn blocks(&mut self, blocker: &str, blocked: &str) -> &mut Self {
         self.add_dependency(blocker, blocked, Relation::Blocks)
     }
 
     /// Add a tracks relationship.
-    pub fn tracks(&self, tracker: &str, tracked: &str) -> &Self {
+    pub fn tracks(&mut self, tracker: &str, tracked: &str) -> &mut Self {
         self.add_dependency(tracker, tracked, Relation::Tracks);
         self.add_dependency(tracked, tracker, Relation::TrackedBy)
     }
 
     /// Update an issue's status.
-    pub fn set_status(&self, id: &str, status: Status) -> &Self {
+    pub fn set_status(&mut self, id: &str, status: Status) -> &mut Self {
         let issue = self.db.get_issue(id).expect("Issue not found");
         let old_status = issue.status;
 
@@ -170,37 +175,37 @@ impl TestContext {
     // Workflow helpers for common test scenarios
 
     /// Start working on an issue (todo -> in_progress).
-    pub fn start_issue(&self, id: &str) -> &Self {
+    pub fn start_issue(&mut self, id: &str) -> &mut Self {
         self.set_status(id, Status::InProgress)
     }
 
     /// Stop working on an issue (in_progress -> todo).
-    pub fn stop_issue(&self, id: &str) -> &Self {
+    pub fn stop_issue(&mut self, id: &str) -> &mut Self {
         self.set_status(id, Status::Todo)
     }
 
     /// Complete an issue (any -> done).
-    pub fn complete_issue(&self, id: &str) -> &Self {
+    pub fn complete_issue(&mut self, id: &str) -> &mut Self {
         self.set_status(id, Status::Done)
     }
 
     /// Close an issue without completing (any -> closed).
-    pub fn close_issue(&self, id: &str) -> &Self {
+    pub fn close_issue(&mut self, id: &str) -> &mut Self {
         self.set_status(id, Status::Closed)
     }
 
     /// Reopen an issue (done/closed -> in_progress).
-    pub fn reopen_issue(&self, id: &str) -> &Self {
+    pub fn reopen_issue(&mut self, id: &str) -> &mut Self {
         self.set_status(id, Status::InProgress)
     }
 
     /// Create an issue and immediately start it.
-    pub fn create_and_start(&self, id: &str, issue_type: IssueType, title: &str) -> &Self {
+    pub fn create_and_start(&mut self, id: &str, issue_type: IssueType, title: &str) -> &mut Self {
         self.create_issue(id, issue_type, title).start_issue(id)
     }
 
     /// Create an issue and mark it as done.
-    pub fn create_completed(&self, id: &str, issue_type: IssueType, title: &str) -> &Self {
+    pub fn create_completed(&mut self, id: &str, issue_type: IssueType, title: &str) -> &mut Self {
         self.create_issue(id, issue_type, title)
             .start_issue(id)
             .complete_issue(id)
@@ -213,19 +218,19 @@ mod tests {
 
     #[test]
     fn test_context_creation() {
-        let ctx = TestContext::new();
+        let mut ctx = TestContext::new();
         assert_eq!(ctx.config.prefix, "test");
     }
 
     #[test]
     fn test_context_with_custom_prefix() {
-        let ctx = TestContext::with_prefix("myproj");
+        let mut ctx = TestContext::with_prefix("myproj");
         assert_eq!(ctx.config.prefix, "myproj");
     }
 
     #[test]
     fn test_create_issue() {
-        let ctx = TestContext::new();
+        let mut ctx = TestContext::new();
         ctx.create_issue("test-1", IssueType::Task, "My task");
 
         let issue = ctx.db.get_issue("test-1").unwrap();
@@ -237,7 +242,7 @@ mod tests {
 
     #[test]
     fn test_create_issue_with_status() {
-        let ctx = TestContext::new();
+        let mut ctx = TestContext::new();
         ctx.create_issue_with_status("test-1", IssueType::Bug, "Fix bug", Status::InProgress);
 
         let issue = ctx.db.get_issue("test-1").unwrap();
@@ -246,7 +251,7 @@ mod tests {
 
     #[test]
     fn test_add_label() {
-        let ctx = TestContext::new();
+        let mut ctx = TestContext::new();
         ctx.create_issue("test-1", IssueType::Task, "My task")
             .add_label("test-1", "urgent");
 
@@ -256,7 +261,7 @@ mod tests {
 
     #[test]
     fn test_add_note() {
-        let ctx = TestContext::new();
+        let mut ctx = TestContext::new();
         ctx.create_issue("test-1", IssueType::Task, "My task")
             .add_note("test-1", "This is a note");
 
@@ -267,7 +272,7 @@ mod tests {
 
     #[test]
     fn test_blocking_dependency() {
-        let ctx = TestContext::new();
+        let mut ctx = TestContext::new();
         ctx.create_issue("blocker", IssueType::Task, "Blocker task")
             .create_issue("blocked", IssueType::Task, "Blocked task")
             .blocks("blocker", "blocked");
@@ -279,7 +284,7 @@ mod tests {
 
     #[test]
     fn test_tracks_relationship() {
-        let ctx = TestContext::new();
+        let mut ctx = TestContext::new();
         ctx.create_issue("tracker", IssueType::Feature, "Tracker feature")
             .create_issue("tracked", IssueType::Task, "Tracked task")
             .tracks("tracker", "tracked");
@@ -293,7 +298,7 @@ mod tests {
 
     #[test]
     fn test_set_status() {
-        let ctx = TestContext::new();
+        let mut ctx = TestContext::new();
         ctx.create_issue("test-1", IssueType::Task, "My task")
             .set_status("test-1", Status::InProgress);
 
@@ -303,7 +308,7 @@ mod tests {
 
     #[test]
     fn test_chained_operations() {
-        let ctx = TestContext::new();
+        let mut ctx = TestContext::new();
         ctx.create_issue("test-1", IssueType::Task, "Task 1")
             .create_issue("test-2", IssueType::Task, "Task 2")
             .add_label("test-1", "priority")
@@ -325,7 +330,7 @@ mod tests {
 
     #[test]
     fn test_start_issue() {
-        let ctx = TestContext::new();
+        let mut ctx = TestContext::new();
         ctx.create_issue("test-1", IssueType::Task, "My task")
             .start_issue("test-1");
 
@@ -335,7 +340,7 @@ mod tests {
 
     #[test]
     fn test_stop_issue() {
-        let ctx = TestContext::new();
+        let mut ctx = TestContext::new();
         ctx.create_issue("test-1", IssueType::Task, "My task")
             .start_issue("test-1")
             .stop_issue("test-1");
@@ -346,7 +351,7 @@ mod tests {
 
     #[test]
     fn test_complete_issue() {
-        let ctx = TestContext::new();
+        let mut ctx = TestContext::new();
         ctx.create_issue("test-1", IssueType::Task, "My task")
             .start_issue("test-1")
             .complete_issue("test-1");
@@ -357,7 +362,7 @@ mod tests {
 
     #[test]
     fn test_close_issue() {
-        let ctx = TestContext::new();
+        let mut ctx = TestContext::new();
         ctx.create_issue("test-1", IssueType::Task, "My task")
             .close_issue("test-1");
 
@@ -367,7 +372,7 @@ mod tests {
 
     #[test]
     fn test_reopen_issue() {
-        let ctx = TestContext::new();
+        let mut ctx = TestContext::new();
         ctx.create_issue("test-1", IssueType::Task, "My task")
             .start_issue("test-1")
             .complete_issue("test-1")
@@ -379,7 +384,7 @@ mod tests {
 
     #[test]
     fn test_create_and_start() {
-        let ctx = TestContext::new();
+        let mut ctx = TestContext::new();
         ctx.create_and_start("test-1", IssueType::Task, "Active task");
 
         let issue = ctx.db.get_issue("test-1").unwrap();
@@ -389,7 +394,7 @@ mod tests {
 
     #[test]
     fn test_create_completed() {
-        let ctx = TestContext::new();
+        let mut ctx = TestContext::new();
         ctx.create_completed("test-1", IssueType::Bug, "Fixed bug");
 
         let issue = ctx.db.get_issue("test-1").unwrap();
@@ -400,7 +405,7 @@ mod tests {
     #[test]
     fn test_workflow_sequence() {
         // Test a realistic workflow: create -> start -> complete
-        let ctx = TestContext::new();
+        let mut ctx = TestContext::new();
         ctx.create_issue("feature-1", IssueType::Task, "Add feature")
             .add_label("feature-1", "enhancement")
             .add_note("feature-1", "Starting implementation")

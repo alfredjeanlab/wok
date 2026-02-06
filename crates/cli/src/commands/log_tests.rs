@@ -9,7 +9,7 @@ use crate::models::{Action, IssueType, Status};
 
 #[test]
 fn test_get_events_for_issue() {
-    let ctx = TestContext::new();
+    let mut ctx = TestContext::new();
     ctx.create_issue("test-1", IssueType::Task, "Test issue");
 
     let events = ctx.db.get_events("test-1").unwrap();
@@ -19,7 +19,7 @@ fn test_get_events_for_issue() {
 
 #[test]
 fn test_get_events_empty_for_nonexistent_issue() {
-    let ctx = TestContext::new();
+    let mut ctx = TestContext::new();
     ctx.create_issue("test-1", IssueType::Task, "Test issue");
 
     // Note: issue_exists check happens at command level
@@ -29,7 +29,7 @@ fn test_get_events_empty_for_nonexistent_issue() {
 
 #[test]
 fn test_events_ordered_by_time() {
-    let ctx = TestContext::new();
+    let mut ctx = TestContext::new();
     ctx.create_issue("test-1", IssueType::Task, "Test issue")
         .set_status("test-1", Status::InProgress)
         .add_label("test-1", "urgent");
@@ -44,7 +44,7 @@ fn test_events_ordered_by_time() {
 
 #[test]
 fn test_get_recent_events_across_issues() {
-    let ctx = TestContext::new();
+    let mut ctx = TestContext::new();
     ctx.create_issue("test-1", IssueType::Task, "Task 1")
         .create_issue("test-2", IssueType::Bug, "Bug 1")
         .set_status("test-1", Status::InProgress);
@@ -55,7 +55,7 @@ fn test_get_recent_events_across_issues() {
 
 #[test]
 fn test_get_recent_events_with_limit() {
-    let ctx = TestContext::new();
+    let mut ctx = TestContext::new();
     ctx.create_issue("test-1", IssueType::Task, "Task 1")
         .create_issue("test-2", IssueType::Task, "Task 2")
         .create_issue("test-3", IssueType::Task, "Task 3");
@@ -66,7 +66,7 @@ fn test_get_recent_events_with_limit() {
 
 #[test]
 fn test_status_change_events() {
-    let ctx = TestContext::new();
+    let mut ctx = TestContext::new();
     ctx.create_issue("test-1", IssueType::Task, "Test issue")
         .set_status("test-1", Status::InProgress)
         .set_status("test-1", Status::Done);
@@ -78,7 +78,7 @@ fn test_status_change_events() {
 
 #[test]
 fn test_label_events() {
-    let ctx = TestContext::new();
+    let mut ctx = TestContext::new();
     ctx.create_issue("test-1", IssueType::Task, "Test issue")
         .add_label("test-1", "backend");
 
@@ -95,7 +95,7 @@ fn test_label_events() {
 
 #[test]
 fn test_note_events() {
-    let ctx = TestContext::new();
+    let mut ctx = TestContext::new();
     ctx.create_issue("test-1", IssueType::Task, "Test issue")
         .add_note("test-1", "This is a note");
 
@@ -105,7 +105,7 @@ fn test_note_events() {
 
 #[test]
 fn test_event_values() {
-    let ctx = TestContext::new();
+    let mut ctx = TestContext::new();
     ctx.create_issue("test-1", IssueType::Task, "Test issue")
         .set_status("test-1", Status::InProgress);
 
@@ -123,7 +123,7 @@ use crate::commands::log::run_impl;
 
 #[test]
 fn test_run_impl_global_log() {
-    let ctx = TestContext::new();
+    let mut ctx = TestContext::new();
     ctx.create_issue("test-1", IssueType::Task, "Test issue")
         .create_issue("test-2", IssueType::Bug, "Another issue");
 
@@ -133,7 +133,7 @@ fn test_run_impl_global_log() {
 
 #[test]
 fn test_run_impl_issue_log() {
-    let ctx = TestContext::new();
+    let mut ctx = TestContext::new();
     ctx.create_issue("test-1", IssueType::Task, "Test issue");
 
     let result = run_impl(&ctx.db, Some("test-1".to_string()), 10);
@@ -142,7 +142,7 @@ fn test_run_impl_issue_log() {
 
 #[test]
 fn test_run_impl_nonexistent_issue() {
-    let ctx = TestContext::new();
+    let mut ctx = TestContext::new();
 
     let result = run_impl(&ctx.db, Some("nonexistent".to_string()), 10);
     assert!(result.is_err());
@@ -150,7 +150,7 @@ fn test_run_impl_nonexistent_issue() {
 
 #[test]
 fn test_run_impl_with_limit() {
-    let ctx = TestContext::new();
+    let mut ctx = TestContext::new();
     ctx.create_issue("test-1", IssueType::Task, "Task 1")
         .create_issue("test-2", IssueType::Task, "Task 2")
         .create_issue("test-3", IssueType::Task, "Task 3");

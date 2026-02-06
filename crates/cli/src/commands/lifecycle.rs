@@ -158,9 +158,9 @@ fn print_bulk_summary(result: &BulkResult, action_verb: &str) {
 /// - `ids`: The issue IDs to process
 /// - `action_verb`: Past tense verb for summary (e.g., "started", "completed")
 /// - `operation`: Closure that performs the single-item operation
-fn bulk_operation<F>(ids: &[String], action_verb: &str, operation: F) -> Result<()>
+fn bulk_operation<F>(ids: &[String], action_verb: &str, mut operation: F) -> Result<()>
 where
-    F: Fn(&str) -> Result<()>,
+    F: FnMut(&str) -> Result<()>,
 {
     let mut result = BulkResult::default();
     let mut last_error: Option<BulkErrorKind> = None;
@@ -231,16 +231,16 @@ where
 
 pub fn start(ids: &[String]) -> Result<()> {
     let ids = super::new::expand_ids(ids);
-    let (db, _config, _work_dir) = open_db()?;
-    start_impl(&db, &ids)
+    let (mut db, _config, _work_dir) = open_db()?;
+    start_impl(&mut db, &ids)
 }
 
 /// Internal implementation that accepts db for testing.
-pub(crate) fn start_impl(db: &Database, ids: &[String]) -> Result<()> {
+pub(crate) fn start_impl(db: &mut Database, ids: &[String]) -> Result<()> {
     bulk_operation(ids, "started", |id| start_single(db, id))
 }
 
-fn start_single(db: &Database, id: &str) -> Result<()> {
+fn start_single(db: &mut Database, id: &str) -> Result<()> {
     let resolved_id = db.resolve_id(id)?;
     let issue = db.get_issue(&resolved_id)?;
 
@@ -272,16 +272,16 @@ pub fn done(ids: &[String], reason: Option<&str>) -> Result<()> {
         None
     };
 
-    let (db, _config, _work_dir) = open_db()?;
-    done_impl(&db, &ids, trimmed_reason.as_deref())
+    let (mut db, _config, _work_dir) = open_db()?;
+    done_impl(&mut db, &ids, trimmed_reason.as_deref())
 }
 
 /// Internal implementation that accepts db for testing.
-pub(crate) fn done_impl(db: &Database, ids: &[String], reason: Option<&str>) -> Result<()> {
+pub(crate) fn done_impl(db: &mut Database, ids: &[String], reason: Option<&str>) -> Result<()> {
     bulk_operation(ids, "completed", |id| done_single(db, id, reason))
 }
 
-fn done_single(db: &Database, id: &str, reason: Option<&str>) -> Result<()> {
+fn done_single(db: &mut Database, id: &str, reason: Option<&str>) -> Result<()> {
     let resolved_id = db.resolve_id(id)?;
     let issue = db.get_issue(&resolved_id)?;
 
@@ -325,7 +325,7 @@ fn done_single(db: &Database, id: &str, reason: Option<&str>) -> Result<()> {
 }
 
 fn done_single_with_reason(
-    db: &Database,
+    db: &mut Database,
     id: &str,
     issue: &crate::models::Issue,
     reason: &str,
@@ -354,16 +354,16 @@ pub fn close(ids: &[String], reason: Option<&str>) -> Result<()> {
     let ids = super::new::expand_ids(ids);
     let effective_reason = resolve_reason(reason, "closed")?;
 
-    let (db, _config, _work_dir) = open_db()?;
-    close_impl(&db, &ids, &effective_reason)
+    let (mut db, _config, _work_dir) = open_db()?;
+    close_impl(&mut db, &ids, &effective_reason)
 }
 
 /// Internal implementation that accepts db for testing.
-pub(crate) fn close_impl(db: &Database, ids: &[String], reason: &str) -> Result<()> {
+pub(crate) fn close_impl(db: &mut Database, ids: &[String], reason: &str) -> Result<()> {
     bulk_operation(ids, "closed", |id| close_single(db, id, reason))
 }
 
-fn close_single(db: &Database, id: &str, reason: &str) -> Result<()> {
+fn close_single(db: &mut Database, id: &str, reason: &str) -> Result<()> {
     let resolved_id = db.resolve_id(id)?;
     let issue = db.get_issue(&resolved_id)?;
 
@@ -400,16 +400,16 @@ pub fn reopen(ids: &[String], reason: Option<&str>) -> Result<()> {
         None
     };
 
-    let (db, _config, _work_dir) = open_db()?;
-    reopen_impl(&db, &ids, trimmed_reason.as_deref())
+    let (mut db, _config, _work_dir) = open_db()?;
+    reopen_impl(&mut db, &ids, trimmed_reason.as_deref())
 }
 
 /// Internal implementation that accepts db for testing.
-pub(crate) fn reopen_impl(db: &Database, ids: &[String], reason: Option<&str>) -> Result<()> {
+pub(crate) fn reopen_impl(db: &mut Database, ids: &[String], reason: Option<&str>) -> Result<()> {
     bulk_operation(ids, "reopened", |id| reopen_single(db, id, reason))
 }
 
-fn reopen_single(db: &Database, id: &str, reason: Option<&str>) -> Result<()> {
+fn reopen_single(db: &mut Database, id: &str, reason: Option<&str>) -> Result<()> {
     let resolved_id = db.resolve_id(id)?;
     let issue = db.get_issue(&resolved_id)?;
 
@@ -445,7 +445,7 @@ fn reopen_single(db: &Database, id: &str, reason: Option<&str>) -> Result<()> {
 }
 
 fn reopen_single_with_reason(
-    db: &Database,
+    db: &mut Database,
     id: &str,
     issue: &crate::models::Issue,
     reason: &str,

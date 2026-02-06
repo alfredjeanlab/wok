@@ -10,7 +10,7 @@ use crate::models::{IssueType, LinkRel, LinkType};
 
 #[test]
 fn test_add_link_github() {
-    let ctx = TestContext::new();
+    let mut ctx = TestContext::new();
     ctx.create_issue("test-1", IssueType::Task, "Test");
 
     let result = add_impl_with_reason(
@@ -29,7 +29,7 @@ fn test_add_link_github() {
 
 #[test]
 fn test_add_link_jira_shorthand() {
-    let ctx = TestContext::new();
+    let mut ctx = TestContext::new();
     ctx.create_issue("test-1", IssueType::Task, "Test");
 
     let result = add_impl_with_reason(&ctx.db, "test-1", "jira://PE-5555", None);
@@ -43,7 +43,7 @@ fn test_add_link_jira_shorthand() {
 
 #[test]
 fn test_add_link_jira_atlassian() {
-    let ctx = TestContext::new();
+    let mut ctx = TestContext::new();
     ctx.create_issue("test-1", IssueType::Task, "Test");
 
     let result = add_impl_with_reason(
@@ -62,7 +62,7 @@ fn test_add_link_jira_atlassian() {
 
 #[test]
 fn test_add_link_confluence() {
-    let ctx = TestContext::new();
+    let mut ctx = TestContext::new();
     ctx.create_issue("test-1", IssueType::Task, "Test");
 
     let result = add_impl_with_reason(
@@ -82,7 +82,7 @@ fn test_add_link_confluence() {
 
 #[test]
 fn test_add_link_unknown_url() {
-    let ctx = TestContext::new();
+    let mut ctx = TestContext::new();
     ctx.create_issue("test-1", IssueType::Task, "Test");
 
     let result = add_impl_with_reason(&ctx.db, "test-1", "https://example.com/issue/123", None);
@@ -96,7 +96,7 @@ fn test_add_link_unknown_url() {
 
 #[test]
 fn test_add_link_with_reason() {
-    let ctx = TestContext::new();
+    let mut ctx = TestContext::new();
     ctx.create_issue("test-1", IssueType::Task, "Test");
 
     let result = add_impl_with_reason(
@@ -114,7 +114,7 @@ fn test_add_link_with_reason() {
 
 #[test]
 fn test_add_link_import_requires_known_provider() {
-    let ctx = TestContext::new();
+    let mut ctx = TestContext::new();
     ctx.create_issue("test-1", IssueType::Task, "Test");
 
     let result = add_impl_with_reason(
@@ -130,7 +130,7 @@ fn test_add_link_import_requires_known_provider() {
 
 #[test]
 fn test_add_link_import_requires_detectable_id() {
-    let ctx = TestContext::new();
+    let mut ctx = TestContext::new();
     ctx.create_issue("test-1", IssueType::Task, "Test");
 
     // Confluence URLs don't have extractable IDs
@@ -147,7 +147,7 @@ fn test_add_link_import_requires_detectable_id() {
 
 #[test]
 fn test_add_link_import_success() {
-    let ctx = TestContext::new();
+    let mut ctx = TestContext::new();
     ctx.create_issue("test-1", IssueType::Task, "Test");
 
     // GitHub URL has both known provider and detectable ID
@@ -165,7 +165,7 @@ fn test_add_link_import_success() {
 
 #[test]
 fn test_add_link_nonexistent_issue() {
-    let ctx = TestContext::new();
+    let mut ctx = TestContext::new();
 
     let result = add_impl_with_reason(
         &ctx.db,
@@ -178,7 +178,7 @@ fn test_add_link_nonexistent_issue() {
 
 #[test]
 fn test_add_link_invalid_reason() {
-    let ctx = TestContext::new();
+    let mut ctx = TestContext::new();
     ctx.create_issue("test-1", IssueType::Task, "Test");
 
     let result = add_impl_with_reason(
@@ -192,7 +192,7 @@ fn test_add_link_invalid_reason() {
 
 #[test]
 fn test_add_link_logs_event() {
-    let ctx = TestContext::new();
+    let mut ctx = TestContext::new();
     ctx.create_issue("test-1", IssueType::Task, "Test");
 
     add_impl_with_reason(
@@ -209,7 +209,7 @@ fn test_add_link_logs_event() {
 
 #[test]
 fn test_add_link_impl_basic() {
-    let ctx = TestContext::new();
+    let mut ctx = TestContext::new();
     ctx.create_issue("test-1", IssueType::Task, "Test");
 
     let result = add_link_impl(&ctx.db, "test-1", "https://github.com/org/repo/issues/999");
@@ -222,7 +222,7 @@ fn test_add_link_impl_basic() {
 
 #[test]
 fn test_remove_link() {
-    let ctx = TestContext::new();
+    let mut ctx = TestContext::new();
     ctx.create_issue("test-1", IssueType::Task, "Test");
 
     // Add a link first
@@ -249,7 +249,7 @@ fn test_remove_link() {
 
 #[test]
 fn test_remove_link_nonexistent_url() {
-    let ctx = TestContext::new();
+    let mut ctx = TestContext::new();
     ctx.create_issue("test-1", IssueType::Task, "Test");
 
     // Try to remove a link that doesn't exist (should succeed with message)
@@ -259,7 +259,7 @@ fn test_remove_link_nonexistent_url() {
 
 #[test]
 fn test_remove_link_nonexistent_issue() {
-    let ctx = TestContext::new();
+    let mut ctx = TestContext::new();
 
     let result = remove_impl(
         &ctx.db,
@@ -271,7 +271,7 @@ fn test_remove_link_nonexistent_issue() {
 
 #[test]
 fn test_remove_link_logs_event() {
-    let ctx = TestContext::new();
+    let mut ctx = TestContext::new();
     ctx.create_issue("test-1", IssueType::Task, "Test");
 
     add_impl_with_reason(
@@ -290,7 +290,7 @@ fn test_remove_link_logs_event() {
 
 #[test]
 fn test_remove_link_multiple_links() {
-    let ctx = TestContext::new();
+    let mut ctx = TestContext::new();
     ctx.create_issue("test-1", IssueType::Task, "Test");
 
     // Add multiple links

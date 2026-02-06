@@ -136,7 +136,7 @@ fn test_convert_beads_issue_tombstone() {
 
 #[test]
 fn test_import_creates_issue() {
-    let (db, _dir) = setup_test_db();
+    let (mut db, _dir) = setup_test_db();
     let config = dummy_config();
 
     // Create temp file with import data
@@ -148,7 +148,7 @@ fn test_import_creates_issue() {
     .unwrap();
 
     run_impl(
-        &db,
+        &mut db,
         &config,
         import_file.to_str().unwrap(),
         "wok",
@@ -166,7 +166,7 @@ fn test_import_creates_issue() {
 
 #[test]
 fn test_import_with_labels() {
-    let (db, _dir) = setup_test_db();
+    let (mut db, _dir) = setup_test_db();
     let config = dummy_config();
 
     let import_file = _dir.path().join("import.jsonl");
@@ -177,7 +177,7 @@ fn test_import_with_labels() {
     .unwrap();
 
     run_impl(
-        &db,
+        &mut db,
         &config,
         import_file.to_str().unwrap(),
         "wok",
@@ -196,7 +196,7 @@ fn test_import_with_labels() {
 
 #[test]
 fn test_import_dry_run() {
-    let (db, _dir) = setup_test_db();
+    let (mut db, _dir) = setup_test_db();
     let config = dummy_config();
 
     let import_file = _dir.path().join("import.jsonl");
@@ -207,7 +207,7 @@ fn test_import_dry_run() {
     .unwrap();
 
     run_impl(
-        &db,
+        &mut db,
         &config,
         import_file.to_str().unwrap(),
         "wok",
@@ -225,7 +225,7 @@ fn test_import_dry_run() {
 
 #[test]
 fn test_import_status_filter() {
-    let (db, _dir) = setup_test_db();
+    let (mut db, _dir) = setup_test_db();
     let config = dummy_config();
 
     let import_file = _dir.path().join("import.jsonl");
@@ -237,7 +237,7 @@ fn test_import_status_filter() {
     .unwrap();
 
     run_impl(
-        &db,
+        &mut db,
         &config,
         import_file.to_str().unwrap(),
         "wok",
@@ -256,7 +256,7 @@ fn test_import_status_filter() {
 
 #[test]
 fn test_import_prefix_filter() {
-    let (db, _dir) = setup_test_db();
+    let (mut db, _dir) = setup_test_db();
     let config = dummy_config();
 
     let import_file = _dir.path().join("import.jsonl");
@@ -268,7 +268,7 @@ fn test_import_prefix_filter() {
     .unwrap();
 
     run_impl(
-        &db,
+        &mut db,
         &config,
         import_file.to_str().unwrap(),
         "wok",
@@ -287,7 +287,7 @@ fn test_import_prefix_filter() {
 
 #[test]
 fn test_import_updates_existing() {
-    let (db, _dir) = setup_test_db();
+    let (mut db, _dir) = setup_test_db();
     let config = dummy_config();
 
     // Create initial issue
@@ -301,6 +301,11 @@ fn test_import_updates_existing() {
         created_at: chrono::Utc::now(),
         updated_at: chrono::Utc::now(),
         closed_at: None,
+        last_status_hlc: None,
+        last_title_hlc: None,
+        last_type_hlc: None,
+        last_description_hlc: None,
+        last_assignee_hlc: None,
     };
     db.create_issue(&issue).unwrap();
 
@@ -313,7 +318,7 @@ fn test_import_updates_existing() {
     .unwrap();
 
     run_impl(
-        &db,
+        &mut db,
         &config,
         import_file.to_str().unwrap(),
         "wok",
@@ -331,7 +336,7 @@ fn test_import_updates_existing() {
 
 #[test]
 fn test_import_updates_existing_status() {
-    let (db, _dir) = setup_test_db();
+    let (mut db, _dir) = setup_test_db();
     let config = dummy_config();
 
     // Create initial issue with todo status
@@ -345,6 +350,11 @@ fn test_import_updates_existing_status() {
         created_at: chrono::Utc::now(),
         updated_at: chrono::Utc::now(),
         closed_at: None,
+        last_status_hlc: None,
+        last_title_hlc: None,
+        last_type_hlc: None,
+        last_description_hlc: None,
+        last_assignee_hlc: None,
     };
     db.create_issue(&issue).unwrap();
 
@@ -357,7 +367,7 @@ fn test_import_updates_existing_status() {
     .unwrap();
 
     run_impl(
-        &db,
+        &mut db,
         &config,
         import_file.to_str().unwrap(),
         "wok",
@@ -375,7 +385,7 @@ fn test_import_updates_existing_status() {
 
 #[test]
 fn test_import_beads_format() {
-    let (db, _dir) = setup_test_db();
+    let (mut db, _dir) = setup_test_db();
     let config = dummy_config();
 
     let import_file = _dir.path().join("import.jsonl");
@@ -386,7 +396,7 @@ fn test_import_beads_format() {
     .unwrap();
 
     run_impl(
-        &db,
+        &mut db,
         &config,
         import_file.to_str().unwrap(),
         "bd",
@@ -409,14 +419,14 @@ fn test_import_beads_format() {
 
 #[test]
 fn test_import_empty_file() {
-    let (db, _dir) = setup_test_db();
+    let (mut db, _dir) = setup_test_db();
     let config = dummy_config();
 
     let import_file = _dir.path().join("import.jsonl");
     std::fs::write(&import_file, "").unwrap();
 
     let result = run_impl(
-        &db,
+        &mut db,
         &config,
         import_file.to_str().unwrap(),
         "wok",
@@ -432,7 +442,7 @@ fn test_import_empty_file() {
 
 #[test]
 fn test_import_skips_empty_lines() {
-    let (db, _dir) = setup_test_db();
+    let (mut db, _dir) = setup_test_db();
     let config = dummy_config();
 
     let import_file = _dir.path().join("import.jsonl");
@@ -445,7 +455,7 @@ fn test_import_skips_empty_lines() {
     .unwrap();
 
     run_impl(
-        &db,
+        &mut db,
         &config,
         import_file.to_str().unwrap(),
         "wok",
@@ -463,14 +473,14 @@ fn test_import_skips_empty_lines() {
 
 #[test]
 fn test_import_invalid_json_fails() {
-    let (db, _dir) = setup_test_db();
+    let (mut db, _dir) = setup_test_db();
     let config = dummy_config();
 
     let import_file = _dir.path().join("import.jsonl");
     std::fs::write(&import_file, "not valid json").unwrap();
 
     let result = run_impl(
-        &db,
+        &mut db,
         &config,
         import_file.to_str().unwrap(),
         "wok",
@@ -486,7 +496,7 @@ fn test_import_invalid_json_fails() {
 
 #[test]
 fn test_import_chore_type() {
-    let (db, _dir) = setup_test_db();
+    let (mut db, _dir) = setup_test_db();
     let config = dummy_config();
 
     let import_file = _dir.path().join("import.jsonl");
@@ -497,7 +507,7 @@ fn test_import_chore_type() {
     .unwrap();
 
     run_impl(
-        &db,
+        &mut db,
         &config,
         import_file.to_str().unwrap(),
         "wok",
@@ -516,7 +526,7 @@ fn test_import_chore_type() {
 
 #[test]
 fn test_import_beads_chore_type() {
-    let (db, _dir) = setup_test_db();
+    let (mut db, _dir) = setup_test_db();
     let config = dummy_config();
 
     let import_file = _dir.path().join("import.jsonl");
@@ -527,7 +537,7 @@ fn test_import_beads_chore_type() {
     .unwrap();
 
     run_impl(
-        &db,
+        &mut db,
         &config,
         import_file.to_str().unwrap(),
         "bd",
@@ -546,7 +556,7 @@ fn test_import_beads_chore_type() {
 
 #[test]
 fn test_import_beads_epic_preserved() {
-    let (db, _dir) = setup_test_db();
+    let (mut db, _dir) = setup_test_db();
     let config = dummy_config();
 
     let import_file = _dir.path().join("import.jsonl");
@@ -557,7 +567,7 @@ fn test_import_beads_epic_preserved() {
     .unwrap();
 
     run_impl(
-        &db,
+        &mut db,
         &config,
         import_file.to_str().unwrap(),
         "bd",
@@ -682,7 +692,7 @@ fn test_convert_beads_status_tombstone_with_failure_delete_reason() {
 
 #[test]
 fn test_import_beads_priority_as_label() {
-    let (db, _dir) = setup_test_db();
+    let (mut db, _dir) = setup_test_db();
     let config = dummy_config();
 
     let import_file = _dir.path().join("import.jsonl");
@@ -693,7 +703,7 @@ fn test_import_beads_priority_as_label() {
     .unwrap();
 
     run_impl(
-        &db,
+        &mut db,
         &config,
         import_file.to_str().unwrap(),
         "bd",
@@ -711,7 +721,7 @@ fn test_import_beads_priority_as_label() {
 
 #[test]
 fn test_import_beads_priority_zero_not_labeled() {
-    let (db, _dir) = setup_test_db();
+    let (mut db, _dir) = setup_test_db();
     let config = dummy_config();
 
     let import_file = _dir.path().join("import.jsonl");
@@ -722,7 +732,7 @@ fn test_import_beads_priority_zero_not_labeled() {
     .unwrap();
 
     run_impl(
-        &db,
+        &mut db,
         &config,
         import_file.to_str().unwrap(),
         "bd",
@@ -740,7 +750,7 @@ fn test_import_beads_priority_zero_not_labeled() {
 
 #[test]
 fn test_beads_comment_text_field() {
-    let (db, _dir) = setup_test_db();
+    let (mut db, _dir) = setup_test_db();
     let config = dummy_config();
 
     let import_file = _dir.path().join("import.jsonl");
@@ -751,7 +761,7 @@ fn test_beads_comment_text_field() {
     .unwrap();
 
     run_impl(
-        &db,
+        &mut db,
         &config,
         import_file.to_str().unwrap(),
         "bd",
@@ -771,7 +781,7 @@ fn test_beads_comment_text_field() {
 
 #[test]
 fn test_beads_comment_content_alias() {
-    let (db, _dir) = setup_test_db();
+    let (mut db, _dir) = setup_test_db();
     let config = dummy_config();
 
     let import_file = _dir.path().join("import.jsonl");
@@ -782,7 +792,7 @@ fn test_beads_comment_content_alias() {
     .unwrap();
 
     run_impl(
-        &db,
+        &mut db,
         &config,
         import_file.to_str().unwrap(),
         "bd",
@@ -802,7 +812,7 @@ fn test_beads_comment_content_alias() {
 
 #[test]
 fn test_import_beads_close_reason_failure() {
-    let (db, _dir) = setup_test_db();
+    let (mut db, _dir) = setup_test_db();
     let config = dummy_config();
 
     let import_file = _dir.path().join("import.jsonl");
@@ -813,7 +823,7 @@ fn test_import_beads_close_reason_failure() {
     .unwrap();
 
     run_impl(
-        &db,
+        &mut db,
         &config,
         import_file.to_str().unwrap(),
         "bd",
@@ -836,7 +846,7 @@ fn test_import_beads_close_reason_failure() {
 
 #[test]
 fn test_import_beads_close_reason_success() {
-    let (db, _dir) = setup_test_db();
+    let (mut db, _dir) = setup_test_db();
     let config = dummy_config();
 
     let import_file = _dir.path().join("import.jsonl");
@@ -847,7 +857,7 @@ fn test_import_beads_close_reason_success() {
     .unwrap();
 
     run_impl(
-        &db,
+        &mut db,
         &config,
         import_file.to_str().unwrap(),
         "bd",
@@ -871,7 +881,7 @@ fn test_import_beads_close_reason_success() {
 
 #[test]
 fn test_import_beads_tombstone_status() {
-    let (db, _dir) = setup_test_db();
+    let (mut db, _dir) = setup_test_db();
     let config = dummy_config();
 
     let import_file = _dir.path().join("import.jsonl");
@@ -882,7 +892,7 @@ fn test_import_beads_tombstone_status() {
     .unwrap();
 
     run_impl(
-        &db,
+        &mut db,
         &config,
         import_file.to_str().unwrap(),
         "bd",
@@ -905,7 +915,7 @@ fn test_import_beads_tombstone_status() {
 
 #[test]
 fn test_import_beads_tombstone_without_delete_reason() {
-    let (db, _dir) = setup_test_db();
+    let (mut db, _dir) = setup_test_db();
     let config = dummy_config();
 
     let import_file = _dir.path().join("import.jsonl");
@@ -916,7 +926,7 @@ fn test_import_beads_tombstone_without_delete_reason() {
     .unwrap();
 
     run_impl(
-        &db,
+        &mut db,
         &config,
         import_file.to_str().unwrap(),
         "bd",

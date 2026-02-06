@@ -128,10 +128,10 @@ fn rename_all_issue_ids(db: &Database, old_prefix: &str, new_prefix: &str) -> Re
     // Disable foreign keys, perform updates, then re-enable
     // Note: PRAGMA foreign_keys cannot be changed inside a transaction,
     // so we handle this carefully.
-    db.core().conn.execute("PRAGMA foreign_keys = OFF", [])?;
+    db.conn.execute("PRAGMA foreign_keys = OFF", [])?;
 
     let result = (|| -> Result<()> {
-        let tx = db.core().conn.unchecked_transaction()?;
+        let tx = db.conn.unchecked_transaction()?;
 
         // Update issues table (primary)
         tx.execute(
@@ -172,7 +172,7 @@ fn rename_all_issue_ids(db: &Database, old_prefix: &str, new_prefix: &str) -> Re
     })();
 
     // Re-enable foreign keys regardless of success/failure
-    db.core().conn.execute("PRAGMA foreign_keys = ON", [])?;
+    db.conn.execute("PRAGMA foreign_keys = ON", [])?;
 
     // Update the prefixes table (outside transaction since it doesn't have foreign key constraints)
     if result.is_ok() {

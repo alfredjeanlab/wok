@@ -126,8 +126,8 @@ pub(crate) fn run_impl(
     issues.sort_by(|a, b| {
         let tags_a = db.get_labels(&a.id).unwrap_or_default();
         let tags_b = db.get_labels(&b.id).unwrap_or_default();
-        let priority_a = Database::priority_from_tags(&tags_a);
-        let priority_b = Database::priority_from_tags(&tags_b);
+        let priority_a = crate::db::priority_from_tags(&tags_a);
+        let priority_b = crate::db::priority_from_tags(&tags_b);
 
         match priority_a.cmp(&priority_b) {
             std::cmp::Ordering::Equal => b.created_at.cmp(&a.created_at), // DESC

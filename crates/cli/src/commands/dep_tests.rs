@@ -29,6 +29,11 @@ fn create_issue(db: &Database, id: &str) {
         created_at: Utc::now(),
         updated_at: Utc::now(),
         closed_at: None,
+        last_status_hlc: None,
+        last_title_hlc: None,
+        last_type_hlc: None,
+        last_description_hlc: None,
+        last_assignee_hlc: None,
     };
     db.create_issue(&issue).unwrap();
 }

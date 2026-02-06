@@ -35,7 +35,7 @@ pub(crate) fn run_impl(db: &Database, ids: &[String], format: &str) -> Result<()
     // Resolve all IDs first (fail fast if any is invalid)
     let resolved_ids: Vec<String> = ids
         .iter()
-        .map(|id| db.resolve_id(id))
+        .map(|id| Ok(db.resolve_id(id)?))
         .collect::<Result<Vec<_>>>()?;
 
     match format {
