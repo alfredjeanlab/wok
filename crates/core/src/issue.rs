@@ -398,7 +398,7 @@ impl FromStr for Relation {
     fn from_str(s: &str) -> Result<Self> {
         match s.to_lowercase().as_str() {
             "blocks" => Ok(Relation::Blocks),
-            "tracked-by" => Ok(Relation::TrackedBy),
+            "tracked-by" | "tracked_by" => Ok(Relation::TrackedBy),
             "tracks" => Ok(Relation::Tracks),
             _ => Err(Error::InvalidRelation(s.to_string())),
         }
