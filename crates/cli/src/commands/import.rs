@@ -7,7 +7,7 @@ use std::io::{self, BufRead, BufReader};
 use serde::Deserialize;
 
 use crate::config::Config;
-use crate::db::links::new_link;
+use crate::db::new_link;
 use crate::db::Database;
 use crate::error::{Error, Result};
 use crate::models::{Action, Event, Issue, IssueType, Link, LinkRel, LinkType, Relation, Status};
@@ -235,6 +235,11 @@ fn convert_beads_issue(bd: BeadsIssue) -> Result<ImportedIssue> {
         created_at,
         updated_at,
         closed_at: None,
+        last_status_hlc: None,
+        last_title_hlc: None,
+        last_type_hlc: None,
+        last_description_hlc: None,
+        last_assignee_hlc: None,
     };
 
     // Start with labels
@@ -347,16 +352,16 @@ pub fn run(
         None => return Err(Error::NoInputFile),
     };
 
-    let (db, config, _) = open_db()?;
+    let (mut db, config, _) = open_db()?;
     run_impl(
-        &db, &config, path, format, dry_run, status, issue_type, label, prefix,
+        &mut db, &config, path, format, dry_run, status, issue_type, label, prefix,
     )
 }
 
 // TODO(refactor): Consider using an options struct to bundle parameters
 #[allow(clippy::too_many_arguments)]
 pub(crate) fn run_impl(
-    db: &Database,
+    db: &mut Database,
     _config: &Config,
     path: &str,
     format: &str,
@@ -469,7 +474,7 @@ pub(crate) fn run_impl(
         }
 
         // Check if issue exists
-        match db.get_issue(&issue.id) {
+        match db.get_issue(&issue.id).map_err(crate::error::Error::from) {
             Ok(existing) => {
                 // Check for collision (different content)
                 if existing.title != issue.title || existing.status != issue.status {

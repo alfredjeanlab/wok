@@ -5,7 +5,6 @@
 #![allow(clippy::expect_used)]
 
 use super::*;
-use crate::models::Status;
 use tempfile::tempdir;
 
 #[test]
@@ -30,49 +29,6 @@ fn test_open_in_memory() {
     assert!(tables.contains(&"notes".to_string()));
     assert!(tables.contains(&"events".to_string()));
 }
-
-// Tests for parse_db error paths
-
-#[test]
-fn test_parse_db_invalid_status() {
-    let result = parse_db::<Status>("INVALID_STATUS", "status");
-    assert!(result.is_err());
-    let err = result.unwrap_err();
-    assert!(matches!(err, rusqlite::Error::FromSqlConversionFailure(..)));
-}
-
-#[test]
-fn test_parse_db_valid_status() {
-    let result = parse_db::<Status>("todo", "status");
-    assert!(result.is_ok());
-    assert_eq!(result.unwrap(), Status::Todo);
-}
-
-// Tests for parse_timestamp error paths
-
-#[test]
-fn test_parse_timestamp_invalid() {
-    let result = parse_timestamp("NOT-A-TIMESTAMP", "created_at");
-    assert!(result.is_err());
-    let err = result.unwrap_err();
-    assert!(matches!(err, rusqlite::Error::FromSqlConversionFailure(..)));
-}
-
-#[test]
-fn test_parse_timestamp_malformed() {
-    let result = parse_timestamp("2024-13-45T99:99:99Z", "created_at");
-    assert!(result.is_err());
-}
-
-#[test]
-fn test_parse_timestamp_valid() {
-    let result = parse_timestamp("2024-01-15T10:30:00Z", "created_at");
-    assert!(result.is_ok());
-    let dt = result.unwrap();
-    assert_eq!(dt.year(), 2024);
-}
-
-use chrono::Datelike;
 
 #[test]
 fn test_wal_mode_enabled_for_file_db() {

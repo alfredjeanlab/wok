@@ -7,19 +7,22 @@
 use super::*;
 use crate::db::Database;
 use crate::models::{Issue, IssueType, Status};
+use chrono::Utc;
 
 #[test]
 fn search_finds_title_match() {
-    let db = Database::open_in_memory().unwrap();
+    let mut db = Database::open_in_memory().unwrap();
     let issue1 = Issue::new(
         "test-1".to_string(),
         IssueType::Task,
         "Authentication login".to_string(),
+        Utc::now(),
     );
     let issue2 = Issue::new(
         "test-2".to_string(),
         IssueType::Task,
         "Dashboard widget".to_string(),
+        Utc::now(),
     );
 
     db.create_issue(&issue1).unwrap();
@@ -43,16 +46,18 @@ fn search_finds_title_match() {
 
 #[test]
 fn search_with_status_filter() {
-    let db = Database::open_in_memory().unwrap();
+    let mut db = Database::open_in_memory().unwrap();
     let issue1 = Issue::new(
         "test-1".to_string(),
         IssueType::Task,
         "Todo task".to_string(),
+        Utc::now(),
     );
     let issue2 = Issue::new(
         "test-2".to_string(),
         IssueType::Task,
         "Done task".to_string(),
+        Utc::now(),
     );
 
     db.create_issue(&issue1).unwrap();
@@ -78,16 +83,18 @@ fn search_with_status_filter() {
 
 #[test]
 fn search_with_type_filter() {
-    let db = Database::open_in_memory().unwrap();
+    let mut db = Database::open_in_memory().unwrap();
     let bug = Issue::new(
         "test-1".to_string(),
         IssueType::Bug,
         "Bug with auth".to_string(),
+        Utc::now(),
     );
     let task = Issue::new(
         "test-2".to_string(),
         IssueType::Task,
         "Task with auth".to_string(),
+        Utc::now(),
     );
 
     db.create_issue(&bug).unwrap();
@@ -111,9 +118,19 @@ fn search_with_type_filter() {
 
 #[test]
 fn search_with_label_filter() {
-    let db = Database::open_in_memory().unwrap();
-    let issue1 = Issue::new("test-1".to_string(), IssueType::Task, "Task A".to_string());
-    let issue2 = Issue::new("test-2".to_string(), IssueType::Task, "Task B".to_string());
+    let mut db = Database::open_in_memory().unwrap();
+    let issue1 = Issue::new(
+        "test-1".to_string(),
+        IssueType::Task,
+        "Task A".to_string(),
+        Utc::now(),
+    );
+    let issue2 = Issue::new(
+        "test-2".to_string(),
+        IssueType::Task,
+        "Task B".to_string(),
+        Utc::now(),
+    );
 
     db.create_issue(&issue1).unwrap();
     db.create_issue(&issue2).unwrap();
@@ -138,11 +155,12 @@ fn search_with_label_filter() {
 
 #[test]
 fn search_no_matches_returns_empty() {
-    let db = Database::open_in_memory().unwrap();
+    let mut db = Database::open_in_memory().unwrap();
     let issue = Issue::new(
         "test-1".to_string(),
         IssueType::Task,
         "Some task".to_string(),
+        Utc::now(),
     );
 
     db.create_issue(&issue).unwrap();
@@ -165,11 +183,12 @@ fn search_no_matches_returns_empty() {
 
 #[test]
 fn search_json_output() {
-    let db = Database::open_in_memory().unwrap();
+    let mut db = Database::open_in_memory().unwrap();
     let issue = Issue::new(
         "test-1".to_string(),
         IssueType::Task,
         "JSON test task".to_string(),
+        Utc::now(),
     );
 
     db.create_issue(&issue).unwrap();
@@ -192,7 +211,7 @@ fn search_json_output() {
 
 #[test]
 fn search_limits_results_to_25() {
-    let db = Database::open_in_memory().unwrap();
+    let mut db = Database::open_in_memory().unwrap();
 
     // Create 30 issues that match the query
     for i in 0..30 {
@@ -200,6 +219,7 @@ fn search_limits_results_to_25() {
             format!("test-{}", i),
             IssueType::Task,
             format!("Matching task {}", i),
+            Utc::now(),
         );
         db.create_issue(&issue).unwrap();
     }
@@ -227,7 +247,7 @@ fn search_limits_results_to_25() {
 
 #[test]
 fn search_json_includes_more_count() {
-    let db = Database::open_in_memory().unwrap();
+    let mut db = Database::open_in_memory().unwrap();
 
     // Create 30 issues
     for i in 0..30 {
@@ -235,6 +255,7 @@ fn search_json_includes_more_count() {
             format!("test-{}", i),
             IssueType::Task,
             format!("JSON task {}", i),
+            Utc::now(),
         );
         db.create_issue(&issue).unwrap();
     }

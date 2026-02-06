@@ -107,7 +107,7 @@ fn test_rename_prefix_validates_old_prefix() {
 
 #[test]
 fn test_rename_prefix_same_prefix_noop() {
-    let test_ctx = ConfigTestContext::new("same");
+    let mut test_ctx = ConfigTestContext::new("same");
     test_ctx
         .ctx
         .create_issue("same-a1b2", IssueType::Task, "Test issue");
@@ -129,7 +129,7 @@ fn test_rename_prefix_same_prefix_noop() {
 
 #[test]
 fn test_rename_prefix_updates_issue_ids() {
-    let test_ctx = ConfigTestContext::new("old");
+    let mut test_ctx = ConfigTestContext::new("old");
     test_ctx
         .ctx
         .create_issue("old-a1b2", IssueType::Task, "Issue 1");
@@ -160,7 +160,7 @@ fn test_rename_prefix_updates_issue_ids() {
 
 #[test]
 fn test_rename_prefix_updates_dependencies() {
-    let test_ctx = ConfigTestContext::new("old");
+    let mut test_ctx = ConfigTestContext::new("old");
     test_ctx
         .ctx
         .create_issue("old-a1b2", IssueType::Task, "Blocker")
@@ -186,7 +186,7 @@ fn test_rename_prefix_updates_dependencies() {
 
 #[test]
 fn test_rename_prefix_updates_labels() {
-    let test_ctx = ConfigTestContext::new("old");
+    let mut test_ctx = ConfigTestContext::new("old");
     test_ctx
         .ctx
         .create_issue("old-a1b2", IssueType::Task, "Test issue")
@@ -209,7 +209,7 @@ fn test_rename_prefix_updates_labels() {
 
 #[test]
 fn test_rename_prefix_updates_notes() {
-    let test_ctx = ConfigTestContext::new("old");
+    let mut test_ctx = ConfigTestContext::new("old");
     test_ctx
         .ctx
         .create_issue("old-a1b2", IssueType::Task, "Test issue")
@@ -231,7 +231,7 @@ fn test_rename_prefix_updates_notes() {
 
 #[test]
 fn test_rename_prefix_updates_events() {
-    let test_ctx = ConfigTestContext::new("old");
+    let mut test_ctx = ConfigTestContext::new("old");
     test_ctx
         .ctx
         .create_issue("old-a1b2", IssueType::Task, "Test issue")
@@ -253,7 +253,7 @@ fn test_rename_prefix_updates_events() {
 
 #[test]
 fn test_rename_prefix_updates_config_file() {
-    let test_ctx = ConfigTestContext::new("old");
+    let mut test_ctx = ConfigTestContext::new("old");
     test_ctx
         .ctx
         .create_issue("old-a1b2", IssueType::Task, "Test issue");
@@ -274,7 +274,7 @@ fn test_rename_prefix_updates_config_file() {
 
 #[test]
 fn test_rename_prefix_does_not_update_config_for_different_prefix() {
-    let test_ctx = ConfigTestContext::new("current");
+    let mut test_ctx = ConfigTestContext::new("current");
     test_ctx
         .ctx
         .create_issue("other-a1b2", IssueType::Task, "Other prefix issue");
@@ -300,7 +300,7 @@ fn test_rename_prefix_does_not_update_config_for_different_prefix() {
 #[test]
 fn test_rename_prefix_handles_mixed_prefixes() {
     // Test that only matching prefixes are updated
-    let test_ctx = ConfigTestContext::new("old");
+    let mut test_ctx = ConfigTestContext::new("old");
     test_ctx
         .ctx
         .create_issue("old-a1b2", IssueType::Task, "Old prefix issue");
@@ -328,7 +328,7 @@ fn test_rename_prefix_handles_mixed_prefixes() {
 
 #[test]
 fn test_rename_prefix_with_tracks_relationship() {
-    let test_ctx = ConfigTestContext::new("old");
+    let mut test_ctx = ConfigTestContext::new("old");
     test_ctx
         .ctx
         .create_issue("old-feat", IssueType::Feature, "Feature")
@@ -375,7 +375,7 @@ fn test_rename_prefix_empty_database() {
 
 #[test]
 fn test_rename_all_issue_ids_transaction() {
-    let test_ctx = ConfigTestContext::new("old");
+    let mut test_ctx = ConfigTestContext::new("old");
     test_ctx
         .ctx
         .create_issue("old-a1b2", IssueType::Task, "Issue 1")
@@ -407,7 +407,7 @@ fn test_rename_prefix_valid_prefixes() {
     let valid_prefixes = vec!["ab", "abc", "project", "v0", "proj2", "myproject123"];
 
     for new_prefix in valid_prefixes {
-        let test_ctx = ConfigTestContext::new("old");
+        let mut test_ctx = ConfigTestContext::new("old");
         test_ctx
             .ctx
             .create_issue("old-a1b2", IssueType::Task, "Test");

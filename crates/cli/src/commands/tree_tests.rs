@@ -9,7 +9,7 @@ use crate::models::{IssueType, Status};
 
 #[test]
 fn test_get_tracked_for_parent() {
-    let ctx = TestContext::new();
+    let mut ctx = TestContext::new();
     ctx.create_issue("parent", IssueType::Feature, "Parent feature")
         .create_issue("child1", IssueType::Task, "Child 1")
         .create_issue("child2", IssueType::Task, "Child 2")
@@ -22,7 +22,7 @@ fn test_get_tracked_for_parent() {
 
 #[test]
 fn test_get_tracked_empty() {
-    let ctx = TestContext::new();
+    let mut ctx = TestContext::new();
     ctx.create_issue("leaf", IssueType::Task, "Leaf task");
 
     let children = ctx.db.get_tracked("leaf").unwrap();
@@ -31,7 +31,7 @@ fn test_get_tracked_empty() {
 
 #[test]
 fn test_nested_hierarchy() {
-    let ctx = TestContext::new();
+    let mut ctx = TestContext::new();
     ctx.create_issue("feature", IssueType::Feature, "Feature")
         .create_issue("task", IssueType::Task, "Task under feature")
         .create_issue("subtask", IssueType::Task, "Subtask under task")
@@ -49,7 +49,7 @@ fn test_nested_hierarchy() {
 
 #[test]
 fn test_transitive_blockers() {
-    let ctx = TestContext::new();
+    let mut ctx = TestContext::new();
     ctx.create_issue("task-a", IssueType::Task, "Task A")
         .create_issue("task-b", IssueType::Task, "Task B")
         .create_issue("task-c", IssueType::Task, "Task C")
@@ -65,7 +65,7 @@ fn test_transitive_blockers() {
 
 #[test]
 fn test_blockers_filtered_by_status() {
-    let ctx = TestContext::new();
+    let mut ctx = TestContext::new();
     ctx.create_issue("blocker1", IssueType::Task, "Open blocker")
         .create_issue("blocker2", IssueType::Task, "Done blocker")
         .create_issue("blocked", IssueType::Task, "Blocked")
@@ -83,7 +83,7 @@ fn test_blockers_filtered_by_status() {
 
 #[test]
 fn test_tree_with_blocking_and_hierarchy() {
-    let ctx = TestContext::new();
+    let mut ctx = TestContext::new();
     ctx.create_issue("feature", IssueType::Feature, "Feature")
         .create_issue("task1", IssueType::Task, "Task 1")
         .create_issue("task2", IssueType::Task, "Task 2")
@@ -103,7 +103,7 @@ fn test_tree_with_blocking_and_hierarchy() {
 
 #[test]
 fn test_issue_without_blockers() {
-    let ctx = TestContext::new();
+    let mut ctx = TestContext::new();
     ctx.create_issue("independent", IssueType::Task, "Independent task");
 
     let blockers = ctx.db.get_transitive_blockers("independent").unwrap();
@@ -112,7 +112,7 @@ fn test_issue_without_blockers() {
 
 #[test]
 fn test_multiple_direct_blockers() {
-    let ctx = TestContext::new();
+    let mut ctx = TestContext::new();
     ctx.create_issue("blocker1", IssueType::Task, "Blocker 1")
         .create_issue("blocker2", IssueType::Task, "Blocker 2")
         .create_issue("blocked", IssueType::Task, "Blocked task")
@@ -131,7 +131,7 @@ use crate::commands::tree::run_impl;
 
 #[test]
 fn test_run_impl_simple() {
-    let ctx = TestContext::new();
+    let mut ctx = TestContext::new();
     ctx.create_issue("test-1", IssueType::Feature, "Test feature")
         .create_issue("test-2", IssueType::Task, "Child task")
         .tracks("test-1", "test-2");
@@ -142,7 +142,7 @@ fn test_run_impl_simple() {
 
 #[test]
 fn test_run_impl_leaf_node() {
-    let ctx = TestContext::new();
+    let mut ctx = TestContext::new();
     ctx.create_issue("leaf", IssueType::Task, "Leaf task");
 
     let result = run_impl(&ctx.db, &["leaf".to_string()]);
@@ -151,7 +151,7 @@ fn test_run_impl_leaf_node() {
 
 #[test]
 fn test_run_impl_nonexistent() {
-    let ctx = TestContext::new();
+    let mut ctx = TestContext::new();
 
     let result = run_impl(&ctx.db, &["nonexistent".to_string()]);
     assert!(result.is_err());
@@ -159,7 +159,7 @@ fn test_run_impl_nonexistent() {
 
 #[test]
 fn test_run_impl_with_blockers() {
-    let ctx = TestContext::new();
+    let mut ctx = TestContext::new();
     ctx.create_issue("blocker", IssueType::Task, "Blocker")
         .create_issue("blocked", IssueType::Task, "Blocked")
         .blocks("blocker", "blocked");
@@ -170,7 +170,7 @@ fn test_run_impl_with_blockers() {
 
 #[test]
 fn test_run_impl_deep_hierarchy() {
-    let ctx = TestContext::new();
+    let mut ctx = TestContext::new();
     ctx.create_issue("l1", IssueType::Feature, "Level 1")
         .create_issue("l2", IssueType::Task, "Level 2")
         .create_issue("l3", IssueType::Task, "Level 3")
@@ -183,7 +183,7 @@ fn test_run_impl_deep_hierarchy() {
 
 #[test]
 fn test_run_impl_with_tracked_and_blocked() {
-    let ctx = TestContext::new();
+    let mut ctx = TestContext::new();
     ctx.create_issue("epic", IssueType::Epic, "Epic")
         .create_issue("feature", IssueType::Feature, "Feature under epic")
         .create_issue("dependent", IssueType::Feature, "Dependent feature")
@@ -205,7 +205,7 @@ fn test_run_impl_with_tracked_and_blocked() {
 
 #[test]
 fn test_run_impl_blocks_only() {
-    let ctx = TestContext::new();
+    let mut ctx = TestContext::new();
     ctx.create_issue("blocker", IssueType::Task, "Blocker task")
         .create_issue("dependent1", IssueType::Task, "Dependent 1")
         .create_issue("dependent2", IssueType::Task, "Dependent 2")
@@ -225,7 +225,7 @@ fn test_run_impl_blocks_only() {
 
 #[test]
 fn test_run_impl_multiple_ids() {
-    let ctx = TestContext::new();
+    let mut ctx = TestContext::new();
     ctx.create_issue("feature1", IssueType::Feature, "Feature 1")
         .create_issue("feature2", IssueType::Feature, "Feature 2")
         .create_issue("task1", IssueType::Task, "Task for F1")
@@ -239,7 +239,7 @@ fn test_run_impl_multiple_ids() {
 
 #[test]
 fn test_run_impl_multiple_ids_fail_fast() {
-    let ctx = TestContext::new();
+    let mut ctx = TestContext::new();
     ctx.create_issue("valid", IssueType::Task, "Valid task");
 
     // Second ID is invalid - should fail fast before printing anything
@@ -249,7 +249,7 @@ fn test_run_impl_multiple_ids_fail_fast() {
 
 #[test]
 fn test_run_impl_single_id_backward_compatible() {
-    let ctx = TestContext::new();
+    let mut ctx = TestContext::new();
     ctx.create_issue("single", IssueType::Task, "Single task");
 
     // Single ID should work exactly as before

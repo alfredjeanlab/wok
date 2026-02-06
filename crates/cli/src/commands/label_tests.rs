@@ -9,7 +9,7 @@ use crate::models::{Action, IssueType};
 
 #[test]
 fn test_add_label_logs_event() {
-    let ctx = TestContext::new();
+    let mut ctx = TestContext::new();
     ctx.create_issue("test-1", IssueType::Task, "Test issue");
 
     // Manually perform what add() does
@@ -29,7 +29,7 @@ fn test_add_label_logs_event() {
 
 #[test]
 fn test_add_multiple_labels() {
-    let ctx = TestContext::new();
+    let mut ctx = TestContext::new();
     ctx.create_issue("test-1", IssueType::Task, "Test issue")
         .add_label("test-1", "backend")
         .add_label("test-1", "urgent")
@@ -44,7 +44,7 @@ fn test_add_multiple_labels() {
 
 #[test]
 fn test_add_duplicate_label_is_idempotent() {
-    let ctx = TestContext::new();
+    let mut ctx = TestContext::new();
     ctx.create_issue("test-1", IssueType::Task, "Test issue");
 
     ctx.db.add_label("test-1", "urgent").unwrap();
@@ -56,7 +56,7 @@ fn test_add_duplicate_label_is_idempotent() {
 
 #[test]
 fn test_add_label_to_nonexistent_issue_fails() {
-    let ctx = TestContext::new();
+    let mut ctx = TestContext::new();
 
     // Trying to add label to non-existent issue should fail
     let result = ctx.db.get_issue("nonexistent");
@@ -65,7 +65,7 @@ fn test_add_label_to_nonexistent_issue_fails() {
 
 #[test]
 fn test_remove_label_logs_event() {
-    let ctx = TestContext::new();
+    let mut ctx = TestContext::new();
     ctx.create_issue("test-1", IssueType::Task, "Test issue")
         .add_label("test-1", "urgent");
 
@@ -88,7 +88,7 @@ fn test_remove_label_logs_event() {
 
 #[test]
 fn test_remove_nonexistent_label_returns_false() {
-    let ctx = TestContext::new();
+    let mut ctx = TestContext::new();
     ctx.create_issue("test-1", IssueType::Task, "Test issue");
 
     let removed = ctx.db.remove_label("test-1", "nonexistent").unwrap();
@@ -97,7 +97,7 @@ fn test_remove_nonexistent_label_returns_false() {
 
 #[test]
 fn test_labels_persist_across_status_changes() {
-    let ctx = TestContext::new();
+    let mut ctx = TestContext::new();
     ctx.create_issue("test-1", IssueType::Task, "Test issue")
         .add_label("test-1", "urgent")
         .set_status("test-1", crate::models::Status::InProgress);
@@ -108,7 +108,7 @@ fn test_labels_persist_across_status_changes() {
 
 #[test]
 fn test_label_filtering_in_list() {
-    let ctx = TestContext::new();
+    let mut ctx = TestContext::new();
     ctx.create_issue("test-1", IssueType::Task, "Task with label")
         .create_issue("test-2", IssueType::Task, "Task without label")
         .add_label("test-1", "backend");
@@ -120,7 +120,7 @@ fn test_label_filtering_in_list() {
 
 #[test]
 fn test_special_characters_in_label_names() {
-    let ctx = TestContext::new();
+    let mut ctx = TestContext::new();
     ctx.create_issue("test-1", IssueType::Task, "Test issue");
 
     // Labels with special characters
@@ -141,7 +141,7 @@ use crate::commands::label::{add_impl, remove_impl};
 
 #[test]
 fn test_add_impl_success() {
-    let ctx = TestContext::new();
+    let mut ctx = TestContext::new();
     ctx.create_issue("test-1", IssueType::Task, "Test issue");
 
     let result = add_impl(&ctx.db, &["test-1".to_string()], "urgent");
@@ -153,7 +153,7 @@ fn test_add_impl_success() {
 
 #[test]
 fn test_add_impl_nonexistent_issue() {
-    let ctx = TestContext::new();
+    let mut ctx = TestContext::new();
 
     let result = add_impl(&ctx.db, &["nonexistent".to_string()], "label");
     assert!(result.is_err());
@@ -161,7 +161,7 @@ fn test_add_impl_nonexistent_issue() {
 
 #[test]
 fn test_remove_impl_success() {
-    let ctx = TestContext::new();
+    let mut ctx = TestContext::new();
     ctx.create_issue("test-1", IssueType::Task, "Test issue")
         .add_label("test-1", "urgent");
 
@@ -174,7 +174,7 @@ fn test_remove_impl_success() {
 
 #[test]
 fn test_remove_impl_nonexistent_label() {
-    let ctx = TestContext::new();
+    let mut ctx = TestContext::new();
     ctx.create_issue("test-1", IssueType::Task, "Test issue");
 
     // Removing non-existent label should succeed but print a message
@@ -184,7 +184,7 @@ fn test_remove_impl_nonexistent_label() {
 
 #[test]
 fn test_remove_impl_nonexistent_issue() {
-    let ctx = TestContext::new();
+    let mut ctx = TestContext::new();
 
     let result = remove_impl(&ctx.db, &["nonexistent".to_string()], "label");
     assert!(result.is_err());
@@ -194,7 +194,7 @@ fn test_remove_impl_nonexistent_issue() {
 
 #[test]
 fn test_add_impl_multiple_issues() {
-    let ctx = TestContext::new();
+    let mut ctx = TestContext::new();
     ctx.create_issue("test-1", IssueType::Task, "Task 1");
     ctx.create_issue("test-2", IssueType::Task, "Task 2");
 
@@ -219,7 +219,7 @@ fn test_add_impl_multiple_issues() {
 
 #[test]
 fn test_add_impl_fails_on_nonexistent_issue() {
-    let ctx = TestContext::new();
+    let mut ctx = TestContext::new();
     ctx.create_issue("test-1", IssueType::Task, "Task 1");
 
     let result = add_impl(
@@ -239,7 +239,7 @@ fn test_add_impl_fails_on_nonexistent_issue() {
 
 #[test]
 fn test_remove_impl_multiple_issues() {
-    let ctx = TestContext::new();
+    let mut ctx = TestContext::new();
     ctx.create_issue("test-1", IssueType::Task, "Task 1")
         .add_label("test-1", "urgent");
     ctx.create_issue("test-2", IssueType::Task, "Task 2")
@@ -270,7 +270,7 @@ use crate::commands::label::{add_with_db, remove_with_db};
 
 #[test]
 fn test_add_with_db_multiple_labels() {
-    let ctx = TestContext::new();
+    let mut ctx = TestContext::new();
     ctx.create_issue("test-1", IssueType::Task, "Task 1");
     ctx.create_issue("test-2", IssueType::Task, "Task 2");
 
@@ -294,7 +294,7 @@ fn test_add_with_db_multiple_labels() {
 
 #[test]
 fn test_remove_with_db_multiple_labels() {
-    let ctx = TestContext::new();
+    let mut ctx = TestContext::new();
     ctx.create_issue("test-1", IssueType::Task, "Task 1")
         .add_label("test-1", "urgent")
         .add_label("test-1", "backend");
@@ -320,7 +320,7 @@ fn test_remove_with_db_multiple_labels() {
 
 #[test]
 fn test_add_with_db_invalid_label_fails_early() {
-    let ctx = TestContext::new();
+    let mut ctx = TestContext::new();
     ctx.create_issue("test-1", IssueType::Task, "Task 1");
 
     // Label that is too long (over 100 chars - MAX_LABEL_LENGTH)

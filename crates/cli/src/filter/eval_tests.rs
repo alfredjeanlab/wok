@@ -18,6 +18,11 @@ fn make_issue_at(created: DateTime<Utc>, updated: DateTime<Utc>) -> Issue {
         created_at: created,
         updated_at: updated,
         closed_at: None,
+        last_status_hlc: None,
+        last_title_hlc: None,
+        last_type_hlc: None,
+        last_description_hlc: None,
+        last_assignee_hlc: None,
     }
 }
 
@@ -350,6 +355,11 @@ fn make_closed_issue(closed: DateTime<Utc>) -> Issue {
         created_at: closed - Duration::days(7),
         updated_at: closed,
         closed_at: Some(closed),
+        last_status_hlc: None,
+        last_title_hlc: None,
+        last_type_hlc: None,
+        last_description_hlc: None,
+        last_assignee_hlc: None,
     }
 }
 
@@ -461,6 +471,11 @@ fn make_done_issue(closed: DateTime<Utc>) -> Issue {
         created_at: closed - Duration::days(7),
         updated_at: closed,
         closed_at: Some(closed),
+        last_status_hlc: None,
+        last_title_hlc: None,
+        last_type_hlc: None,
+        last_description_hlc: None,
+        last_assignee_hlc: None,
     }
 }
 
@@ -475,6 +490,11 @@ fn make_cancelled_issue(closed: DateTime<Utc>) -> Issue {
         created_at: closed - Duration::days(7),
         updated_at: closed,
         closed_at: Some(closed),
+        last_status_hlc: None,
+        last_title_hlc: None,
+        last_type_hlc: None,
+        last_description_hlc: None,
+        last_assignee_hlc: None,
     }
 }
 

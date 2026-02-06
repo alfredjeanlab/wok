@@ -115,9 +115,14 @@ fn create_issue_with_retry(
             created_at,
             updated_at: created_at,
             closed_at: None,
+            last_status_hlc: None,
+            last_title_hlc: None,
+            last_type_hlc: None,
+            last_description_hlc: None,
+            last_assignee_hlc: None,
         };
 
-        match db.create_issue(&issue) {
+        match db.create_issue(&issue).map_err(crate::error::Error::from) {
             Ok(()) => return Ok((id, issue)),
             Err(Error::Database(ref e)) if is_unique_constraint_error(e) => {
                 // ID collision due to race condition, retry with new timestamp

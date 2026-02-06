@@ -12,7 +12,7 @@ use yare::parameterized;
 
 #[test]
 fn test_create_issue_basic() {
-    let ctx = TestContext::new();
+    let mut ctx = TestContext::new();
     ctx.create_issue("test-1", IssueType::Task, "My new task");
 
     let issue = ctx.db.get_issue("test-1").unwrap();
@@ -24,7 +24,7 @@ fn test_create_issue_basic() {
 
 #[test]
 fn test_create_issue_with_type_bug() {
-    let ctx = TestContext::new();
+    let mut ctx = TestContext::new();
     ctx.create_issue("bug-1", IssueType::Bug, "Fix the crash");
 
     let issue = ctx.db.get_issue("bug-1").unwrap();
@@ -33,7 +33,7 @@ fn test_create_issue_with_type_bug() {
 
 #[test]
 fn test_create_issue_with_type_feature() {
-    let ctx = TestContext::new();
+    let mut ctx = TestContext::new();
     ctx.create_issue("feature-1", IssueType::Feature, "Big feature");
 
     let issue = ctx.db.get_issue("feature-1").unwrap();
@@ -42,7 +42,7 @@ fn test_create_issue_with_type_feature() {
 
 #[test]
 fn test_create_issue_with_type_chore() {
-    let ctx = TestContext::new();
+    let mut ctx = TestContext::new();
     ctx.create_issue("chore-1", IssueType::Chore, "Update dependencies");
 
     let issue = ctx.db.get_issue("chore-1").unwrap();
@@ -51,7 +51,7 @@ fn test_create_issue_with_type_chore() {
 
 #[test]
 fn test_create_issue_logs_created_event() {
-    let ctx = TestContext::new();
+    let mut ctx = TestContext::new();
     ctx.create_issue("test-1", IssueType::Task, "Test task");
 
     let events = ctx.db.get_events("test-1").unwrap();
@@ -61,7 +61,7 @@ fn test_create_issue_logs_created_event() {
 
 #[test]
 fn test_create_issue_with_labels() {
-    let ctx = TestContext::new();
+    let mut ctx = TestContext::new();
     ctx.create_issue("test-1", IssueType::Task, "Labeled task")
         .add_label("test-1", "backend")
         .add_label("test-1", "urgent");
@@ -74,7 +74,7 @@ fn test_create_issue_with_labels() {
 
 #[test]
 fn test_create_issue_with_note() {
-    let ctx = TestContext::new();
+    let mut ctx = TestContext::new();
     ctx.create_issue("test-1", IssueType::Task, "Task with note")
         .add_note("test-1", "Initial implementation note");
 
@@ -119,7 +119,7 @@ fn test_empty_title_validation() {
 
 #[test]
 fn test_duplicate_id_handling() {
-    let ctx = TestContext::new();
+    let mut ctx = TestContext::new();
     ctx.create_issue("test-1", IssueType::Task, "First task");
 
     // Attempting to create with same ID should fail
@@ -133,6 +133,11 @@ fn test_duplicate_id_handling() {
         created_at: chrono::Utc::now(),
         updated_at: chrono::Utc::now(),
         closed_at: None,
+        last_status_hlc: None,
+        last_title_hlc: None,
+        last_type_hlc: None,
+        last_description_hlc: None,
+        last_assignee_hlc: None,
     };
     let result = ctx.db.create_issue(&issue);
     assert!(result.is_err());
@@ -140,7 +145,7 @@ fn test_duplicate_id_handling() {
 
 #[test]
 fn test_issue_exists_check() {
-    let ctx = TestContext::new();
+    let mut ctx = TestContext::new();
     ctx.create_issue("test-1", IssueType::Task, "Test task");
 
     assert!(ctx.db.issue_exists("test-1").unwrap());
@@ -149,7 +154,7 @@ fn test_issue_exists_check() {
 
 #[test]
 fn test_timestamps_set_on_creation() {
-    let ctx = TestContext::new();
+    let mut ctx = TestContext::new();
     ctx.create_issue("test-1", IssueType::Task, "Test task");
 
     let issue = ctx.db.get_issue("test-1").unwrap();
@@ -249,7 +254,7 @@ fn test_note_over_max_length_is_rejected() {
 
 #[test]
 fn test_run_impl_creates_task() {
-    let ctx = TestContext::new();
+    let mut ctx = TestContext::new();
 
     let result = run_impl(
         &ctx.db,
@@ -281,7 +286,7 @@ fn test_run_impl_creates_task() {
 
 #[test]
 fn test_run_impl_creates_bug() {
-    let ctx = TestContext::new();
+    let mut ctx = TestContext::new();
 
     let result = run_impl(
         &ctx.db,
@@ -310,7 +315,7 @@ fn test_run_impl_creates_bug() {
 
 #[test]
 fn test_run_impl_creates_feature() {
-    let ctx = TestContext::new();
+    let mut ctx = TestContext::new();
 
     let result = run_impl(
         &ctx.db,
@@ -339,7 +344,7 @@ fn test_run_impl_creates_feature() {
 
 #[test]
 fn test_run_impl_creates_chore() {
-    let ctx = TestContext::new();
+    let mut ctx = TestContext::new();
 
     let result = run_impl(
         &ctx.db,
@@ -368,7 +373,7 @@ fn test_run_impl_creates_chore() {
 
 #[test]
 fn test_run_impl_title_only_defaults_to_task() {
-    let ctx = TestContext::new();
+    let mut ctx = TestContext::new();
 
     // When title is None, type_or_title is treated as the title
     let result = run_impl(
@@ -399,7 +404,7 @@ fn test_run_impl_title_only_defaults_to_task() {
 
 #[test]
 fn test_run_impl_with_labels() {
-    let ctx = TestContext::new();
+    let mut ctx = TestContext::new();
 
     let result = run_impl(
         &ctx.db,
@@ -431,7 +436,7 @@ fn test_run_impl_with_labels() {
 
 #[test]
 fn test_run_impl_with_note() {
-    let ctx = TestContext::new();
+    let mut ctx = TestContext::new();
 
     let result = run_impl(
         &ctx.db,
@@ -462,7 +467,7 @@ fn test_run_impl_with_note() {
 
 #[test]
 fn test_run_impl_empty_title_rejected() {
-    let ctx = TestContext::new();
+    let mut ctx = TestContext::new();
 
     let result = run_impl(
         &ctx.db,
@@ -488,7 +493,7 @@ fn test_run_impl_empty_title_rejected() {
 
 #[test]
 fn test_run_impl_whitespace_title_rejected() {
-    let ctx = TestContext::new();
+    let mut ctx = TestContext::new();
 
     let result = run_impl(
         &ctx.db,
@@ -514,7 +519,7 @@ fn test_run_impl_whitespace_title_rejected() {
 
 #[test]
 fn test_run_impl_invalid_type_rejected() {
-    let ctx = TestContext::new();
+    let mut ctx = TestContext::new();
 
     let result = run_impl(
         &ctx.db,
@@ -540,7 +545,7 @@ fn test_run_impl_invalid_type_rejected() {
 
 #[test]
 fn test_run_impl_logs_events() {
-    let ctx = TestContext::new();
+    let mut ctx = TestContext::new();
 
     run_impl(
         &ctx.db,
@@ -575,7 +580,7 @@ fn test_run_impl_logs_events() {
 
 #[test]
 fn test_run_impl_with_priority_0() {
-    let ctx = TestContext::new();
+    let mut ctx = TestContext::new();
 
     let result = run_impl(
         &ctx.db,
@@ -605,7 +610,7 @@ fn test_run_impl_with_priority_0() {
 
 #[test]
 fn test_run_impl_with_priority_4() {
-    let ctx = TestContext::new();
+    let mut ctx = TestContext::new();
 
     let result = run_impl(
         &ctx.db,
@@ -635,7 +640,7 @@ fn test_run_impl_with_priority_4() {
 
 #[test]
 fn test_run_impl_priority_with_existing_labels() {
-    let ctx = TestContext::new();
+    let mut ctx = TestContext::new();
 
     let result = run_impl(
         &ctx.db,
@@ -666,7 +671,7 @@ fn test_run_impl_priority_with_existing_labels() {
 
 #[test]
 fn test_run_impl_without_priority() {
-    let ctx = TestContext::new();
+    let mut ctx = TestContext::new();
 
     let result = run_impl(
         &ctx.db,
@@ -699,7 +704,7 @@ fn test_run_impl_without_priority() {
 
 #[test]
 fn test_run_impl_with_description() {
-    let ctx = TestContext::new();
+    let mut ctx = TestContext::new();
 
     let result = run_impl(
         &ctx.db,
@@ -730,7 +735,7 @@ fn test_run_impl_with_description() {
 
 #[test]
 fn test_run_impl_note_takes_precedence_over_description() {
-    let ctx = TestContext::new();
+    let mut ctx = TestContext::new();
 
     let result = run_impl(
         &ctx.db,
@@ -761,7 +766,7 @@ fn test_run_impl_note_takes_precedence_over_description() {
 
 #[test]
 fn test_run_impl_without_description_or_note() {
-    let ctx = TestContext::new();
+    let mut ctx = TestContext::new();
 
     let result = run_impl(
         &ctx.db,
@@ -791,7 +796,7 @@ fn test_run_impl_without_description_or_note() {
 
 #[test]
 fn test_run_impl_description_with_labels() {
-    let ctx = TestContext::new();
+    let mut ctx = TestContext::new();
 
     let result = run_impl(
         &ctx.db,
@@ -827,7 +832,7 @@ fn test_run_impl_description_with_labels() {
 
 #[test]
 fn test_run_impl_comma_separated_labels() {
-    let ctx = TestContext::new();
+    let mut ctx = TestContext::new();
 
     let result = run_impl(
         &ctx.db,
@@ -860,7 +865,7 @@ fn test_run_impl_comma_separated_labels() {
 
 #[test]
 fn test_run_impl_comma_separated_and_multiple_labels() {
-    let ctx = TestContext::new();
+    let mut ctx = TestContext::new();
 
     let result = run_impl(
         &ctx.db,
@@ -893,7 +898,7 @@ fn test_run_impl_comma_separated_and_multiple_labels() {
 
 #[test]
 fn test_run_impl_comma_separated_trims_whitespace() {
-    let ctx = TestContext::new();
+    let mut ctx = TestContext::new();
 
     let result = run_impl(
         &ctx.db,
@@ -925,7 +930,7 @@ fn test_run_impl_comma_separated_trims_whitespace() {
 
 #[test]
 fn test_run_impl_comma_separated_ignores_empty() {
-    let ctx = TestContext::new();
+    let mut ctx = TestContext::new();
 
     let result = run_impl(
         &ctx.db,
@@ -957,7 +962,7 @@ fn test_run_impl_comma_separated_ignores_empty() {
 
 #[test]
 fn test_run_impl_comma_separated_with_priority() {
-    let ctx = TestContext::new();
+    let mut ctx = TestContext::new();
 
     let result = run_impl(
         &ctx.db,

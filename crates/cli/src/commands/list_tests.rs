@@ -27,6 +27,11 @@ fn create_issue(db: &Database, id: &str, status: Status, issue_type: IssueType) 
         created_at: Utc::now(),
         updated_at: Utc::now(),
         closed_at: None,
+        last_status_hlc: None,
+        last_title_hlc: None,
+        last_type_hlc: None,
+        last_description_hlc: None,
+        last_assignee_hlc: None,
     };
     db.create_issue(&issue).unwrap();
 }
@@ -536,8 +541,8 @@ fn test_list_sorts_by_priority_asc() {
     issues.sort_by(|a, b| {
         let tags_a = db.get_labels(&a.id).unwrap_or_default();
         let tags_b = db.get_labels(&b.id).unwrap_or_default();
-        let priority_a = Database::priority_from_tags(&tags_a);
-        let priority_b = Database::priority_from_tags(&tags_b);
+        let priority_a = crate::db::priority_from_tags(&tags_a);
+        let priority_b = crate::db::priority_from_tags(&tags_b);
 
         match priority_a.cmp(&priority_b) {
             std::cmp::Ordering::Equal => b.created_at.cmp(&a.created_at),
@@ -565,6 +570,11 @@ fn test_list_same_priority_sorts_by_created_at_desc() {
         created_at: Utc::now() - chrono::Duration::hours(1),
         updated_at: Utc::now(),
         closed_at: None,
+        last_status_hlc: None,
+        last_title_hlc: None,
+        last_type_hlc: None,
+        last_description_hlc: None,
+        last_assignee_hlc: None,
     };
     db.create_issue(&older).unwrap();
 
@@ -578,6 +588,11 @@ fn test_list_same_priority_sorts_by_created_at_desc() {
         created_at: Utc::now(),
         updated_at: Utc::now(),
         closed_at: None,
+        last_status_hlc: None,
+        last_title_hlc: None,
+        last_type_hlc: None,
+        last_description_hlc: None,
+        last_assignee_hlc: None,
     };
     db.create_issue(&newer).unwrap();
 
@@ -589,8 +604,8 @@ fn test_list_same_priority_sorts_by_created_at_desc() {
     issues.sort_by(|a, b| {
         let tags_a = db.get_labels(&a.id).unwrap_or_default();
         let tags_b = db.get_labels(&b.id).unwrap_or_default();
-        let priority_a = Database::priority_from_tags(&tags_a);
-        let priority_b = Database::priority_from_tags(&tags_b);
+        let priority_a = crate::db::priority_from_tags(&tags_a);
+        let priority_b = crate::db::priority_from_tags(&tags_b);
 
         match priority_a.cmp(&priority_b) {
             std::cmp::Ordering::Equal => b.created_at.cmp(&a.created_at), // DESC
@@ -621,8 +636,8 @@ fn test_list_priority_tag_precedence() {
     issues.sort_by(|a, b| {
         let tags_a = db.get_labels(&a.id).unwrap_or_default();
         let tags_b = db.get_labels(&b.id).unwrap_or_default();
-        let priority_a = Database::priority_from_tags(&tags_a);
-        let priority_b = Database::priority_from_tags(&tags_b);
+        let priority_a = crate::db::priority_from_tags(&tags_a);
+        let priority_b = crate::db::priority_from_tags(&tags_b);
         priority_a.cmp(&priority_b)
     });
 
@@ -753,6 +768,11 @@ fn test_effective_limit(input: Option<usize>, expected_max: usize) {
             created_at: Utc::now(),
             updated_at: Utc::now(),
             closed_at: None,
+            last_status_hlc: None,
+            last_title_hlc: None,
+            last_type_hlc: None,
+            last_description_hlc: None,
+            last_assignee_hlc: None,
         };
         db.create_issue(&issue).unwrap();
     }
@@ -784,6 +804,11 @@ fn test_default_limit_is_100() {
             created_at: Utc::now(),
             updated_at: Utc::now(),
             closed_at: None,
+            last_status_hlc: None,
+            last_title_hlc: None,
+            last_type_hlc: None,
+            last_description_hlc: None,
+            last_assignee_hlc: None,
         };
         db.create_issue(&issue).unwrap();
     }
@@ -823,6 +848,11 @@ fn test_limit_zero_is_unlimited() {
             created_at: Utc::now(),
             updated_at: Utc::now(),
             closed_at: None,
+            last_status_hlc: None,
+            last_title_hlc: None,
+            last_type_hlc: None,
+            last_description_hlc: None,
+            last_assignee_hlc: None,
         };
         db.create_issue(&issue).unwrap();
     }
@@ -859,6 +889,11 @@ fn test_explicit_limit_overrides_default() {
             created_at: Utc::now(),
             updated_at: Utc::now(),
             closed_at: None,
+            last_status_hlc: None,
+            last_title_hlc: None,
+            last_type_hlc: None,
+            last_description_hlc: None,
+            last_assignee_hlc: None,
         };
         db.create_issue(&issue).unwrap();
     }
@@ -895,6 +930,11 @@ fn test_ids_format_respects_limit() {
             created_at: Utc::now(),
             updated_at: Utc::now(),
             closed_at: None,
+            last_status_hlc: None,
+            last_title_hlc: None,
+            last_type_hlc: None,
+            last_description_hlc: None,
+            last_assignee_hlc: None,
         };
         db.create_issue(&issue).unwrap();
     }

@@ -56,7 +56,7 @@ pub use cli::{
     OutputFormat, SchemaCommand, TypeLabelArgs,
 };
 pub use config::{find_work_dir, get_db_path, init_work_dir, Config};
-pub use db::Database;
+pub use db::{Database, DatabaseExt};
 pub use error::{Error, Result};
 
 use clap::CommandFactory;

@@ -3,7 +3,7 @@
 
 //! External link management command.
 
-use crate::db::links::new_link;
+use crate::db::new_link;
 use crate::db::Database;
 use crate::error::{Error, Result};
 use crate::models::{parse_link_url, Action, Event, LinkRel};

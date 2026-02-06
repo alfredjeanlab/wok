@@ -183,8 +183,8 @@ pub(crate) fn run_impl(
                 let empty_vec = Vec::new();
                 let tags_a = labels_map.get(&a.id).unwrap_or(&empty_vec);
                 let tags_b = labels_map.get(&b.id).unwrap_or(&empty_vec);
-                let priority_a = Database::priority_from_tags(tags_a);
-                let priority_b = Database::priority_from_tags(tags_b);
+                let priority_a = crate::db::priority_from_tags(tags_a);
+                let priority_b = crate::db::priority_from_tags(tags_b);
                 match priority_a.cmp(&priority_b) {
                     std::cmp::Ordering::Equal => a.created_at.cmp(&b.created_at), // ASC tiebreaker
                     other => other,

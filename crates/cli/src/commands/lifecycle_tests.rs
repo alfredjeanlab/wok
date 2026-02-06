@@ -33,7 +33,7 @@ fn test_all_non_self_transitions_valid() {
 // Test log_unblocked_events logic
 #[test]
 fn test_log_unblocked_when_blocker_completed() {
-    let ctx = TestContext::new();
+    let mut ctx = TestContext::new();
 
     // Create two issues: A blocks B
     ctx.create_issue_with_status("issue-a", IssueType::Task, "Issue A", Status::InProgress);
@@ -55,7 +55,7 @@ fn test_log_unblocked_when_blocker_completed() {
 
 #[test]
 fn test_no_unblocked_when_multiple_blockers() {
-    let ctx = TestContext::new();
+    let mut ctx = TestContext::new();
 
     // Create three issues: A and C both block B
     ctx.create_issue_with_status("issue-a", IssueType::Task, "Issue A", Status::InProgress);
@@ -81,7 +81,7 @@ fn test_no_unblocked_when_multiple_blockers() {
 
 #[test]
 fn test_unblocked_after_all_blockers_done() {
-    let ctx = TestContext::new();
+    let mut ctx = TestContext::new();
 
     // Create three issues: A and C both block B
     ctx.create_issue_with_status("issue-a", IssueType::Task, "Issue A", Status::InProgress);
@@ -124,10 +124,10 @@ fn test_invalid_transition_error_format() {
 
 #[test]
 fn test_start_impl_from_todo() {
-    let ctx = TestContext::new();
+    let mut ctx = TestContext::new();
     ctx.create_issue("test-1", IssueType::Task, "Start test");
 
-    let result = start_impl(&ctx.db, &["test-1".to_string()]);
+    let result = start_impl(&mut ctx.db, &["test-1".to_string()]);
 
     assert!(result.is_ok());
     let issue = ctx.db.get_issue("test-1").unwrap();
@@ -136,11 +136,11 @@ fn test_start_impl_from_todo() {
 
 #[test]
 fn test_start_impl_from_in_progress_idempotent() {
-    let ctx = TestContext::new();
+    let mut ctx = TestContext::new();
     ctx.create_issue("test-1", IssueType::Task, "Already started")
         .start_issue("test-1");
 
-    let result = start_impl(&ctx.db, &["test-1".to_string()]);
+    let result = start_impl(&mut ctx.db, &["test-1".to_string()]);
 
     assert!(result.is_ok());
     assert_eq!(
@@ -151,10 +151,10 @@ fn test_start_impl_from_in_progress_idempotent() {
 
 #[test]
 fn test_start_impl_from_done() {
-    let ctx = TestContext::new();
+    let mut ctx = TestContext::new();
     ctx.create_completed("test-1", IssueType::Task, "Completed task");
 
-    let result = start_impl(&ctx.db, &["test-1".to_string()]);
+    let result = start_impl(&mut ctx.db, &["test-1".to_string()]);
 
     assert!(result.is_ok());
     assert_eq!(
@@ -165,11 +165,11 @@ fn test_start_impl_from_done() {
 
 #[test]
 fn test_start_impl_from_closed() {
-    let ctx = TestContext::new();
+    let mut ctx = TestContext::new();
     ctx.create_issue("test-1", IssueType::Task, "Closed task")
         .close_issue("test-1");
 
-    let result = start_impl(&ctx.db, &["test-1".to_string()]);
+    let result = start_impl(&mut ctx.db, &["test-1".to_string()]);
 
     assert!(result.is_ok());
     assert_eq!(
@@ -180,10 +180,10 @@ fn test_start_impl_from_closed() {
 
 #[test]
 fn test_done_impl_from_in_progress() {
-    let ctx = TestContext::new();
+    let mut ctx = TestContext::new();
     ctx.create_and_start("test-1", IssueType::Task, "Done test");
 
-    let result = done_impl(&ctx.db, &["test-1".to_string()], None);
+    let result = done_impl(&mut ctx.db, &["test-1".to_string()], None);
 
     assert!(result.is_ok());
     let issue = ctx.db.get_issue("test-1").unwrap();
@@ -192,14 +192,14 @@ fn test_done_impl_from_in_progress() {
 
 #[test]
 fn test_done_impl_from_todo_requires_reason() {
-    let ctx = TestContext::new();
+    let mut ctx = TestContext::new();
     ctx.create_issue("test-1", IssueType::Task, "Todo task");
 
     // Set AI env var to ensure non-interactive mode (requires reason)
     let prev = std::env::var_os("CLAUDE_CODE");
     std::env::set_var("CLAUDE_CODE", "1");
 
-    let result = done_impl(&ctx.db, &["test-1".to_string()], None);
+    let result = done_impl(&mut ctx.db, &["test-1".to_string()], None);
 
     match prev {
         Some(v) => std::env::set_var("CLAUDE_CODE", v),
@@ -211,11 +211,11 @@ fn test_done_impl_from_todo_requires_reason() {
 
 #[test]
 fn test_done_impl_from_todo_with_reason() {
-    let ctx = TestContext::new();
+    let mut ctx = TestContext::new();
     ctx.create_issue("test-1", IssueType::Task, "Todo task");
 
     let result = done_impl(
-        &ctx.db,
+        &mut ctx.db,
         &["test-1".to_string()],
         Some("Already completed externally"),
     );
@@ -227,10 +227,10 @@ fn test_done_impl_from_todo_with_reason() {
 
 #[test]
 fn test_done_impl_from_done_idempotent() {
-    let ctx = TestContext::new();
+    let mut ctx = TestContext::new();
     ctx.create_completed("test-1", IssueType::Task, "Already done");
 
-    let result = done_impl(&ctx.db, &["test-1".to_string()], None);
+    let result = done_impl(&mut ctx.db, &["test-1".to_string()], None);
 
     assert!(result.is_ok());
     assert_eq!(ctx.db.get_issue("test-1").unwrap().status, Status::Done);
@@ -238,11 +238,15 @@ fn test_done_impl_from_done_idempotent() {
 
 #[test]
 fn test_done_impl_from_closed_with_reason() {
-    let ctx = TestContext::new();
+    let mut ctx = TestContext::new();
     ctx.create_issue("test-1", IssueType::Task, "Closed task")
         .close_issue("test-1");
 
-    let result = done_impl(&ctx.db, &["test-1".to_string()], Some("Actually completed"));
+    let result = done_impl(
+        &mut ctx.db,
+        &["test-1".to_string()],
+        Some("Actually completed"),
+    );
 
     assert!(result.is_ok());
     assert_eq!(ctx.db.get_issue("test-1").unwrap().status, Status::Done);
@@ -250,10 +254,10 @@ fn test_done_impl_from_closed_with_reason() {
 
 #[test]
 fn test_close_impl_from_todo() {
-    let ctx = TestContext::new();
+    let mut ctx = TestContext::new();
     ctx.create_issue("test-1", IssueType::Task, "Close test");
 
-    let result = close_impl(&ctx.db, &["test-1".to_string()], "Won't fix");
+    let result = close_impl(&mut ctx.db, &["test-1".to_string()], "Won't fix");
 
     assert!(result.is_ok());
     let issue = ctx.db.get_issue("test-1").unwrap();
@@ -262,10 +266,10 @@ fn test_close_impl_from_todo() {
 
 #[test]
 fn test_close_impl_from_in_progress() {
-    let ctx = TestContext::new();
+    let mut ctx = TestContext::new();
     ctx.create_and_start("test-1", IssueType::Task, "In progress task");
 
-    let result = close_impl(&ctx.db, &["test-1".to_string()], "Requirements changed");
+    let result = close_impl(&mut ctx.db, &["test-1".to_string()], "Requirements changed");
 
     assert!(result.is_ok());
     let issue = ctx.db.get_issue("test-1").unwrap();
@@ -274,10 +278,10 @@ fn test_close_impl_from_in_progress() {
 
 #[test]
 fn test_close_impl_from_done() {
-    let ctx = TestContext::new();
+    let mut ctx = TestContext::new();
     ctx.create_completed("test-1", IssueType::Task, "Done task");
 
-    let result = close_impl(&ctx.db, &["test-1".to_string()], "Actually not needed");
+    let result = close_impl(&mut ctx.db, &["test-1".to_string()], "Actually not needed");
 
     assert!(result.is_ok());
     assert_eq!(ctx.db.get_issue("test-1").unwrap().status, Status::Closed);
@@ -285,11 +289,11 @@ fn test_close_impl_from_done() {
 
 #[test]
 fn test_close_impl_from_closed_idempotent() {
-    let ctx = TestContext::new();
+    let mut ctx = TestContext::new();
     ctx.create_issue("test-1", IssueType::Task, "Closed task")
         .close_issue("test-1");
 
-    let result = close_impl(&ctx.db, &["test-1".to_string()], "duplicate");
+    let result = close_impl(&mut ctx.db, &["test-1".to_string()], "duplicate");
 
     assert!(result.is_ok());
     assert_eq!(ctx.db.get_issue("test-1").unwrap().status, Status::Closed);
@@ -297,10 +301,10 @@ fn test_close_impl_from_closed_idempotent() {
 
 #[test]
 fn test_reopen_impl_from_done() {
-    let ctx = TestContext::new();
+    let mut ctx = TestContext::new();
     ctx.create_completed("test-1", IssueType::Task, "Completed task");
 
-    let result = reopen_impl(&ctx.db, &["test-1".to_string()], Some("Found a bug"));
+    let result = reopen_impl(&mut ctx.db, &["test-1".to_string()], Some("Found a bug"));
 
     assert!(result.is_ok());
     let issue = ctx.db.get_issue("test-1").unwrap();
@@ -309,11 +313,15 @@ fn test_reopen_impl_from_done() {
 
 #[test]
 fn test_reopen_impl_from_closed() {
-    let ctx = TestContext::new();
+    let mut ctx = TestContext::new();
     ctx.create_issue("test-1", IssueType::Task, "Closed task")
         .close_issue("test-1");
 
-    let result = reopen_impl(&ctx.db, &["test-1".to_string()], Some("Actually needed"));
+    let result = reopen_impl(
+        &mut ctx.db,
+        &["test-1".to_string()],
+        Some("Actually needed"),
+    );
 
     assert!(result.is_ok());
     let issue = ctx.db.get_issue("test-1").unwrap();
@@ -323,10 +331,10 @@ fn test_reopen_impl_from_closed() {
 #[test]
 fn test_reopen_impl_from_in_progress_succeeds() {
     // Reopen from in_progress works and doesn't require a reason
-    let ctx = TestContext::new();
+    let mut ctx = TestContext::new();
     ctx.create_and_start("test-1", IssueType::Task, "In progress task");
 
-    let result = reopen_impl(&ctx.db, &["test-1".to_string()], None);
+    let result = reopen_impl(&mut ctx.db, &["test-1".to_string()], None);
 
     assert!(result.is_ok());
     let issue = ctx.db.get_issue("test-1").unwrap();
@@ -336,10 +344,10 @@ fn test_reopen_impl_from_in_progress_succeeds() {
 #[test]
 fn test_reopen_impl_from_todo_idempotent() {
     // Reopen from todo is idempotent - already in todo state
-    let ctx = TestContext::new();
+    let mut ctx = TestContext::new();
     ctx.create_issue("test-1", IssueType::Task, "Todo task");
 
-    let result = reopen_impl(&ctx.db, &["test-1".to_string()], None);
+    let result = reopen_impl(&mut ctx.db, &["test-1".to_string()], None);
 
     assert!(result.is_ok());
     assert_eq!(ctx.db.get_issue("test-1").unwrap().status, Status::Todo);
@@ -349,10 +357,10 @@ fn test_reopen_impl_from_todo_idempotent() {
 
 #[test]
 fn test_close_creates_note() {
-    let ctx = TestContext::new();
+    let mut ctx = TestContext::new();
     ctx.create_issue("test-1", IssueType::Task, "Test task");
 
-    close_impl(&ctx.db, &["test-1".to_string()], "duplicate of test-2").unwrap();
+    close_impl(&mut ctx.db, &["test-1".to_string()], "duplicate of test-2").unwrap();
 
     let notes = ctx.db.get_notes("test-1").unwrap();
     assert!(notes
@@ -362,11 +370,11 @@ fn test_close_creates_note() {
 
 #[test]
 fn test_done_with_reason_creates_note() {
-    let ctx = TestContext::new();
+    let mut ctx = TestContext::new();
     ctx.create_issue("test-1", IssueType::Task, "Test task");
 
     done_impl(
-        &ctx.db,
+        &mut ctx.db,
         &["test-1".to_string()],
         Some("already completed upstream"),
     )
@@ -380,10 +388,10 @@ fn test_done_with_reason_creates_note() {
 
 #[test]
 fn test_done_without_reason_no_note() {
-    let ctx = TestContext::new();
+    let mut ctx = TestContext::new();
     ctx.create_and_start("test-1", IssueType::Task, "Test task");
 
-    done_impl(&ctx.db, &["test-1".to_string()], None).unwrap();
+    done_impl(&mut ctx.db, &["test-1".to_string()], None).unwrap();
 
     let notes = ctx.db.get_notes("test-1").unwrap();
     // Should have no notes created by done command (may have notes from other sources)
@@ -392,11 +400,11 @@ fn test_done_without_reason_no_note() {
 
 #[test]
 fn test_reopen_creates_note() {
-    let ctx = TestContext::new();
+    let mut ctx = TestContext::new();
     ctx.create_completed("test-1", IssueType::Task, "Completed task");
 
     reopen_impl(
-        &ctx.db,
+        &mut ctx.db,
         &["test-1".to_string()],
         Some("regression found in v2"),
     )
@@ -412,11 +420,11 @@ fn test_reopen_creates_note() {
 
 #[test]
 fn test_start_impl_multiple_from_todo() {
-    let ctx = TestContext::new();
+    let mut ctx = TestContext::new();
     ctx.create_issue("test-1", IssueType::Task, "Task 1");
     ctx.create_issue("test-2", IssueType::Task, "Task 2");
 
-    let result = start_impl(&ctx.db, &["test-1".to_string(), "test-2".to_string()]);
+    let result = start_impl(&mut ctx.db, &["test-1".to_string(), "test-2".to_string()]);
 
     assert!(result.is_ok());
     assert_eq!(
@@ -431,12 +439,12 @@ fn test_start_impl_multiple_from_todo() {
 
 #[test]
 fn test_start_impl_idempotent_on_already_started() {
-    let ctx = TestContext::new();
+    let mut ctx = TestContext::new();
     ctx.create_issue("test-1", IssueType::Task, "Task 1");
     ctx.create_issue("test-2", IssueType::Task, "Task 2")
         .start_issue("test-2");
 
-    let result = start_impl(&ctx.db, &["test-1".to_string(), "test-2".to_string()]);
+    let result = start_impl(&mut ctx.db, &["test-1".to_string(), "test-2".to_string()]);
 
     // Both succeed (test-2 is idempotent)
     assert!(result.is_ok());
@@ -452,11 +460,15 @@ fn test_start_impl_idempotent_on_already_started() {
 
 #[test]
 fn test_done_impl_multiple_from_in_progress() {
-    let ctx = TestContext::new();
+    let mut ctx = TestContext::new();
     ctx.create_and_start("test-1", IssueType::Task, "Task 1");
     ctx.create_and_start("test-2", IssueType::Task, "Task 2");
 
-    let result = done_impl(&ctx.db, &["test-1".to_string(), "test-2".to_string()], None);
+    let result = done_impl(
+        &mut ctx.db,
+        &["test-1".to_string(), "test-2".to_string()],
+        None,
+    );
 
     assert!(result.is_ok());
     assert_eq!(ctx.db.get_issue("test-1").unwrap().status, Status::Done);
@@ -465,12 +477,12 @@ fn test_done_impl_multiple_from_in_progress() {
 
 #[test]
 fn test_done_impl_multiple_with_reason() {
-    let ctx = TestContext::new();
+    let mut ctx = TestContext::new();
     ctx.create_issue("test-1", IssueType::Task, "Task 1");
     ctx.create_issue("test-2", IssueType::Task, "Task 2");
 
     let result = done_impl(
-        &ctx.db,
+        &mut ctx.db,
         &["test-1".to_string(), "test-2".to_string()],
         Some("upstream"),
     );
@@ -482,12 +494,12 @@ fn test_done_impl_multiple_with_reason() {
 
 #[test]
 fn test_close_impl_multiple() {
-    let ctx = TestContext::new();
+    let mut ctx = TestContext::new();
     ctx.create_issue("test-1", IssueType::Task, "Task 1");
     ctx.create_issue("test-2", IssueType::Task, "Task 2");
 
     let result = close_impl(
-        &ctx.db,
+        &mut ctx.db,
         &["test-1".to_string(), "test-2".to_string()],
         "duplicate",
     );
@@ -499,13 +511,13 @@ fn test_close_impl_multiple() {
 
 #[test]
 fn test_reopen_impl_multiple() {
-    let ctx = TestContext::new();
+    let mut ctx = TestContext::new();
     ctx.create_completed("test-1", IssueType::Task, "Task 1");
     ctx.create_issue("test-2", IssueType::Task, "Task 2")
         .close_issue("test-2");
 
     let result = reopen_impl(
-        &ctx.db,
+        &mut ctx.db,
         &["test-1".to_string(), "test-2".to_string()],
         Some("regression"),
     );
@@ -625,10 +637,13 @@ fn test_bulk_result_mixed_failures() {
 
 #[test]
 fn test_start_partial_update_with_unknown() {
-    let ctx = TestContext::new();
+    let mut ctx = TestContext::new();
     ctx.create_issue("test-1", IssueType::Task, "Task 1");
 
-    let result = start_impl(&ctx.db, &["test-1".to_string(), "unknown-123".to_string()]);
+    let result = start_impl(
+        &mut ctx.db,
+        &["test-1".to_string(), "unknown-123".to_string()],
+    );
 
     // Should fail overall but test-1 should be transitioned
     assert!(result.is_err());
@@ -656,12 +671,12 @@ fn test_start_partial_update_with_unknown() {
 
 #[test]
 fn test_start_batch_with_already_started_succeeds() {
-    let ctx = TestContext::new();
+    let mut ctx = TestContext::new();
     ctx.create_issue("test-1", IssueType::Task, "Task 1")
         .start_issue("test-1"); // Already started - idempotent
     ctx.create_issue("test-2", IssueType::Task, "Task 2");
 
-    let result = start_impl(&ctx.db, &["test-1".to_string(), "test-2".to_string()]);
+    let result = start_impl(&mut ctx.db, &["test-1".to_string(), "test-2".to_string()]);
 
     // Both succeed (test-1 is idempotent)
     assert!(result.is_ok());
@@ -677,13 +692,13 @@ fn test_start_batch_with_already_started_succeeds() {
 
 #[test]
 fn test_start_partial_update_mixed_idempotent_and_unknown() {
-    let ctx = TestContext::new();
+    let mut ctx = TestContext::new();
     ctx.create_issue("test-1", IssueType::Task, "Task 1")
         .start_issue("test-1"); // Already started - idempotent
     ctx.create_issue("test-2", IssueType::Task, "Task 2");
 
     let result = start_impl(
-        &ctx.db,
+        &mut ctx.db,
         &[
             "test-1".to_string(),
             "test-2".to_string(),
@@ -716,11 +731,11 @@ fn test_start_partial_update_mixed_idempotent_and_unknown() {
 
 #[test]
 fn test_done_partial_update_with_unknown() {
-    let ctx = TestContext::new();
+    let mut ctx = TestContext::new();
     ctx.create_and_start("test-1", IssueType::Task, "Task 1");
 
     let result = done_impl(
-        &ctx.db,
+        &mut ctx.db,
         &["test-1".to_string(), "unknown-123".to_string()],
         None,
     );
@@ -741,11 +756,11 @@ fn test_done_partial_update_with_unknown() {
 
 #[test]
 fn test_close_partial_update_with_unknown() {
-    let ctx = TestContext::new();
+    let mut ctx = TestContext::new();
     ctx.create_issue("test-1", IssueType::Task, "Task 1");
 
     let result = close_impl(
-        &ctx.db,
+        &mut ctx.db,
         &["test-1".to_string(), "unknown-123".to_string()],
         "duplicate",
     );
@@ -766,11 +781,11 @@ fn test_close_partial_update_with_unknown() {
 
 #[test]
 fn test_reopen_partial_update_with_unknown() {
-    let ctx = TestContext::new();
+    let mut ctx = TestContext::new();
     ctx.create_completed("test-1", IssueType::Task, "Task 1");
 
     let result = reopen_impl(
-        &ctx.db,
+        &mut ctx.db,
         &["test-1".to_string(), "unknown-123".to_string()],
         Some("regression"),
     );
@@ -791,10 +806,10 @@ fn test_reopen_partial_update_with_unknown() {
 
 #[test]
 fn test_start_all_unknown_ids() {
-    let ctx = TestContext::new();
+    let mut ctx = TestContext::new();
 
     let result = start_impl(
-        &ctx.db,
+        &mut ctx.db,
         &[
             "unknown-1".to_string(),
             "unknown-2".to_string(),

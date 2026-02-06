@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Alfred Jean LLC
 
-use crate::db::Database;
+use crate::db::{Database, DatabaseExt};
 
 use super::{apply_mutation, open_db};
 use crate::error::{Error, Result};

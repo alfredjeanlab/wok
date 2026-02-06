@@ -13,12 +13,12 @@ use crate::validate::{
 };
 
 pub fn run(id: &str, attr: &str, value: &str) -> Result<()> {
-    let (db, _config, _work_dir) = open_db()?;
-    run_impl(&db, id, attr, value)
+    let (mut db, _config, _work_dir) = open_db()?;
+    run_impl(&mut db, id, attr, value)
 }
 
 /// Internal implementation that accepts db for testing.
-pub(crate) fn run_impl(db: &Database, id: &str, attr: &str, value: &str) -> Result<()> {
+pub(crate) fn run_impl(db: &mut Database, id: &str, attr: &str, value: &str) -> Result<()> {
     let resolved_id = db.resolve_id(id)?;
     let issue = db.get_issue(&resolved_id)?;
 

@@ -5,11 +5,12 @@
 #![allow(clippy::expect_used)]
 
 use crate::commands::testing::TestContext;
+use crate::db::DatabaseExt;
 use crate::models::{IssueType, Status};
 
 #[test]
 fn test_get_issue_details() {
-    let ctx = TestContext::new();
+    let mut ctx = TestContext::new();
     ctx.create_issue("test-1", IssueType::Task, "Test issue");
 
     let issue = ctx.db.get_issue("test-1").unwrap();
@@ -21,7 +22,7 @@ fn test_get_issue_details() {
 
 #[test]
 fn test_get_nonexistent_issue() {
-    let ctx = TestContext::new();
+    let mut ctx = TestContext::new();
 
     let result = ctx.db.get_issue("nonexistent");
     assert!(result.is_err());
@@ -29,7 +30,7 @@ fn test_get_nonexistent_issue() {
 
 #[test]
 fn test_get_issue_labels() {
-    let ctx = TestContext::new();
+    let mut ctx = TestContext::new();
     ctx.create_issue("test-1", IssueType::Task, "Test issue")
         .add_label("test-1", "urgent")
         .add_label("test-1", "backend");
@@ -42,7 +43,7 @@ fn test_get_issue_labels() {
 
 #[test]
 fn test_get_issue_blockers() {
-    let ctx = TestContext::new();
+    let mut ctx = TestContext::new();
     ctx.create_issue("blocker", IssueType::Task, "Blocker")
         .create_issue("blocked", IssueType::Task, "Blocked issue")
         .blocks("blocker", "blocked");
@@ -54,7 +55,7 @@ fn test_get_issue_blockers() {
 
 #[test]
 fn test_get_issue_blocking() {
-    let ctx = TestContext::new();
+    let mut ctx = TestContext::new();
     ctx.create_issue("blocker", IssueType::Task, "Blocker")
         .create_issue("blocked", IssueType::Task, "Blocked issue")
         .blocks("blocker", "blocked");
@@ -66,7 +67,7 @@ fn test_get_issue_blocking() {
 
 #[test]
 fn test_get_issue_parents() {
-    let ctx = TestContext::new();
+    let mut ctx = TestContext::new();
     ctx.create_issue("parent", IssueType::Feature, "Parent feature")
         .create_issue("child", IssueType::Task, "Child task")
         .tracks("parent", "child");
@@ -78,7 +79,7 @@ fn test_get_issue_parents() {
 
 #[test]
 fn test_get_issue_children() {
-    let ctx = TestContext::new();
+    let mut ctx = TestContext::new();
     ctx.create_issue("parent", IssueType::Feature, "Parent feature")
         .create_issue("child1", IssueType::Task, "Child 1")
         .create_issue("child2", IssueType::Task, "Child 2")
@@ -93,7 +94,7 @@ fn test_get_issue_children() {
 
 #[test]
 fn test_get_issue_notes_by_status() {
-    let ctx = TestContext::new();
+    let mut ctx = TestContext::new();
     ctx.create_issue("test-1", IssueType::Task, "Test issue")
         .add_note("test-1", "Note in todo state")
         .set_status("test-1", Status::InProgress);
@@ -110,7 +111,7 @@ fn test_get_issue_notes_by_status() {
 
 #[test]
 fn test_get_issue_events() {
-    let ctx = TestContext::new();
+    let mut ctx = TestContext::new();
     ctx.create_issue("test-1", IssueType::Task, "Test issue")
         .set_status("test-1", Status::InProgress)
         .add_label("test-1", "urgent");
@@ -121,7 +122,7 @@ fn test_get_issue_events() {
 
 #[test]
 fn test_show_complex_issue() {
-    let ctx = TestContext::new();
+    let mut ctx = TestContext::new();
     ctx.create_issue("feature-1", IssueType::Feature, "Feature")
         .create_issue("task-1", IssueType::Task, "Task")
         .create_issue("task-2", IssueType::Task, "Blocked task")
@@ -154,7 +155,7 @@ fn test_show_complex_issue() {
 #[test]
 fn test_notes_for_json_output() {
     // Tests that get_notes returns flat list suitable for JSON serialization
-    let ctx = TestContext::new();
+    let mut ctx = TestContext::new();
     ctx.create_issue("test-1", IssueType::Task, "Test issue")
         .add_note("test-1", "First note")
         .set_status("test-1", Status::InProgress);
@@ -186,7 +187,7 @@ fn test_issue_details_serialization() {
         notes: Vec<crate::models::Note>,
     }
 
-    let ctx = TestContext::new();
+    let mut ctx = TestContext::new();
     ctx.create_issue("test-1", IssueType::Task, "Test issue")
         .add_label("test-1", "backend")
         .add_note("test-1", "A note");
@@ -216,7 +217,7 @@ use crate::commands::show::run_impl;
 
 #[test]
 fn test_run_impl_text_format() {
-    let ctx = TestContext::new();
+    let mut ctx = TestContext::new();
     ctx.create_issue("test-1", IssueType::Task, "Test issue");
 
     let result = run_impl(&ctx.db, &["test-1".to_string()], "text");
@@ -225,7 +226,7 @@ fn test_run_impl_text_format() {
 
 #[test]
 fn test_run_impl_json_format() {
-    let ctx = TestContext::new();
+    let mut ctx = TestContext::new();
     ctx.create_issue("test-1", IssueType::Task, "Test issue");
 
     let result = run_impl(&ctx.db, &["test-1".to_string()], "json");
@@ -234,7 +235,7 @@ fn test_run_impl_json_format() {
 
 #[test]
 fn test_run_impl_with_labels() {
-    let ctx = TestContext::new();
+    let mut ctx = TestContext::new();
     ctx.create_issue("test-1", IssueType::Task, "Test issue")
         .add_label("test-1", "urgent");
 
@@ -244,7 +245,7 @@ fn test_run_impl_with_labels() {
 
 #[test]
 fn test_run_impl_nonexistent_issue() {
-    let ctx = TestContext::new();
+    let mut ctx = TestContext::new();
 
     let result = run_impl(&ctx.db, &["nonexistent".to_string()], "text");
     assert!(result.is_err());
@@ -252,7 +253,7 @@ fn test_run_impl_nonexistent_issue() {
 
 #[test]
 fn test_run_impl_invalid_format() {
-    let ctx = TestContext::new();
+    let mut ctx = TestContext::new();
     ctx.create_issue("test-1", IssueType::Task, "Test issue");
 
     let result = run_impl(&ctx.db, &["test-1".to_string()], "invalid");
@@ -261,7 +262,7 @@ fn test_run_impl_invalid_format() {
 
 #[test]
 fn test_run_impl_multiple_issues_text() {
-    let ctx = TestContext::new();
+    let mut ctx = TestContext::new();
     ctx.create_issue("test-1", IssueType::Task, "First issue")
         .create_issue("test-2", IssueType::Task, "Second issue");
 
@@ -275,7 +276,7 @@ fn test_run_impl_multiple_issues_text() {
 
 #[test]
 fn test_run_impl_multiple_issues_json() {
-    let ctx = TestContext::new();
+    let mut ctx = TestContext::new();
     ctx.create_issue("test-1", IssueType::Task, "First issue")
         .create_issue("test-2", IssueType::Task, "Second issue");
 
@@ -289,7 +290,7 @@ fn test_run_impl_multiple_issues_json() {
 
 #[test]
 fn test_run_impl_fails_if_any_id_invalid() {
-    let ctx = TestContext::new();
+    let mut ctx = TestContext::new();
     ctx.create_issue("test-1", IssueType::Task, "Valid issue");
 
     // Should fail because "nonexistent" is invalid, even though test-1 is valid
