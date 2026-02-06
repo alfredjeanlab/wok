@@ -227,6 +227,137 @@ impl From<wk_core::PrefixInfo> for PrefixInfo {
     }
 }
 
+impl From<wk_core::Relation> for Relation {
+    fn from(r: wk_core::Relation) -> Self {
+        match r {
+            wk_core::Relation::Blocks => Relation::Blocks,
+            wk_core::Relation::TrackedBy => Relation::TrackedBy,
+            wk_core::Relation::Tracks => Relation::Tracks,
+        }
+    }
+}
+
+impl From<Relation> for wk_core::Relation {
+    fn from(r: Relation) -> Self {
+        match r {
+            Relation::Blocks => wk_core::Relation::Blocks,
+            Relation::TrackedBy => wk_core::Relation::TrackedBy,
+            Relation::Tracks => wk_core::Relation::Tracks,
+        }
+    }
+}
+
+impl From<wk_core::Issue> for Issue {
+    fn from(i: wk_core::Issue) -> Self {
+        Issue {
+            id: i.id,
+            issue_type: i.issue_type,
+            title: i.title,
+            description: i.description,
+            status: i.status.into(),
+            assignee: i.assignee,
+            created_at: i.created_at,
+            updated_at: i.updated_at,
+            closed_at: i.closed_at,
+        }
+    }
+}
+
+impl From<Issue> for wk_core::Issue {
+    fn from(i: Issue) -> Self {
+        wk_core::Issue {
+            id: i.id,
+            issue_type: i.issue_type,
+            title: i.title,
+            description: i.description,
+            status: i.status.into(),
+            assignee: i.assignee,
+            created_at: i.created_at,
+            updated_at: i.updated_at,
+            closed_at: i.closed_at,
+            last_status_hlc: None,
+            last_title_hlc: None,
+            last_type_hlc: None,
+            last_description_hlc: None,
+            last_assignee_hlc: None,
+        }
+    }
+}
+
+impl From<wk_core::Event> for Event {
+    fn from(e: wk_core::Event) -> Self {
+        Event {
+            id: e.id,
+            issue_id: e.issue_id,
+            action: e.action.into(),
+            old_value: e.old_value,
+            new_value: e.new_value,
+            reason: e.reason,
+            created_at: e.created_at,
+        }
+    }
+}
+
+impl From<Event> for wk_core::Event {
+    fn from(e: Event) -> Self {
+        wk_core::Event {
+            id: e.id,
+            issue_id: e.issue_id,
+            action: e.action.into(),
+            old_value: e.old_value,
+            new_value: e.new_value,
+            reason: e.reason,
+            created_at: e.created_at,
+        }
+    }
+}
+
+impl From<wk_core::Note> for Note {
+    fn from(n: wk_core::Note) -> Self {
+        Note {
+            id: n.id,
+            issue_id: n.issue_id,
+            status: n.status.into(),
+            content: n.content,
+            created_at: n.created_at,
+        }
+    }
+}
+
+impl From<Note> for wk_core::Note {
+    fn from(n: Note) -> Self {
+        wk_core::Note {
+            id: n.id,
+            issue_id: n.issue_id,
+            status: n.status.into(),
+            content: n.content,
+            created_at: n.created_at,
+        }
+    }
+}
+
+impl From<wk_core::Dependency> for Dependency {
+    fn from(d: wk_core::Dependency) -> Self {
+        Dependency {
+            from_id: d.from_id,
+            to_id: d.to_id,
+            relation: d.relation.into(),
+            created_at: d.created_at,
+        }
+    }
+}
+
+impl From<Dependency> for wk_core::Dependency {
+    fn from(d: Dependency) -> Self {
+        wk_core::Dependency {
+            from_id: d.from_id,
+            to_id: d.to_id,
+            relation: d.relation.into(),
+            created_at: d.created_at,
+        }
+    }
+}
+
 impl From<Action> for wk_core::Action {
     fn from(action: Action) -> Self {
         match action {

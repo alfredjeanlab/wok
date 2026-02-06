@@ -162,6 +162,9 @@ pub struct Issue {
     pub created_at: DateTime<Utc>,
     /// When the issue was last modified.
     pub updated_at: DateTime<Utc>,
+    /// When the issue was closed/done (computed from events), if applicable.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub closed_at: Option<DateTime<Utc>>,
     /// HLC timestamp of last status change (for conflict resolution).
     #[serde(skip_serializing_if = "Option::is_none")]
     pub last_status_hlc: Option<Hlc>,
@@ -196,6 +199,7 @@ impl Issue {
             assignee: None,
             created_at,
             updated_at: created_at,
+            closed_at: None,
             last_status_hlc: None,
             last_title_hlc: None,
             last_type_hlc: None,
@@ -373,7 +377,7 @@ impl Relation {
     pub fn as_str(&self) -> &'static str {
         match self {
             Relation::Blocks => "blocks",
-            Relation::TrackedBy => "tracked_by",
+            Relation::TrackedBy => "tracked-by",
             Relation::Tracks => "tracks",
         }
     }
@@ -391,7 +395,7 @@ impl FromStr for Relation {
     fn from_str(s: &str) -> Result<Self> {
         match s.to_lowercase().as_str() {
             "blocks" => Ok(Relation::Blocks),
-            "tracked_by" => Ok(Relation::TrackedBy),
+            "tracked-by" | "tracked_by" => Ok(Relation::TrackedBy),
             "tracks" => Ok(Relation::Tracks),
             _ => Err(Error::InvalidRelation(s.to_string())),
         }

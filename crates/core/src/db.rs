@@ -6,13 +6,16 @@
 //! The [`Database`] struct provides all data access operations for issues,
 //! events, notes, tags, and dependencies.
 
+use std::collections::HashMap;
+use std::path::Path;
+
 use chrono::{DateTime, Utc};
 use rusqlite::{params, Connection, OptionalExtension};
-use std::path::Path;
 
 use crate::error::{Error, Result};
 use crate::hlc::Hlc;
 use crate::issue::{Dependency, Event, Issue, IssueType, Note, Relation, Status};
+use crate::link::{Link, LinkRel, LinkType, PrefixInfo};
 
 /// SQL schema for the issue tracker database.
 const SCHEMA: &str = r#"
@@ -106,7 +109,7 @@ CREATE INDEX IF NOT EXISTS idx_prefixes_count ON prefixes(issue_count DESC);
 "#;
 
 /// Parse a string value from the database, returning a rusqlite error on parse failure.
-fn parse_db<T: std::str::FromStr>(
+pub fn parse_db<T: std::str::FromStr>(
     value: &str,
     column: &str,
 ) -> std::result::Result<T, rusqlite::Error> {
@@ -122,7 +125,7 @@ fn parse_db<T: std::str::FromStr>(
 }
 
 /// Parse an RFC3339 timestamp from the database.
-fn parse_timestamp(
+pub fn parse_timestamp(
     value: &str,
     column: &str,
 ) -> std::result::Result<DateTime<Utc>, rusqlite::Error> {
@@ -195,6 +198,73 @@ impl Database {
     /// Run database migrations.
     fn migrate(&self) -> Result<()> {
         self.conn.execute_batch(SCHEMA)?;
+        self.migrate_add_assignee()?;
+        self.migrate_add_hlc_columns()?;
+        self.migrate_backfill_prefixes()?;
+        Ok(())
+    }
+
+    /// Migration: Add assignee column to existing databases.
+    fn migrate_add_assignee(&self) -> Result<()> {
+        let has_assignee: bool = self
+            .conn
+            .query_row(
+                "SELECT COUNT(*) > 0 FROM pragma_table_info('issues') WHERE name = 'assignee'",
+                [],
+                |row| row.get(0),
+            )
+            .unwrap_or(false);
+
+        if !has_assignee {
+            self.conn
+                .execute("ALTER TABLE issues ADD COLUMN assignee TEXT", [])?;
+        }
+        Ok(())
+    }
+
+    /// Migration: Add HLC columns for CRDT sync compatibility.
+    fn migrate_add_hlc_columns(&self) -> Result<()> {
+        let columns = ["last_status_hlc", "last_title_hlc", "last_type_hlc"];
+
+        for column in columns {
+            let has_column: bool = self
+                .conn
+                .query_row(
+                    "SELECT COUNT(*) > 0 FROM pragma_table_info('issues') WHERE name = ?1",
+                    [column],
+                    |row| row.get(0),
+                )
+                .unwrap_or(false);
+
+            if !has_column {
+                let sql = format!("ALTER TABLE issues ADD COLUMN {} TEXT", column);
+                self.conn.execute(&sql, [])?;
+            }
+        }
+
+        Ok(())
+    }
+
+    /// Migration: Backfill prefixes table from existing issues.
+    fn migrate_backfill_prefixes(&self) -> Result<()> {
+        let prefix_count: i64 = self
+            .conn
+            .query_row("SELECT COUNT(*) FROM prefixes", [], |row| row.get(0))
+            .unwrap_or(0);
+
+        if prefix_count == 0 {
+            self.conn.execute(
+                "INSERT OR IGNORE INTO prefixes (prefix, created_at, issue_count)
+                 SELECT
+                     substr(id, 1, instr(id, '-') - 1) as prefix,
+                     MIN(created_at) as created_at,
+                     COUNT(*) as issue_count
+                 FROM issues
+                 WHERE id LIKE '%-%'
+                 GROUP BY prefix",
+                [],
+            )?;
+        }
         Ok(())
     }
 
@@ -229,21 +299,31 @@ impl Database {
         let issue = self
             .conn
             .query_row(
-                "SELECT id, type, title, description, status, assignee,
-                        created_at, updated_at, last_status_hlc, last_title_hlc,
-                        last_type_hlc, last_description_hlc, last_assignee_hlc
-                 FROM issues WHERE id = ?1",
+                "SELECT i.id, i.type, i.title, i.description, i.status, i.assignee,
+                        i.created_at, i.updated_at,
+                        (SELECT MAX(e.created_at) FROM events e
+                         WHERE e.issue_id = i.id AND e.action IN ('done', 'closed')
+                         AND NOT EXISTS (
+                             SELECT 1 FROM events e2
+                             WHERE e2.issue_id = e.issue_id
+                             AND e2.action = 'reopened'
+                             AND e2.created_at > e.created_at
+                         )) as closed_at,
+                        i.last_status_hlc, i.last_title_hlc,
+                        i.last_type_hlc, i.last_description_hlc, i.last_assignee_hlc
+                 FROM issues i WHERE i.id = ?1",
                 params![id],
                 |row| {
                     let type_str: String = row.get(1)?;
                     let status_str: String = row.get(4)?;
                     let created_str: String = row.get(6)?;
                     let updated_str: String = row.get(7)?;
-                    let status_hlc: Option<String> = row.get(8)?;
-                    let title_hlc: Option<String> = row.get(9)?;
-                    let type_hlc: Option<String> = row.get(10)?;
-                    let desc_hlc: Option<String> = row.get(11)?;
-                    let assignee_hlc: Option<String> = row.get(12)?;
+                    let closed_str: Option<String> = row.get(8)?;
+                    let status_hlc: Option<String> = row.get(9)?;
+                    let title_hlc: Option<String> = row.get(10)?;
+                    let type_hlc: Option<String> = row.get(11)?;
+                    let desc_hlc: Option<String> = row.get(12)?;
+                    let assignee_hlc: Option<String> = row.get(13)?;
 
                     Ok(Issue {
                         id: row.get(0)?,
@@ -254,6 +334,10 @@ impl Database {
                         assignee: row.get(5)?,
                         created_at: parse_timestamp(&created_str, "created_at")?,
                         updated_at: parse_timestamp(&updated_str, "updated_at")?,
+                        closed_at: closed_str
+                            .as_ref()
+                            .map(|s| parse_timestamp(s, "closed_at"))
+                            .transpose()?,
                         last_status_hlc: parse_hlc_opt(status_hlc)?,
                         last_title_hlc: parse_hlc_opt(title_hlc)?,
                         last_type_hlc: parse_hlc_opt(type_hlc)?,
@@ -352,8 +436,17 @@ impl Database {
     ) -> Result<Vec<Issue>> {
         let mut sql = String::from(
             "SELECT DISTINCT i.id, i.type, i.title, i.description, i.status, i.assignee,
-             i.created_at, i.updated_at, i.last_status_hlc, i.last_title_hlc,
-             i.last_type_hlc, i.last_description_hlc, i.last_assignee_hlc
+                    i.created_at, i.updated_at,
+                    (SELECT MAX(e.created_at) FROM events e
+                     WHERE e.issue_id = i.id AND e.action IN ('done', 'closed')
+                     AND NOT EXISTS (
+                         SELECT 1 FROM events e2
+                         WHERE e2.issue_id = e.issue_id
+                         AND e2.action = 'reopened'
+                         AND e2.created_at > e.created_at
+                     )) as closed_at,
+                    i.last_status_hlc, i.last_title_hlc,
+                    i.last_type_hlc, i.last_description_hlc, i.last_assignee_hlc
              FROM issues i",
         );
 
@@ -399,11 +492,12 @@ impl Database {
                 let status_str: String = row.get(4)?;
                 let created_str: String = row.get(6)?;
                 let updated_str: String = row.get(7)?;
-                let status_hlc: Option<String> = row.get(8)?;
-                let title_hlc: Option<String> = row.get(9)?;
-                let type_hlc: Option<String> = row.get(10)?;
-                let desc_hlc: Option<String> = row.get(11)?;
-                let assignee_hlc: Option<String> = row.get(12)?;
+                let closed_str: Option<String> = row.get(8)?;
+                let status_hlc: Option<String> = row.get(9)?;
+                let title_hlc: Option<String> = row.get(10)?;
+                let type_hlc: Option<String> = row.get(11)?;
+                let desc_hlc: Option<String> = row.get(12)?;
+                let assignee_hlc: Option<String> = row.get(13)?;
 
                 Ok(Issue {
                     id: row.get(0)?,
@@ -414,6 +508,10 @@ impl Database {
                     assignee: row.get(5)?,
                     created_at: parse_timestamp(&created_str, "created_at")?,
                     updated_at: parse_timestamp(&updated_str, "updated_at")?,
+                    closed_at: closed_str
+                        .as_ref()
+                        .map(|s| parse_timestamp(s, "closed_at"))
+                        .transpose()?,
                     last_status_hlc: parse_hlc_opt(status_hlc)?,
                     last_title_hlc: parse_hlc_opt(title_hlc)?,
                     last_type_hlc: parse_hlc_opt(type_hlc)?,
@@ -731,7 +829,7 @@ impl Database {
     pub fn get_tracking(&self, issue_id: &str) -> Result<Vec<String>> {
         let mut stmt = self
             .conn
-            .prepare("SELECT to_id FROM deps WHERE from_id = ?1 AND rel = 'tracked_by'")?;
+            .prepare("SELECT to_id FROM deps WHERE from_id = ?1 AND rel = 'tracked-by'")?;
 
         let ids = stmt
             .query_map(params![issue_id], |row| row.get(0))?
@@ -751,6 +849,435 @@ impl Database {
             .collect::<std::result::Result<Vec<String>, _>>()?;
 
         Ok(ids)
+    }
+
+    /// Resolve a potentially partial issue ID to a full ID.
+    ///
+    /// Returns the full ID if exactly one match is found.
+    /// Returns an error if no match or multiple matches.
+    ///
+    /// Resolution strategy:
+    /// 1. Exact match - Check if the ID exists exactly (fast path)
+    /// 2. Prefix match - If no exact match and length >= 3, search for prefix matches
+    /// 3. Ambiguity check - If multiple prefix matches, return error with all matches
+    pub fn resolve_id(&self, partial_id: &str) -> Result<String> {
+        // First try exact match (fast path)
+        if self.issue_exists(partial_id)? {
+            return Ok(partial_id.to_string());
+        }
+
+        // Check minimum length for prefix matching
+        if partial_id.len() < 3 {
+            return Err(Error::IssueNotFound(partial_id.to_string()));
+        }
+
+        // Find all IDs that start with the prefix
+        let pattern = format!("{}%", partial_id);
+        let mut stmt = self
+            .conn
+            .prepare("SELECT id FROM issues WHERE id LIKE ?1")?;
+
+        let matches: Vec<String> = stmt
+            .query_map([&pattern], |row| row.get(0))?
+            .collect::<std::result::Result<Vec<_>, _>>()?;
+
+        match matches.as_slice() {
+            [] => Err(Error::IssueNotFound(partial_id.to_string())),
+            [single] => Ok(single.clone()),
+            _ => Err(Error::AmbiguousId {
+                prefix: partial_id.to_string(),
+                matches,
+            }),
+        }
+    }
+
+    /// Search issues by query string across title, description, assignee, notes, labels, and links.
+    /// Returns issues where any searchable field contains the query (case-insensitive).
+    /// Special characters % and _ are escaped to prevent SQL LIKE syntax interpretation.
+    pub fn search_issues(&self, query: &str) -> Result<Vec<Issue>> {
+        let escaped_query = query.replace('%', "\\%").replace('_', "\\_");
+        let pattern = format!("%{}%", escaped_query);
+        let mut stmt = self.conn.prepare(
+            "SELECT DISTINCT i.id, i.type, i.title, i.description, i.status, i.assignee,
+                    i.created_at, i.updated_at,
+                    (SELECT MAX(e.created_at) FROM events e
+                     WHERE e.issue_id = i.id AND e.action IN ('done', 'closed')
+                     AND NOT EXISTS (
+                         SELECT 1 FROM events e2
+                         WHERE e2.issue_id = e.issue_id
+                         AND e2.action = 'reopened'
+                         AND e2.created_at > e.created_at
+                     )) as closed_at,
+                    i.last_status_hlc, i.last_title_hlc,
+                    i.last_type_hlc, i.last_description_hlc, i.last_assignee_hlc
+             FROM issues i
+             LEFT JOIN notes n ON n.issue_id = i.id
+             LEFT JOIN labels l ON l.issue_id = i.id
+             LEFT JOIN links lk ON lk.issue_id = i.id
+             WHERE i.title LIKE ?1 COLLATE NOCASE ESCAPE '\\'
+                OR i.description LIKE ?1 COLLATE NOCASE ESCAPE '\\'
+                OR i.assignee LIKE ?1 COLLATE NOCASE ESCAPE '\\'
+                OR n.content LIKE ?1 COLLATE NOCASE ESCAPE '\\'
+                OR l.label LIKE ?1 COLLATE NOCASE ESCAPE '\\'
+                OR lk.url LIKE ?1 COLLATE NOCASE ESCAPE '\\'
+                OR lk.external_id LIKE ?1 COLLATE NOCASE ESCAPE '\\'
+             ORDER BY i.created_at DESC",
+        )?;
+
+        let issues = stmt
+            .query_map(params![&pattern], |row| {
+                let type_str: String = row.get(1)?;
+                let status_str: String = row.get(4)?;
+                let created_str: String = row.get(6)?;
+                let updated_str: String = row.get(7)?;
+                let closed_str: Option<String> = row.get(8)?;
+                let status_hlc: Option<String> = row.get(9)?;
+                let title_hlc: Option<String> = row.get(10)?;
+                let type_hlc: Option<String> = row.get(11)?;
+                let desc_hlc: Option<String> = row.get(12)?;
+                let assignee_hlc: Option<String> = row.get(13)?;
+
+                Ok(Issue {
+                    id: row.get(0)?,
+                    issue_type: parse_db(&type_str, "type")?,
+                    title: row.get(2)?,
+                    description: row.get(3)?,
+                    status: parse_db(&status_str, "status")?,
+                    assignee: row.get(5)?,
+                    created_at: parse_timestamp(&created_str, "created_at")?,
+                    updated_at: parse_timestamp(&updated_str, "updated_at")?,
+                    closed_at: closed_str
+                        .as_ref()
+                        .map(|s| parse_timestamp(s, "closed_at"))
+                        .transpose()?,
+                    last_status_hlc: parse_hlc_opt(status_hlc)?,
+                    last_title_hlc: parse_hlc_opt(title_hlc)?,
+                    last_type_hlc: parse_hlc_opt(type_hlc)?,
+                    last_description_hlc: parse_hlc_opt(desc_hlc)?,
+                    last_assignee_hlc: parse_hlc_opt(assignee_hlc)?,
+                })
+            })?
+            .collect::<std::result::Result<Vec<_>, _>>()?;
+
+        Ok(issues)
+    }
+
+    /// Get labels for multiple issues in a single query (batch optimization).
+    pub fn get_labels_batch(&self, issue_ids: &[&str]) -> Result<HashMap<String, Vec<String>>> {
+        if issue_ids.is_empty() {
+            return Ok(HashMap::new());
+        }
+
+        // Build query with positional placeholders
+        let placeholders: Vec<_> = (1..=issue_ids.len()).map(|i| format!("?{}", i)).collect();
+        let sql = format!(
+            "SELECT issue_id, label FROM labels WHERE issue_id IN ({}) ORDER BY issue_id, label",
+            placeholders.join(", ")
+        );
+
+        let mut stmt = self.conn.prepare(&sql)?;
+        let params: Vec<&dyn rusqlite::ToSql> = issue_ids
+            .iter()
+            .map(|s| s as &dyn rusqlite::ToSql)
+            .collect();
+
+        let mut map: HashMap<String, Vec<String>> = HashMap::new();
+        let mut rows = stmt.query(params.as_slice())?;
+        while let Some(row) = rows.next()? {
+            let issue_id: String = row.get(0)?;
+            let label: String = row.get(1)?;
+            map.entry(issue_id).or_default().push(label);
+        }
+
+        Ok(map)
+    }
+
+    /// Update issue description.
+    pub fn update_issue_description(&mut self, id: &str, description: &str) -> Result<()> {
+        let affected = self.conn.execute(
+            "UPDATE issues SET description = ?1, updated_at = ?2 WHERE id = ?3",
+            params![description, Utc::now().to_rfc3339(), id],
+        )?;
+
+        if affected == 0 {
+            return Err(Error::IssueNotFound(id.to_string()));
+        }
+        Ok(())
+    }
+
+    /// Set issue assignee.
+    pub fn set_assignee(&mut self, id: &str, assignee: &str) -> Result<()> {
+        let affected = self.conn.execute(
+            "UPDATE issues SET assignee = ?1, updated_at = ?2 WHERE id = ?3",
+            params![assignee, Utc::now().to_rfc3339(), id],
+        )?;
+
+        if affected == 0 {
+            return Err(Error::IssueNotFound(id.to_string()));
+        }
+        Ok(())
+    }
+
+    /// Clear issue assignee.
+    pub fn clear_assignee(&mut self, id: &str) -> Result<()> {
+        let affected = self.conn.execute(
+            "UPDATE issues SET assignee = NULL, updated_at = ?1 WHERE id = ?2",
+            params![Utc::now().to_rfc3339(), id],
+        )?;
+
+        if affected == 0 {
+            return Err(Error::IssueNotFound(id.to_string()));
+        }
+        Ok(())
+    }
+
+    /// Add an external link.
+    pub fn add_link(&self, link: &Link) -> Result<i64> {
+        let created_at = link.created_at.to_rfc3339();
+        let link_type_str = link.link_type.map(|t| t.as_str().to_string());
+        let rel_str = link.rel.map(|r| r.as_str().to_string());
+
+        self.conn.execute(
+            "INSERT INTO links (issue_id, link_type, url, external_id, rel, created_at)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
+            params![
+                link.issue_id,
+                link_type_str,
+                link.url,
+                link.external_id,
+                rel_str,
+                created_at,
+            ],
+        )?;
+
+        Ok(self.conn.last_insert_rowid())
+    }
+
+    /// Get all links for an issue.
+    pub fn get_links(&self, issue_id: &str) -> Result<Vec<Link>> {
+        let mut stmt = self.conn.prepare(
+            "SELECT id, issue_id, link_type, url, external_id, rel, created_at
+             FROM links
+             WHERE issue_id = ?1
+             ORDER BY created_at ASC",
+        )?;
+
+        let links = stmt.query_map([issue_id], |row| {
+            let link_type_str: Option<String> = row.get(2)?;
+            let link_type = link_type_str
+                .map(|s| parse_db::<LinkType>(&s, "link_type"))
+                .transpose()?;
+
+            let rel_str: Option<String> = row.get(5)?;
+            let rel = rel_str
+                .map(|s| parse_db::<LinkRel>(&s, "rel"))
+                .transpose()?;
+
+            let created_at_str: String = row.get(6)?;
+
+            Ok(Link {
+                id: row.get(0)?,
+                issue_id: row.get(1)?,
+                link_type,
+                url: row.get(3)?,
+                external_id: row.get(4)?,
+                rel,
+                created_at: parse_timestamp(&created_at_str, "created_at")?,
+            })
+        })?;
+
+        links
+            .collect::<std::result::Result<Vec<_>, _>>()
+            .map_err(Into::into)
+    }
+
+    /// Remove a link by ID.
+    pub fn remove_link(&self, link_id: i64) -> Result<()> {
+        self.conn
+            .execute("DELETE FROM links WHERE id = ?1", [link_id])?;
+        Ok(())
+    }
+
+    /// Remove all links for an issue.
+    pub fn remove_all_links(&self, issue_id: &str) -> Result<()> {
+        self.conn
+            .execute("DELETE FROM links WHERE issue_id = ?1", [issue_id])?;
+        Ok(())
+    }
+
+    /// Get a link by issue ID and URL.
+    pub fn get_link_by_url(&self, issue_id: &str, url: &str) -> Result<Option<Link>> {
+        let link = self
+            .conn
+            .query_row(
+                "SELECT id, issue_id, link_type, url, external_id, rel, created_at
+                 FROM links WHERE issue_id = ?1 AND url = ?2",
+                [issue_id, url],
+                |row| {
+                    let link_type_str: Option<String> = row.get(2)?;
+                    let link_type = link_type_str
+                        .map(|s| parse_db::<LinkType>(&s, "link_type"))
+                        .transpose()?;
+
+                    let rel_str: Option<String> = row.get(5)?;
+                    let rel = rel_str
+                        .map(|s| parse_db::<LinkRel>(&s, "rel"))
+                        .transpose()?;
+
+                    let created_at_str: String = row.get(6)?;
+
+                    Ok(Link {
+                        id: row.get(0)?,
+                        issue_id: row.get(1)?,
+                        link_type,
+                        url: row.get(3)?,
+                        external_id: row.get(4)?,
+                        rel,
+                        created_at: parse_timestamp(&created_at_str, "created_at")?,
+                    })
+                },
+            )
+            .optional()?;
+
+        Ok(link)
+    }
+
+    /// Ensure a prefix exists in the prefixes table.
+    pub fn ensure_prefix(&self, prefix: &str) -> Result<()> {
+        let now = Utc::now().to_rfc3339();
+        self.conn.execute(
+            "INSERT OR IGNORE INTO prefixes (prefix, created_at, issue_count) VALUES (?1, ?2, 0)",
+            params![prefix, now],
+        )?;
+        Ok(())
+    }
+
+    /// Increment the issue count for a prefix.
+    pub fn increment_prefix_count(&self, prefix: &str) -> Result<()> {
+        self.conn.execute(
+            "UPDATE prefixes SET issue_count = issue_count + 1 WHERE prefix = ?1",
+            params![prefix],
+        )?;
+        Ok(())
+    }
+
+    /// Decrement the issue count for a prefix.
+    pub fn decrement_prefix_count(&self, prefix: &str) -> Result<()> {
+        self.conn.execute(
+            "UPDATE prefixes SET issue_count = issue_count - 1 WHERE prefix = ?1",
+            params![prefix],
+        )?;
+        Ok(())
+    }
+
+    /// List all prefixes ordered by issue count descending.
+    pub fn list_prefixes(&self) -> Result<Vec<PrefixInfo>> {
+        let mut stmt = self.conn.prepare(
+            "SELECT prefix, created_at, issue_count FROM prefixes ORDER BY issue_count DESC, prefix ASC",
+        )?;
+        let rows = stmt.query_map([], |row| {
+            let prefix: String = row.get(0)?;
+            let created_at_str: String = row.get(1)?;
+            let created_at = parse_timestamp(&created_at_str, "created_at")?;
+            let issue_count: i64 = row.get(2)?;
+            Ok(PrefixInfo {
+                prefix,
+                created_at,
+                issue_count,
+            })
+        })?;
+
+        let mut prefixes = Vec::new();
+        for row in rows {
+            prefixes.push(row?);
+        }
+        Ok(prefixes)
+    }
+
+    /// Rename a prefix in the prefixes table.
+    ///
+    /// Transfers the created_at and issue_count to the new prefix name.
+    /// If the new prefix already exists, merges the counts.
+    pub fn rename_prefix(&self, old: &str, new: &str) -> Result<()> {
+        let old_info: Option<(String, i64)> = self
+            .conn
+            .query_row(
+                "SELECT created_at, issue_count FROM prefixes WHERE prefix = ?1",
+                params![old],
+                |row| Ok((row.get(0)?, row.get(1)?)),
+            )
+            .ok();
+
+        if let Some((created_at, issue_count)) = old_info {
+            let new_exists: bool = self
+                .conn
+                .query_row(
+                    "SELECT 1 FROM prefixes WHERE prefix = ?1",
+                    params![new],
+                    |_| Ok(true),
+                )
+                .unwrap_or(false);
+
+            if new_exists {
+                self.conn.execute(
+                    "UPDATE prefixes SET
+                        issue_count = issue_count + ?1,
+                        created_at = MIN(created_at, ?2)
+                     WHERE prefix = ?3",
+                    params![issue_count, created_at, new],
+                )?;
+            } else {
+                self.conn.execute(
+                    "INSERT INTO prefixes (prefix, created_at, issue_count) VALUES (?1, ?2, ?3)",
+                    params![new, created_at, issue_count],
+                )?;
+            }
+
+            self.conn
+                .execute("DELETE FROM prefixes WHERE prefix = ?1", params![old])?;
+        }
+
+        Ok(())
+    }
+
+    /// Replace the most recent note for an issue with new content.
+    pub fn replace_note(&self, issue_id: &str, status: Status, content: &str) -> Result<i64> {
+        let note_id: Option<i64> = self
+            .conn
+            .query_row(
+                "SELECT id FROM notes WHERE issue_id = ?1 ORDER BY created_at DESC LIMIT 1",
+                params![issue_id],
+                |row| row.get(0),
+            )
+            .ok();
+
+        match note_id {
+            Some(id) => {
+                self.conn.execute(
+                    "UPDATE notes SET content = ?1, status = ?2, created_at = ?3 WHERE id = ?4",
+                    params![content, status.as_str(), Utc::now().to_rfc3339(), id],
+                )?;
+                Ok(id)
+            }
+            None => Err(Error::NoNotesToReplace(issue_id.to_string())),
+        }
+    }
+
+    /// Get notes grouped by status.
+    pub fn get_notes_by_status(&self, issue_id: &str) -> Result<Vec<(Status, Vec<Note>)>> {
+        let notes = self.get_notes(issue_id)?;
+
+        let mut grouped: Vec<(Status, Vec<Note>)> = Vec::new();
+
+        for note in notes {
+            if let Some((_, notes_vec)) = grouped.iter_mut().find(|(s, _)| *s == note.status) {
+                notes_vec.push(note);
+            } else {
+                grouped.push((note.status, vec![note]));
+            }
+        }
+
+        Ok(grouped)
     }
 }
 
