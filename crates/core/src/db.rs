@@ -731,7 +731,7 @@ impl Database {
     pub fn get_tracking(&self, issue_id: &str) -> Result<Vec<String>> {
         let mut stmt = self
             .conn
-            .prepare("SELECT to_id FROM deps WHERE from_id = ?1 AND rel = 'tracked_by'")?;
+            .prepare("SELECT to_id FROM deps WHERE from_id = ?1 AND rel = 'tracked-by'")?;
 
         let ids = stmt
             .query_map(params![issue_id], |row| row.get(0))?

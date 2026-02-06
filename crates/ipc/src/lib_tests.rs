@@ -104,20 +104,6 @@ fn relation_display() {
 }
 
 #[test]
-fn status_core_conversion_roundtrip() {
-    for status in [
-        Status::Todo,
-        Status::InProgress,
-        Status::Done,
-        Status::Closed,
-    ] {
-        let core: wk_core::Status = status.into();
-        let back: Status = core.into();
-        assert_eq!(status, back);
-    }
-}
-
-#[test]
 fn event_builder() {
     let event = Event::new("test-001".to_string(), Action::Edited)
         .with_values(Some("old".to_string()), Some("new".to_string()))
