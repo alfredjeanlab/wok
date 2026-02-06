@@ -155,7 +155,13 @@ impl Database {
         }
 
         // Add HLC columns if missing (for sync compatibility)
-        let hlc_columns = ["last_status_hlc", "last_title_hlc", "last_type_hlc"];
+        let hlc_columns = [
+            "last_status_hlc",
+            "last_title_hlc",
+            "last_type_hlc",
+            "last_description_hlc",
+            "last_assignee_hlc",
+        ];
         for col in hlc_columns {
             let has_col: bool = self
                 .conn
