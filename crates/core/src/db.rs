@@ -306,12 +306,18 @@ impl Database {
     /// Run database migrations.
     fn migrate(&self) -> Result<()> {
         self.conn.execute_batch(SCHEMA)?;
-        self.migrate_relation_kebab_case()?;
+        self.migrate_add_assignee()?;
+        self.migrate_add_hlc_columns()?;
         self.migrate_add_closed_at()?;
+        self.migrate_backfill_prefixes()?;
+        self.migrate_relation_kebab_case()?;
         Ok(())
     }
 
-    /// Migrate relation values from snake_case to kebab-case.
+    /// Migration: Rewrite "tracked_by" to "tracked-by" in deps table.
+    ///
+    /// Early versions serialized TrackedBy as "tracked_by" (underscore).
+    /// The canonical form is "tracked-by" (kebab-case).
     fn migrate_relation_kebab_case(&self) -> Result<()> {
         self.conn.execute(
             "UPDATE deps SET rel = 'tracked-by' WHERE rel = 'tracked_by'",
@@ -320,34 +326,127 @@ impl Database {
         Ok(())
     }
 
-    /// Add closed_at column and backfill from events.
+    /// Migration: Add assignee column to existing databases.
+    fn migrate_add_assignee(&self) -> Result<()> {
+        let has_assignee: bool = self
+            .conn
+            .query_row(
+                "SELECT COUNT(*) > 0 FROM pragma_table_info('issues') WHERE name = 'assignee'",
+                [],
+                |row| row.get(0),
+            )
+            .unwrap_or(false);
+
+        if !has_assignee {
+            self.conn
+                .execute("ALTER TABLE issues ADD COLUMN assignee TEXT", [])?;
+        }
+        Ok(())
+    }
+
+    /// Migration: Add HLC columns for CRDT sync compatibility.
+    ///
+    /// Databases created by old CLI/daemon versions lack these columns.
+    /// For fresh databases the schema already includes them, so this is a no-op.
+    fn migrate_add_hlc_columns(&self) -> Result<()> {
+        let columns = [
+            "last_status_hlc",
+            "last_title_hlc",
+            "last_type_hlc",
+            "last_description_hlc",
+            "last_assignee_hlc",
+        ];
+
+        for column in columns {
+            let has_column: bool = self
+                .conn
+                .query_row(
+                    "SELECT COUNT(*) > 0 FROM pragma_table_info('issues') WHERE name = ?1",
+                    [column],
+                    |row| row.get(0),
+                )
+                .unwrap_or(false);
+
+            if !has_column {
+                let sql = format!("ALTER TABLE issues ADD COLUMN {} TEXT", column);
+                self.conn.execute(&sql, [])?;
+            }
+        }
+
+        Ok(())
+    }
+
+    /// Migration: Add closed_at column and backfill from events.
+    ///
+    /// Stores the timestamp when an issue was closed (done/closed status) directly
+    /// on the issues table, replacing the correlated subquery that computed it.
     fn migrate_add_closed_at(&self) -> Result<()> {
-        let has_col: bool = self.conn.query_row(
-            "SELECT COUNT(*) > 0 FROM pragma_table_info('issues') WHERE name = 'closed_at'",
-            [],
-            |row| row.get(0),
-        )?;
+        let has_col: bool = self
+            .conn
+            .query_row(
+                "SELECT COUNT(*) > 0 FROM pragma_table_info('issues') WHERE name = 'closed_at'",
+                [],
+                |row| row.get(0),
+            )
+            .unwrap_or(false);
 
         if !has_col {
-            self.conn
-                .execute("ALTER TABLE issues ADD COLUMN closed_at TEXT", [])?;
+            // Handle concurrent migration: another connection may add the column
+            // between our check and this ALTER TABLE (shared user-level database).
+            match self
+                .conn
+                .execute("ALTER TABLE issues ADD COLUMN closed_at TEXT", [])
+            {
+                Ok(_) => {
+                    // Backfill closed_at from events table
+                    self.conn.execute(
+                        "UPDATE issues SET closed_at = (
+                            SELECT MAX(e.created_at) FROM events e
+                            WHERE e.issue_id = issues.id AND e.action IN ('done', 'closed')
+                            AND NOT EXISTS (
+                                SELECT 1 FROM events e2
+                                WHERE e2.issue_id = e.issue_id
+                                AND e2.action = 'reopened'
+                                AND e2.created_at > e.created_at
+                            )
+                        ) WHERE status IN ('done', 'closed')",
+                        [],
+                    )?;
+                }
+                Err(e) if e.to_string().contains("duplicate column") => {
+                    // Column was added by another connection concurrently
+                }
+                Err(e) => return Err(e.into()),
+            }
+        }
 
-            // Backfill closed_at from events table
+        Ok(())
+    }
+
+    /// Migration: Backfill prefixes table from existing issues.
+    ///
+    /// Extracts prefixes from issue IDs and populates the prefixes table
+    /// with correct issue counts. Only runs if the table is empty but
+    /// issues exist.
+    fn migrate_backfill_prefixes(&self) -> Result<()> {
+        let prefix_count: i64 = self
+            .conn
+            .query_row("SELECT COUNT(*) FROM prefixes", [], |row| row.get(0))
+            .unwrap_or(0);
+
+        if prefix_count == 0 {
             self.conn.execute(
-                "UPDATE issues SET closed_at = (
-                    SELECT MAX(e.created_at) FROM events e
-                    WHERE e.issue_id = issues.id AND e.action IN ('done', 'closed')
-                    AND NOT EXISTS (
-                        SELECT 1 FROM events e2
-                        WHERE e2.issue_id = e.issue_id
-                        AND e2.action = 'reopened'
-                        AND e2.created_at > e.created_at
-                    )
-                ) WHERE status IN ('done', 'closed')",
+                "INSERT OR IGNORE INTO prefixes (prefix, created_at, issue_count)
+                 SELECT
+                     substr(id, 1, instr(id, '-') - 1) as prefix,
+                     MIN(created_at) as created_at,
+                     COUNT(*) as issue_count
+                 FROM issues
+                 WHERE id LIKE '%-%'
+                 GROUP BY prefix",
                 [],
             )?;
         }
-
         Ok(())
     }
 

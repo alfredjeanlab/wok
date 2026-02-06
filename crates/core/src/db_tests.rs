@@ -597,3 +597,132 @@ fn rename_nonexistent_prefix_is_noop() {
     let prefixes = db.list_prefixes().unwrap();
     assert!(prefixes.is_empty());
 }
+
+/// Create a database with a minimal old-style schema (no assignee, no HLC columns,
+/// no closed_at, no prefixes table), insert data, then run migrations and verify
+/// everything works.
+#[test]
+fn migrate_old_schema_adds_missing_columns_and_backfills() {
+    use rusqlite::Connection;
+
+    let conn = Connection::open_in_memory().unwrap();
+    conn.execute_batch("PRAGMA foreign_keys = ON;").unwrap();
+
+    // Old-style schema: no assignee, no HLC columns, no closed_at, no prefixes table
+    conn.execute_batch(
+        "CREATE TABLE issues (
+            id TEXT PRIMARY KEY,
+            type TEXT NOT NULL,
+            title TEXT NOT NULL,
+            description TEXT,
+            status TEXT NOT NULL DEFAULT 'todo',
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL
+        );
+        CREATE TABLE deps (
+            from_id TEXT NOT NULL,
+            to_id TEXT NOT NULL,
+            rel TEXT NOT NULL,
+            created_at TEXT NOT NULL,
+            PRIMARY KEY (from_id, to_id, rel)
+        );
+        CREATE TABLE labels (
+            issue_id TEXT NOT NULL,
+            label TEXT NOT NULL,
+            PRIMARY KEY (issue_id, label)
+        );
+        CREATE TABLE notes (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            issue_id TEXT NOT NULL,
+            status TEXT NOT NULL,
+            content TEXT NOT NULL,
+            created_at TEXT NOT NULL
+        );
+        CREATE TABLE events (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            issue_id TEXT NOT NULL,
+            action TEXT NOT NULL,
+            old_value TEXT,
+            new_value TEXT,
+            reason TEXT,
+            created_at TEXT NOT NULL
+        );
+        CREATE TABLE links (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            issue_id TEXT NOT NULL,
+            link_type TEXT,
+            url TEXT,
+            external_id TEXT,
+            rel TEXT,
+            created_at TEXT NOT NULL
+        );",
+    )
+    .unwrap();
+
+    // Insert issues using old schema (no assignee / HLC / closed_at)
+    conn.execute(
+        "INSERT INTO issues (id, type, title, status, created_at, updated_at)
+         VALUES ('proj-abc1', 'task', 'First task', 'done', '2026-01-01T00:00:00Z', '2026-01-02T00:00:00Z')",
+        [],
+    )
+    .unwrap();
+    conn.execute(
+        "INSERT INTO issues (id, type, title, status, created_at, updated_at)
+         VALUES ('proj-def2', 'bug', 'A bug', 'todo', '2026-01-03T00:00:00Z', '2026-01-03T00:00:00Z')",
+        [],
+    )
+    .unwrap();
+
+    // Add a done event for the first issue (for closed_at backfill)
+    conn.execute(
+        "INSERT INTO events (issue_id, action, created_at)
+         VALUES ('proj-abc1', 'done', '2026-01-02T00:00:00Z')",
+        [],
+    )
+    .unwrap();
+
+    // Add an old-style tracked_by dependency
+    conn.execute(
+        "INSERT INTO deps (from_id, to_id, rel, created_at)
+         VALUES ('proj-abc1', 'proj-def2', 'tracked_by', '2026-01-01T00:00:00Z')",
+        [],
+    )
+    .unwrap();
+
+    // Now wrap with Database and run migrations
+    let db = Database { conn };
+    db.migrate().unwrap();
+
+    // Verify assignee column exists and is readable
+    let issue = db.get_issue("proj-abc1").unwrap();
+    assert!(issue.assignee.is_none());
+
+    // Verify HLC columns exist and are NULL
+    assert!(issue.last_status_hlc.is_none());
+    assert!(issue.last_title_hlc.is_none());
+    assert!(issue.last_type_hlc.is_none());
+    assert!(issue.last_description_hlc.is_none());
+    assert!(issue.last_assignee_hlc.is_none());
+
+    // Verify closed_at was backfilled for the done issue
+    assert!(issue.closed_at.is_some());
+    assert_eq!(
+        issue.closed_at.unwrap().to_rfc3339(),
+        "2026-01-02T00:00:00+00:00"
+    );
+
+    // Verify the todo issue has no closed_at
+    let bug = db.get_issue("proj-def2").unwrap();
+    assert!(bug.closed_at.is_none());
+
+    // Verify prefixes were backfilled
+    let prefixes = db.list_prefixes().unwrap();
+    assert_eq!(prefixes.len(), 1);
+    assert_eq!(prefixes[0].prefix, "proj");
+    assert_eq!(prefixes[0].issue_count, 2);
+
+    // Verify tracked_by was migrated to tracked-by
+    let deps = db.get_deps_from("proj-abc1").unwrap();
+    assert_eq!(deps.len(), 1);
+    assert_eq!(deps[0].relation, Relation::TrackedBy);
+}
