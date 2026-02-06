@@ -371,7 +371,7 @@ impl Database {
     }
 
     /// Update issue status.
-    pub fn update_issue_status(&mut self, id: &str, status: Status) -> Result<()> {
+    pub fn update_issue_status(&self, id: &str, status: Status) -> Result<()> {
         let affected = self.conn.execute(
             "UPDATE issues SET status = ?1, updated_at = ?2 WHERE id = ?3",
             params![status.as_str(), Utc::now().to_rfc3339(), id],
@@ -384,7 +384,7 @@ impl Database {
     }
 
     /// Update issue status HLC.
-    pub fn update_issue_status_hlc(&mut self, id: &str, hlc: Hlc) -> Result<()> {
+    pub fn update_issue_status_hlc(&self, id: &str, hlc: Hlc) -> Result<()> {
         self.conn.execute(
             "UPDATE issues SET last_status_hlc = ?1 WHERE id = ?2",
             params![hlc.to_string(), id],
@@ -393,7 +393,7 @@ impl Database {
     }
 
     /// Update issue title.
-    pub fn update_issue_title(&mut self, id: &str, title: &str) -> Result<()> {
+    pub fn update_issue_title(&self, id: &str, title: &str) -> Result<()> {
         let affected = self.conn.execute(
             "UPDATE issues SET title = ?1, updated_at = ?2 WHERE id = ?3",
             params![title, Utc::now().to_rfc3339(), id],
@@ -406,7 +406,7 @@ impl Database {
     }
 
     /// Update issue title HLC.
-    pub fn update_issue_title_hlc(&mut self, id: &str, hlc: Hlc) -> Result<()> {
+    pub fn update_issue_title_hlc(&self, id: &str, hlc: Hlc) -> Result<()> {
         self.conn.execute(
             "UPDATE issues SET last_title_hlc = ?1 WHERE id = ?2",
             params![hlc.to_string(), id],
@@ -415,7 +415,7 @@ impl Database {
     }
 
     /// Update issue type.
-    pub fn update_issue_type(&mut self, id: &str, issue_type: IssueType) -> Result<()> {
+    pub fn update_issue_type(&self, id: &str, issue_type: IssueType) -> Result<()> {
         let affected = self.conn.execute(
             "UPDATE issues SET type = ?1, updated_at = ?2 WHERE id = ?3",
             params![issue_type.as_str(), Utc::now().to_rfc3339(), id],
@@ -428,7 +428,7 @@ impl Database {
     }
 
     /// Update issue type HLC.
-    pub fn update_issue_type_hlc(&mut self, id: &str, hlc: Hlc) -> Result<()> {
+    pub fn update_issue_type_hlc(&self, id: &str, hlc: Hlc) -> Result<()> {
         self.conn.execute(
             "UPDATE issues SET last_type_hlc = ?1 WHERE id = ?2",
             params![hlc.to_string(), id],
