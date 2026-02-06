@@ -44,7 +44,7 @@ fn issue_exists() {
 
 #[test]
 fn update_issue_status() {
-    let mut db = Database::open_in_memory().unwrap();
+    let db = Database::open_in_memory().unwrap();
     let issue = test_issue("test-1", "Test issue");
     db.create_issue(&issue).unwrap();
 
@@ -56,7 +56,7 @@ fn update_issue_status() {
 
 #[test]
 fn update_issue_status_hlc() {
-    let mut db = Database::open_in_memory().unwrap();
+    let db = Database::open_in_memory().unwrap();
     let issue = test_issue("test-1", "Test issue");
     db.create_issue(&issue).unwrap();
 
@@ -94,7 +94,7 @@ fn update_issue_status_sets_closed_at() {
 
 #[test]
 fn update_issue_title() {
-    let mut db = Database::open_in_memory().unwrap();
+    let db = Database::open_in_memory().unwrap();
     let issue = test_issue("test-1", "Old title");
     db.create_issue(&issue).unwrap();
 
@@ -105,7 +105,7 @@ fn update_issue_title() {
 
 #[test]
 fn update_issue_type() {
-    let mut db = Database::open_in_memory().unwrap();
+    let db = Database::open_in_memory().unwrap();
     let issue = test_issue("test-1", "Test issue");
     db.create_issue(&issue).unwrap();
 
@@ -356,7 +356,7 @@ fn search_issues_case_insensitive() {
 
 #[test]
 fn update_issue_description() {
-    let mut db = Database::open_in_memory().unwrap();
+    let db = Database::open_in_memory().unwrap();
     let issue = test_issue("test-1", "Test issue");
     db.create_issue(&issue).unwrap();
 
@@ -368,7 +368,7 @@ fn update_issue_description() {
 
 #[test]
 fn set_and_clear_assignee() {
-    let mut db = Database::open_in_memory().unwrap();
+    let db = Database::open_in_memory().unwrap();
     let issue = test_issue("test-1", "Test issue");
     db.create_issue(&issue).unwrap();
 

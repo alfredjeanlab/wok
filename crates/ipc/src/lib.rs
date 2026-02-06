@@ -52,24 +52,6 @@ pub struct Issue {
     pub closed_at: Option<DateTime<Utc>>,
 }
 
-impl Issue {
-    /// Construct an Issue with default status (Todo) and current timestamp.
-    pub fn new(id: String, issue_type: IssueType, title: String) -> Self {
-        let now = Utc::now();
-        Issue {
-            id,
-            issue_type,
-            title,
-            description: None,
-            status: Status::Todo,
-            assignee: None,
-            created_at: now,
-            updated_at: now,
-            closed_at: None,
-        }
-    }
-}
-
 impl From<wk_core::Issue> for Issue {
     fn from(core: wk_core::Issue) -> Self {
         Issue {
@@ -103,6 +85,24 @@ impl From<Issue> for wk_core::Issue {
             last_type_hlc: None,
             last_description_hlc: None,
             last_assignee_hlc: None,
+        }
+    }
+}
+
+impl Issue {
+    /// Construct an Issue with default status (Todo) and current timestamp.
+    pub fn new(id: String, issue_type: IssueType, title: String) -> Self {
+        let now = Utc::now();
+        Issue {
+            id,
+            issue_type,
+            title,
+            description: None,
+            status: Status::Todo,
+            assignee: None,
+            created_at: now,
+            updated_at: now,
+            closed_at: None,
         }
     }
 }

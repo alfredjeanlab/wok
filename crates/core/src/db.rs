@@ -495,7 +495,7 @@ impl Database {
     ///
     /// Sets `closed_at` to now when transitioning to a terminal state (done/closed),
     /// and clears it when transitioning to an active state (todo/in_progress).
-    pub fn update_issue_status(&mut self, id: &str, status: Status) -> Result<()> {
+    pub fn update_issue_status(&self, id: &str, status: Status) -> Result<()> {
         let now = Utc::now();
         let closed_at = if status.is_terminal() {
             Some(now.to_rfc3339())
@@ -515,7 +515,7 @@ impl Database {
     }
 
     /// Update issue status HLC.
-    pub fn update_issue_status_hlc(&mut self, id: &str, hlc: Hlc) -> Result<()> {
+    pub fn update_issue_status_hlc(&self, id: &str, hlc: Hlc) -> Result<()> {
         self.conn.execute(
             "UPDATE issues SET last_status_hlc = ?1 WHERE id = ?2",
             params![hlc.to_string(), id],
@@ -524,7 +524,7 @@ impl Database {
     }
 
     /// Update issue title.
-    pub fn update_issue_title(&mut self, id: &str, title: &str) -> Result<()> {
+    pub fn update_issue_title(&self, id: &str, title: &str) -> Result<()> {
         let affected = self.conn.execute(
             "UPDATE issues SET title = ?1, updated_at = ?2 WHERE id = ?3",
             params![title, Utc::now().to_rfc3339(), id],
@@ -537,7 +537,7 @@ impl Database {
     }
 
     /// Update issue title HLC.
-    pub fn update_issue_title_hlc(&mut self, id: &str, hlc: Hlc) -> Result<()> {
+    pub fn update_issue_title_hlc(&self, id: &str, hlc: Hlc) -> Result<()> {
         self.conn.execute(
             "UPDATE issues SET last_title_hlc = ?1 WHERE id = ?2",
             params![hlc.to_string(), id],
@@ -546,7 +546,7 @@ impl Database {
     }
 
     /// Update issue type.
-    pub fn update_issue_type(&mut self, id: &str, issue_type: IssueType) -> Result<()> {
+    pub fn update_issue_type(&self, id: &str, issue_type: IssueType) -> Result<()> {
         let affected = self.conn.execute(
             "UPDATE issues SET type = ?1, updated_at = ?2 WHERE id = ?3",
             params![issue_type.as_str(), Utc::now().to_rfc3339(), id],
@@ -559,7 +559,7 @@ impl Database {
     }
 
     /// Update issue type HLC.
-    pub fn update_issue_type_hlc(&mut self, id: &str, hlc: Hlc) -> Result<()> {
+    pub fn update_issue_type_hlc(&self, id: &str, hlc: Hlc) -> Result<()> {
         self.conn.execute(
             "UPDATE issues SET last_type_hlc = ?1 WHERE id = ?2",
             params![hlc.to_string(), id],
@@ -1017,7 +1017,7 @@ impl Database {
     }
 
     /// Update issue description.
-    pub fn update_issue_description(&mut self, id: &str, description: &str) -> Result<()> {
+    pub fn update_issue_description(&self, id: &str, description: &str) -> Result<()> {
         let affected = self.conn.execute(
             "UPDATE issues SET description = ?1, updated_at = ?2 WHERE id = ?3",
             params![description, Utc::now().to_rfc3339(), id],
@@ -1030,7 +1030,7 @@ impl Database {
     }
 
     /// Set issue assignee.
-    pub fn set_assignee(&mut self, id: &str, assignee: &str) -> Result<()> {
+    pub fn set_assignee(&self, id: &str, assignee: &str) -> Result<()> {
         let affected = self.conn.execute(
             "UPDATE issues SET assignee = ?1, updated_at = ?2 WHERE id = ?3",
             params![assignee, Utc::now().to_rfc3339(), id],
@@ -1043,7 +1043,7 @@ impl Database {
     }
 
     /// Clear issue assignee.
-    pub fn clear_assignee(&mut self, id: &str) -> Result<()> {
+    pub fn clear_assignee(&self, id: &str) -> Result<()> {
         let affected = self.conn.execute(
             "UPDATE issues SET assignee = NULL, updated_at = ?1 WHERE id = ?2",
             params![Utc::now().to_rfc3339(), id],
@@ -1253,6 +1253,39 @@ impl Database {
         }
 
         Ok(())
+    }
+
+    /// Extract priority from label list.
+    /// Prefers "priority:" over "p:" if both present.
+    /// Returns 0-4 where 0 is highest priority.
+    /// Default (no priority label): 2 (medium)
+    pub fn priority_from_tags(tags: &[String]) -> u8 {
+        for tag in tags {
+            if let Some(value) = tag.strip_prefix("priority:") {
+                if let Some(p) = Self::parse_priority_value(value) {
+                    return p;
+                }
+            }
+        }
+        for tag in tags {
+            if let Some(value) = tag.strip_prefix("p:") {
+                if let Some(p) = Self::parse_priority_value(value) {
+                    return p;
+                }
+            }
+        }
+        2
+    }
+
+    fn parse_priority_value(value: &str) -> Option<u8> {
+        match value {
+            "0" | "highest" => Some(0),
+            "1" | "high" => Some(1),
+            "2" | "medium" | "med" => Some(2),
+            "3" | "low" => Some(3),
+            "4" | "lowest" => Some(4),
+            _ => None,
+        }
     }
 }
 

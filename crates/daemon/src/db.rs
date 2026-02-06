@@ -9,7 +9,6 @@
 use std::path::Path;
 
 use chrono::Utc;
-use rusqlite::params;
 
 use crate::ipc::{MutateOp, MutateResult, QueryOp, QueryResult};
 
@@ -181,93 +180,37 @@ impl Database {
                 Ok(MutateResult::Ok)
             }
             MutateOp::UpdateIssueStatus { id, status } => {
-                let now = Utc::now();
-                let closed_at = if status.is_terminal() {
-                    Some(now.to_rfc3339())
-                } else {
-                    None
-                };
-                let affected = self
-                    .core
-                    .conn
-                    .execute(
-                        "UPDATE issues SET status = ?1, updated_at = ?2, closed_at = ?3 WHERE id = ?4",
-                        params![status.as_str(), now.to_rfc3339(), closed_at, id],
-                    )
+                self.core
+                    .update_issue_status(&id, status)
                     .map_err(|e| e.to_string())?;
-                if affected == 0 {
-                    return Err(format!("issue not found: {}", id));
-                }
                 Ok(MutateResult::Ok)
             }
             MutateOp::UpdateIssueTitle { id, title } => {
-                let affected = self
-                    .core
-                    .conn
-                    .execute(
-                        "UPDATE issues SET title = ?1, updated_at = ?2 WHERE id = ?3",
-                        params![title, Utc::now().to_rfc3339(), id],
-                    )
+                self.core
+                    .update_issue_title(&id, &title)
                     .map_err(|e| e.to_string())?;
-                if affected == 0 {
-                    return Err(format!("issue not found: {}", id));
-                }
                 Ok(MutateResult::Ok)
             }
             MutateOp::UpdateIssueDescription { id, description } => {
-                let affected = self
-                    .core
-                    .conn
-                    .execute(
-                        "UPDATE issues SET description = ?1, updated_at = ?2 WHERE id = ?3",
-                        params![description, Utc::now().to_rfc3339(), id],
-                    )
+                self.core
+                    .update_issue_description(&id, &description)
                     .map_err(|e| e.to_string())?;
-                if affected == 0 {
-                    return Err(format!("issue not found: {}", id));
-                }
                 Ok(MutateResult::Ok)
             }
             MutateOp::UpdateIssueType { id, issue_type } => {
-                let affected = self
-                    .core
-                    .conn
-                    .execute(
-                        "UPDATE issues SET type = ?1, updated_at = ?2 WHERE id = ?3",
-                        params![issue_type.as_str(), Utc::now().to_rfc3339(), id],
-                    )
+                self.core
+                    .update_issue_type(&id, issue_type)
                     .map_err(|e| e.to_string())?;
-                if affected == 0 {
-                    return Err(format!("issue not found: {}", id));
-                }
                 Ok(MutateResult::Ok)
             }
             MutateOp::SetAssignee { id, assignee } => {
-                let affected = self
-                    .core
-                    .conn
-                    .execute(
-                        "UPDATE issues SET assignee = ?1, updated_at = ?2 WHERE id = ?3",
-                        params![assignee, Utc::now().to_rfc3339(), id],
-                    )
+                self.core
+                    .set_assignee(&id, &assignee)
                     .map_err(|e| e.to_string())?;
-                if affected == 0 {
-                    return Err(format!("issue not found: {}", id));
-                }
                 Ok(MutateResult::Ok)
             }
             MutateOp::ClearAssignee { id } => {
-                let affected = self
-                    .core
-                    .conn
-                    .execute(
-                        "UPDATE issues SET assignee = NULL, updated_at = ?1 WHERE id = ?2",
-                        params![Utc::now().to_rfc3339(), id],
-                    )
-                    .map_err(|e| e.to_string())?;
-                if affected == 0 {
-                    return Err(format!("issue not found: {}", id));
-                }
+                self.core.clear_assignee(&id).map_err(|e| e.to_string())?;
                 Ok(MutateResult::Ok)
             }
             MutateOp::AddLabel { id, label } => {
@@ -337,13 +280,13 @@ impl Database {
                 Ok(MutateResult::Ok)
             }
             MutateOp::RemoveLink { id, url } => {
-                self.core
-                    .conn
-                    .execute(
-                        "DELETE FROM links WHERE issue_id = ?1 AND url = ?2",
-                        params![id, url],
-                    )
-                    .map_err(|e| e.to_string())?;
+                if let Some(link) = self
+                    .core
+                    .get_link_by_url(&id, &url)
+                    .map_err(|e| e.to_string())?
+                {
+                    self.core.remove_link(link.id).map_err(|e| e.to_string())?;
+                }
                 Ok(MutateResult::Ok)
             }
             MutateOp::EnsurePrefix { prefix } => {
