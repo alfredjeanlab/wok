@@ -304,7 +304,7 @@ impl FromStr for Action {
 }
 
 /// An audit log entry recording a change to an issue.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Event {
     /// Database-assigned identifier.
     pub id: i64,
@@ -313,10 +313,13 @@ pub struct Event {
     /// What type of change occurred.
     pub action: Action,
     /// Previous value (for edits, status changes).
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub old_value: Option<String>,
     /// New value (for edits, tags, related issues).
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub new_value: Option<String>,
     /// User-provided explanation (for closes, reopens).
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub reason: Option<String>,
     /// When the event occurred.
     pub created_at: DateTime<Utc>,
@@ -373,7 +376,7 @@ impl Relation {
     pub fn as_str(&self) -> &'static str {
         match self {
             Relation::Blocks => "blocks",
-            Relation::TrackedBy => "tracked_by",
+            Relation::TrackedBy => "tracked-by",
             Relation::Tracks => "tracks",
         }
     }
@@ -391,7 +394,7 @@ impl FromStr for Relation {
     fn from_str(s: &str) -> Result<Self> {
         match s.to_lowercase().as_str() {
             "blocks" => Ok(Relation::Blocks),
-            "tracked_by" => Ok(Relation::TrackedBy),
+            "tracked-by" | "tracked_by" => Ok(Relation::TrackedBy),
             "tracks" => Ok(Relation::Tracks),
             _ => Err(Error::InvalidRelation(s.to_string())),
         }
@@ -399,7 +402,7 @@ impl FromStr for Relation {
 }
 
 /// A dependency relationship between two issues.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Dependency {
     /// The source issue ID.
     pub from_id: String,
@@ -412,7 +415,7 @@ pub struct Dependency {
 }
 
 /// A note attached to an issue.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Note {
     /// Database-assigned identifier.
     pub id: i64,
