@@ -62,6 +62,7 @@ impl Merge for Database {
                     assignee: None,
                     created_at: chrono::Utc::now(),
                     updated_at: chrono::Utc::now(),
+                    closed_at: None,
                     last_status_hlc: None,
                     last_title_hlc: None,
                     last_type_hlc: None,

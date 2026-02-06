@@ -29,6 +29,7 @@ CREATE TABLE IF NOT EXISTS issues (
     assignee TEXT,
     created_at TEXT NOT NULL,
     updated_at TEXT NOT NULL,
+    closed_at TEXT,
     last_status_hlc TEXT,
     last_title_hlc TEXT,
     last_type_hlc TEXT,
@@ -159,18 +160,19 @@ fn parse_hlc_opt(value: Option<String>) -> std::result::Result<Option<Hlc>, rusq
 /// Map a row to an Issue.
 ///
 /// Expected columns: id, type, title, description, status, assignee,
-/// created_at, updated_at, last_status_hlc, last_title_hlc,
+/// created_at, updated_at, closed_at, last_status_hlc, last_title_hlc,
 /// last_type_hlc, last_description_hlc, last_assignee_hlc
 fn row_to_issue(row: &rusqlite::Row) -> rusqlite::Result<Issue> {
     let type_str: String = row.get(1)?;
     let status_str: String = row.get(4)?;
     let created_str: String = row.get(6)?;
     let updated_str: String = row.get(7)?;
-    let status_hlc: Option<String> = row.get(8)?;
-    let title_hlc: Option<String> = row.get(9)?;
-    let type_hlc: Option<String> = row.get(10)?;
-    let desc_hlc: Option<String> = row.get(11)?;
-    let assignee_hlc: Option<String> = row.get(12)?;
+    let closed_str: Option<String> = row.get(8)?;
+    let status_hlc: Option<String> = row.get(9)?;
+    let title_hlc: Option<String> = row.get(10)?;
+    let type_hlc: Option<String> = row.get(11)?;
+    let desc_hlc: Option<String> = row.get(12)?;
+    let assignee_hlc: Option<String> = row.get(13)?;
 
     Ok(Issue {
         id: row.get(0)?,
@@ -181,6 +183,9 @@ fn row_to_issue(row: &rusqlite::Row) -> rusqlite::Result<Issue> {
         assignee: row.get(5)?,
         created_at: parse_timestamp(&created_str, "created_at")?,
         updated_at: parse_timestamp(&updated_str, "updated_at")?,
+        closed_at: closed_str
+            .map(|s| parse_timestamp(&s, "closed_at"))
+            .transpose()?,
         last_status_hlc: parse_hlc_opt(status_hlc)?,
         last_title_hlc: parse_hlc_opt(title_hlc)?,
         last_type_hlc: parse_hlc_opt(type_hlc)?,
@@ -321,9 +326,9 @@ impl Database {
     pub fn create_issue(&self, issue: &Issue) -> Result<()> {
         self.conn.execute(
             "INSERT INTO issues (id, type, title, description, status, assignee,
-             created_at, updated_at, last_status_hlc, last_title_hlc, last_type_hlc,
-             last_description_hlc, last_assignee_hlc)
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13)",
+             created_at, updated_at, closed_at, last_status_hlc, last_title_hlc,
+             last_type_hlc, last_description_hlc, last_assignee_hlc)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14)",
             params![
                 issue.id,
                 issue.issue_type.as_str(),
@@ -333,6 +338,7 @@ impl Database {
                 issue.assignee,
                 issue.created_at.to_rfc3339(),
                 issue.updated_at.to_rfc3339(),
+                issue.closed_at.map(|dt| dt.to_rfc3339()),
                 issue.last_status_hlc.map(|h| h.to_string()),
                 issue.last_title_hlc.map(|h| h.to_string()),
                 issue.last_type_hlc.map(|h| h.to_string()),
@@ -349,8 +355,9 @@ impl Database {
             .conn
             .query_row(
                 "SELECT id, type, title, description, status, assignee,
-                        created_at, updated_at, last_status_hlc, last_title_hlc,
-                        last_type_hlc, last_description_hlc, last_assignee_hlc
+                        created_at, updated_at, closed_at, last_status_hlc,
+                        last_title_hlc, last_type_hlc, last_description_hlc,
+                        last_assignee_hlc
                  FROM issues WHERE id = ?1",
                 params![id],
                 row_to_issue,
@@ -371,10 +378,19 @@ impl Database {
     }
 
     /// Update issue status.
+    ///
+    /// Sets `closed_at` to now when transitioning to a terminal state (done/closed),
+    /// and clears it when transitioning to an active state (todo/in_progress).
     pub fn update_issue_status(&mut self, id: &str, status: Status) -> Result<()> {
+        let now = Utc::now().to_rfc3339();
+        let closed_at = if status.is_terminal() {
+            Some(now.clone())
+        } else {
+            None
+        };
         let affected = self.conn.execute(
-            "UPDATE issues SET status = ?1, updated_at = ?2 WHERE id = ?3",
-            params![status.as_str(), Utc::now().to_rfc3339(), id],
+            "UPDATE issues SET status = ?1, updated_at = ?2, closed_at = ?3 WHERE id = ?4",
+            params![status.as_str(), now, closed_at, id],
         )?;
 
         if affected == 0 {
@@ -445,7 +461,7 @@ impl Database {
     ) -> Result<Vec<Issue>> {
         let mut sql = String::from(
             "SELECT DISTINCT i.id, i.type, i.title, i.description, i.status, i.assignee,
-             i.created_at, i.updated_at, i.last_status_hlc, i.last_title_hlc,
+             i.created_at, i.updated_at, i.closed_at, i.last_status_hlc, i.last_title_hlc,
              i.last_type_hlc, i.last_description_hlc, i.last_assignee_hlc
              FROM issues i",
         );
@@ -824,8 +840,9 @@ impl Database {
         let pattern = format!("%{}%", escaped_query);
         let mut stmt = self.conn.prepare(
             "SELECT DISTINCT i.id, i.type, i.title, i.description, i.status, i.assignee,
-                    i.created_at, i.updated_at, i.last_status_hlc, i.last_title_hlc,
-                    i.last_type_hlc, i.last_description_hlc, i.last_assignee_hlc
+                    i.created_at, i.updated_at, i.closed_at, i.last_status_hlc,
+                    i.last_title_hlc, i.last_type_hlc, i.last_description_hlc,
+                    i.last_assignee_hlc
              FROM issues i
              LEFT JOIN notes n ON n.issue_id = i.id
              LEFT JOIN labels l ON l.issue_id = i.id

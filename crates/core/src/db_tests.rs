@@ -28,6 +28,7 @@ fn create_and_get_issue() {
     assert_eq!(retrieved.id, "test-1");
     assert_eq!(retrieved.title, "Test issue");
     assert_eq!(retrieved.status, Status::Todo);
+    assert!(retrieved.closed_at.is_none());
     assert!(retrieved.last_status_hlc.is_none());
 }
 
@@ -64,6 +65,31 @@ fn update_issue_status_hlc() {
 
     let retrieved = db.get_issue("test-1").unwrap();
     assert_eq!(retrieved.last_status_hlc, Some(hlc));
+}
+
+#[test]
+fn update_issue_status_sets_closed_at() {
+    let mut db = Database::open_in_memory().unwrap();
+    let issue = test_issue("test-1", "Test issue");
+    db.create_issue(&issue).unwrap();
+
+    // Transitioning to Done should set closed_at
+    db.update_issue_status("test-1", Status::Done).unwrap();
+    let retrieved = db.get_issue("test-1").unwrap();
+    assert_eq!(retrieved.status, Status::Done);
+    assert!(retrieved.closed_at.is_some());
+
+    // Reopening (back to Todo) should clear closed_at
+    db.update_issue_status("test-1", Status::Todo).unwrap();
+    let retrieved = db.get_issue("test-1").unwrap();
+    assert_eq!(retrieved.status, Status::Todo);
+    assert!(retrieved.closed_at.is_none());
+
+    // Transitioning to Closed should set closed_at
+    db.update_issue_status("test-1", Status::Closed).unwrap();
+    let retrieved = db.get_issue("test-1").unwrap();
+    assert_eq!(retrieved.status, Status::Closed);
+    assert!(retrieved.closed_at.is_some());
 }
 
 #[test]

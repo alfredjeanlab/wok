@@ -191,6 +191,7 @@ fn issue_new() {
     assert_eq!(issue.status, Status::Todo);
     assert_eq!(issue.created_at, now);
     assert_eq!(issue.updated_at, now);
+    assert!(issue.closed_at.is_none());
     assert!(issue.last_status_hlc.is_none());
     assert!(issue.last_title_hlc.is_none());
     assert!(issue.last_type_hlc.is_none());
