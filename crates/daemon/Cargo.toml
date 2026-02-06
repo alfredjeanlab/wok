@@ -10,7 +10,6 @@ path = "src/main.rs"
 [dependencies]
 wk-core = { path = "../core" }
 wk-ipc = { path = "../ipc" }
-chrono = { version = "0.4", default-features = false, features = ["clock"] }
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 fs2 = "0.4"
