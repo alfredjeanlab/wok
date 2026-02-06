@@ -9,6 +9,20 @@ use crate::models::{Dependency, Relation};
 
 use super::{parse_db, parse_timestamp, Database};
 
+/// Map a row to a Dependency.
+///
+/// Expected columns: from_id, to_id, rel, created_at
+fn row_to_dependency(row: &rusqlite::Row) -> rusqlite::Result<Dependency> {
+    let rel_str: String = row.get(2)?;
+    let created_str: String = row.get(3)?;
+    Ok(Dependency {
+        from_id: row.get(0)?,
+        to_id: row.get(1)?,
+        relation: parse_db(&rel_str, "rel")?,
+        created_at: parse_timestamp(&created_str, "created_at")?,
+    })
+}
+
 impl Database {
     /// Add a dependency between two issues
     pub fn add_dependency(&self, from_id: &str, to_id: &str, relation: Relation) -> Result<()> {
@@ -74,16 +88,7 @@ impl Database {
             .prepare("SELECT from_id, to_id, rel, created_at FROM deps WHERE from_id = ?1")?;
 
         let deps = stmt
-            .query_map(params![from_id], |row| {
-                let rel_str: String = row.get(2)?;
-                let created_str: String = row.get(3)?;
-                Ok(Dependency {
-                    from_id: row.get(0)?,
-                    to_id: row.get(1)?,
-                    relation: parse_db(&rel_str, "rel")?,
-                    created_at: parse_timestamp(&created_str, "created_at")?,
-                })
-            })?
+            .query_map(params![from_id], row_to_dependency)?
             .collect::<std::result::Result<Vec<_>, _>>()?;
 
         Ok(deps)

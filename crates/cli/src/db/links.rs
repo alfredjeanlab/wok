@@ -10,6 +10,30 @@ use super::{parse_db, parse_timestamp, Database};
 use crate::error::Result;
 use crate::models::{Link, LinkRel, LinkType};
 
+/// Map a row to a Link.
+///
+/// Expected columns: id, issue_id, link_type, url, external_id, rel, created_at
+fn row_to_link(row: &rusqlite::Row) -> rusqlite::Result<Link> {
+    let link_type_str: Option<String> = row.get(2)?;
+    let link_type = link_type_str
+        .map(|s| parse_db::<LinkType>(&s, "link_type"))
+        .transpose()?;
+    let rel_str: Option<String> = row.get(5)?;
+    let rel = rel_str
+        .map(|s| parse_db::<LinkRel>(&s, "rel"))
+        .transpose()?;
+    let created_at_str: String = row.get(6)?;
+    Ok(Link {
+        id: row.get(0)?,
+        issue_id: row.get(1)?,
+        link_type,
+        url: row.get(3)?,
+        external_id: row.get(4)?,
+        rel,
+        created_at: parse_timestamp(&created_at_str, "created_at")?,
+    })
+}
+
 impl Database {
     /// Add an external link to an issue.
     ///
@@ -44,33 +68,11 @@ impl Database {
              ORDER BY created_at ASC",
         )?;
 
-        let links = stmt.query_map([issue_id], |row| {
-            let link_type_str: Option<String> = row.get(2)?;
-            let link_type = link_type_str
-                .map(|s| parse_db::<LinkType>(&s, "link_type"))
-                .transpose()?;
+        let links = stmt
+            .query_map([issue_id], row_to_link)?
+            .collect::<std::result::Result<Vec<_>, _>>()?;
 
-            let rel_str: Option<String> = row.get(5)?;
-            let rel = rel_str
-                .map(|s| parse_db::<LinkRel>(&s, "rel"))
-                .transpose()?;
-
-            let created_at_str: String = row.get(6)?;
-
-            Ok(Link {
-                id: row.get(0)?,
-                issue_id: row.get(1)?,
-                link_type,
-                url: row.get(3)?,
-                external_id: row.get(4)?,
-                rel,
-                created_at: parse_timestamp(&created_at_str, "created_at")?,
-            })
-        })?;
-
-        links
-            .collect::<std::result::Result<Vec<_>, _>>()
-            .map_err(Into::into)
+        Ok(links)
     }
 
     /// Remove an external link by its ID.
