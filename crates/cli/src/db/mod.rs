@@ -157,7 +157,13 @@ impl Database {
     /// conflict resolution during sync. We add these columns to CLI's database
     /// so that both can share the same SQLite file.
     fn migrate_add_hlc_columns(&self) -> Result<()> {
-        let columns = ["last_status_hlc", "last_title_hlc", "last_type_hlc"];
+        let columns = [
+            "last_status_hlc",
+            "last_title_hlc",
+            "last_type_hlc",
+            "last_description_hlc",
+            "last_assignee_hlc",
+        ];
 
         for column in columns {
             let has_column: bool = self
