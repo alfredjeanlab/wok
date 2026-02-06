@@ -174,6 +174,14 @@ impl Database {
             }
         }
 
+        // Rewrite "tracked_by" to "tracked-by" in deps table
+        self.conn
+            .execute(
+                "UPDATE deps SET rel = 'tracked-by' WHERE rel = 'tracked_by'",
+                [],
+            )
+            .map_err(|e| format!("tracked_by migration failed: {}", e))?;
+
         // Backfill prefixes table
         let prefix_count: i64 = self
             .conn

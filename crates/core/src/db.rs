@@ -195,6 +195,19 @@ impl Database {
     /// Run database migrations.
     fn migrate(&self) -> Result<()> {
         self.conn.execute_batch(SCHEMA)?;
+        self.migrate_tracked_by_relation()?;
+        Ok(())
+    }
+
+    /// Migration: Rewrite "tracked_by" to "tracked-by" in deps table.
+    ///
+    /// Early versions serialized TrackedBy as "tracked_by" (underscore).
+    /// The canonical form is "tracked-by" (kebab-case).
+    fn migrate_tracked_by_relation(&self) -> Result<()> {
+        self.conn.execute(
+            "UPDATE deps SET rel = 'tracked-by' WHERE rel = 'tracked_by'",
+            [],
+        )?;
         Ok(())
     }
 
@@ -731,7 +744,7 @@ impl Database {
     pub fn get_tracking(&self, issue_id: &str) -> Result<Vec<String>> {
         let mut stmt = self
             .conn
-            .prepare("SELECT to_id FROM deps WHERE from_id = ?1 AND rel = 'tracked_by'")?;
+            .prepare("SELECT to_id FROM deps WHERE from_id = ?1 AND rel = 'tracked-by'")?;
 
         let ids = stmt
             .query_map(params![issue_id], |row| row.get(0))?

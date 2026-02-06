@@ -373,7 +373,7 @@ impl Relation {
     pub fn as_str(&self) -> &'static str {
         match self {
             Relation::Blocks => "blocks",
-            Relation::TrackedBy => "tracked_by",
+            Relation::TrackedBy => "tracked-by",
             Relation::Tracks => "tracks",
         }
     }
@@ -391,7 +391,7 @@ impl FromStr for Relation {
     fn from_str(s: &str) -> Result<Self> {
         match s.to_lowercase().as_str() {
             "blocks" => Ok(Relation::Blocks),
-            "tracked_by" => Ok(Relation::TrackedBy),
+            "tracked-by" => Ok(Relation::TrackedBy),
             "tracks" => Ok(Relation::Tracks),
             _ => Err(Error::InvalidRelation(s.to_string())),
         }
