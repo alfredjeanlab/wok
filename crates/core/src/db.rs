@@ -636,6 +636,48 @@ impl Database {
         Ok(notes)
     }
 
+    /// Replace the most recent note for an issue with new content.
+    pub fn replace_note(&self, issue_id: &str, status: Status, content: &str) -> Result<i64> {
+        let note_id: Option<i64> = self
+            .conn
+            .query_row(
+                "SELECT id FROM notes WHERE issue_id = ?1 ORDER BY created_at DESC LIMIT 1",
+                params![issue_id],
+                |row| row.get(0),
+            )
+            .optional()?;
+
+        match note_id {
+            Some(id) => {
+                self.conn.execute(
+                    "UPDATE notes SET content = ?1, status = ?2, created_at = ?3 WHERE id = ?4",
+                    params![content, status.as_str(), Utc::now().to_rfc3339(), id],
+                )?;
+                Ok(id)
+            }
+            None => Err(Error::NoNotesToReplace {
+                issue_id: issue_id.to_string(),
+            }),
+        }
+    }
+
+    /// Get notes grouped by status, preserving first-occurrence order.
+    pub fn get_notes_by_status(&self, issue_id: &str) -> Result<Vec<(Status, Vec<Note>)>> {
+        let notes = self.get_notes(issue_id)?;
+
+        let mut grouped: Vec<(Status, Vec<Note>)> = Vec::new();
+
+        for note in notes {
+            if let Some((_, notes_vec)) = grouped.iter_mut().find(|(s, _)| *s == note.status) {
+                notes_vec.push(note);
+            } else {
+                grouped.push((note.status, vec![note]));
+            }
+        }
+
+        Ok(grouped)
+    }
+
     /// Add a label to an issue.
     pub fn add_label(&self, issue_id: &str, label: &str) -> Result<()> {
         self.conn.execute(
@@ -1024,6 +1066,41 @@ impl Database {
         self.conn
             .execute("DELETE FROM links WHERE issue_id = ?1", [issue_id])?;
         Ok(())
+    }
+
+    /// Extract priority from tag list.
+    ///
+    /// Prefers "priority:" over "p:" if both present.
+    /// Returns 0-4 where 0 is highest priority.
+    /// Default (no priority tag): 2 (medium).
+    pub fn priority_from_tags(tags: &[String]) -> u8 {
+        for tag in tags {
+            if let Some(value) = tag.strip_prefix("priority:") {
+                if let Some(p) = Self::parse_priority_value(value) {
+                    return p;
+                }
+            }
+        }
+        for tag in tags {
+            if let Some(value) = tag.strip_prefix("p:") {
+                if let Some(p) = Self::parse_priority_value(value) {
+                    return p;
+                }
+            }
+        }
+        2
+    }
+
+    /// Parse priority value (numeric 0-4 or named).
+    fn parse_priority_value(value: &str) -> Option<u8> {
+        match value {
+            "0" | "highest" => Some(0),
+            "1" | "high" => Some(1),
+            "2" | "medium" | "med" => Some(2),
+            "3" | "low" => Some(3),
+            "4" | "lowest" => Some(4),
+            _ => None,
+        }
     }
 }
 

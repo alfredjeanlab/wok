@@ -82,6 +82,9 @@ pub enum Error {
 
     #[error("oplog error: {0}")]
     Oplog(String),
+
+    #[error("no notes to replace for issue {issue_id}")]
+    NoNotesToReplace { issue_id: String },
 }
 
 /// A specialized Result type for wk-core operations.

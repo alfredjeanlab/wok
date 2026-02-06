@@ -450,6 +450,155 @@ fn get_link_by_url() {
 }
 
 #[test]
+fn replace_note() {
+    let db = Database::open_in_memory().unwrap();
+    let issue = test_issue("test-1", "Test issue");
+    db.create_issue(&issue).unwrap();
+
+    db.add_note("test-1", Status::Todo, "Original note")
+        .unwrap();
+
+    let result = db.replace_note("test-1", Status::Todo, "Replaced note");
+    assert!(result.is_ok());
+
+    let notes = db.get_notes("test-1").unwrap();
+    assert_eq!(notes.len(), 1);
+    assert_eq!(notes[0].content, "Replaced note");
+}
+
+#[test]
+fn replace_note_no_existing_notes() {
+    let db = Database::open_in_memory().unwrap();
+    let issue = test_issue("test-1", "Test issue");
+    db.create_issue(&issue).unwrap();
+
+    let result = db.replace_note("test-1", Status::Todo, "New content");
+    assert!(result.is_err());
+
+    if let Err(e) = result {
+        assert!(e.to_string().contains("no notes to replace"));
+    }
+}
+
+#[test]
+fn replace_note_updates_status() {
+    let db = Database::open_in_memory().unwrap();
+    let issue = test_issue("test-1", "Test issue");
+    db.create_issue(&issue).unwrap();
+
+    db.add_note("test-1", Status::Todo, "Original note")
+        .unwrap();
+
+    let result = db.replace_note("test-1", Status::InProgress, "Updated note");
+    assert!(result.is_ok());
+
+    let notes = db.get_notes("test-1").unwrap();
+    assert_eq!(notes.len(), 1);
+    assert_eq!(notes[0].status, Status::InProgress);
+    assert_eq!(notes[0].content, "Updated note");
+}
+
+#[test]
+fn get_notes_by_status() {
+    let db = Database::open_in_memory().unwrap();
+    let issue = test_issue("test-1", "Test issue");
+    db.create_issue(&issue).unwrap();
+
+    db.add_note("test-1", Status::Todo, "Todo note 1").unwrap();
+    db.add_note("test-1", Status::Todo, "Todo note 2").unwrap();
+    db.add_note("test-1", Status::InProgress, "Progress note")
+        .unwrap();
+
+    let grouped = db.get_notes_by_status("test-1").unwrap();
+    assert_eq!(grouped.len(), 2);
+
+    let (status, notes) = &grouped[0];
+    assert_eq!(*status, Status::Todo);
+    assert_eq!(notes.len(), 2);
+}
+
+#[test]
+fn get_notes_by_status_empty() {
+    let db = Database::open_in_memory().unwrap();
+    let issue = test_issue("test-1", "Test issue");
+    db.create_issue(&issue).unwrap();
+
+    let grouped = db.get_notes_by_status("test-1").unwrap();
+    assert!(grouped.is_empty());
+}
+
+#[test]
+fn priority_from_tags_numeric() {
+    assert_eq!(Database::priority_from_tags(&["priority:0".into()]), 0);
+    assert_eq!(Database::priority_from_tags(&["priority:1".into()]), 1);
+    assert_eq!(Database::priority_from_tags(&["priority:2".into()]), 2);
+    assert_eq!(Database::priority_from_tags(&["priority:3".into()]), 3);
+    assert_eq!(Database::priority_from_tags(&["priority:4".into()]), 4);
+}
+
+#[test]
+fn priority_from_tags_named() {
+    assert_eq!(
+        Database::priority_from_tags(&["priority:highest".into()]),
+        0
+    );
+    assert_eq!(Database::priority_from_tags(&["priority:high".into()]), 1);
+    assert_eq!(Database::priority_from_tags(&["priority:medium".into()]), 2);
+    assert_eq!(Database::priority_from_tags(&["priority:med".into()]), 2);
+    assert_eq!(Database::priority_from_tags(&["priority:low".into()]), 3);
+    assert_eq!(Database::priority_from_tags(&["priority:lowest".into()]), 4);
+}
+
+#[test]
+fn priority_from_tags_prefers_priority_over_p() {
+    let tags = vec!["p:0".into(), "priority:4".into()];
+    assert_eq!(Database::priority_from_tags(&tags), 4);
+
+    let tags2 = vec!["priority:3".into(), "p:1".into()];
+    assert_eq!(Database::priority_from_tags(&tags2), 3);
+}
+
+#[test]
+fn priority_from_tags_default() {
+    assert_eq!(Database::priority_from_tags(&[]), 2);
+    assert_eq!(Database::priority_from_tags(&["unrelated".into()]), 2);
+    assert_eq!(
+        Database::priority_from_tags(&["team:backend".into(), "urgent".into()]),
+        2
+    );
+}
+
+#[test]
+fn priority_from_tags_p_fallback() {
+    assert_eq!(Database::priority_from_tags(&["p:0".into()]), 0);
+    assert_eq!(Database::priority_from_tags(&["p:1".into()]), 1);
+    assert_eq!(Database::priority_from_tags(&["p:4".into()]), 4);
+}
+
+#[test]
+fn priority_from_tags_invalid_values_ignored() {
+    assert_eq!(
+        Database::priority_from_tags(&["priority:invalid".into()]),
+        2
+    );
+    assert_eq!(Database::priority_from_tags(&["priority:5".into()]), 2);
+    assert_eq!(Database::priority_from_tags(&["priority:-1".into()]), 2);
+    assert_eq!(Database::priority_from_tags(&["priority:".into()]), 2);
+}
+
+#[test]
+fn priority_from_tags_first_valid_wins() {
+    let tags = vec!["priority:1".into(), "priority:4".into()];
+    assert_eq!(Database::priority_from_tags(&tags), 1);
+}
+
+#[test]
+fn priority_from_tags_with_other_tags() {
+    let tags = vec!["team:backend".into(), "priority:0".into(), "urgent".into()];
+    assert_eq!(Database::priority_from_tags(&tags), 0);
+}
+
+#[test]
 fn remove_all_links() {
     let db = Database::open_in_memory().unwrap();
     let issue = test_issue("test-1", "Test issue");
