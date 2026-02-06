@@ -59,7 +59,7 @@ fn main() {
 
     // Open the database
     let db_path = state_dir.join("issues.db");
-    let db = match Database::open(&db_path) {
+    let mut db = match Database::open(&db_path) {
         Ok(db) => db,
         Err(e) => {
             tracing::error!("failed to open database: {}", e);
@@ -101,7 +101,7 @@ fn main() {
 
                 match framing::read_message::<_, DaemonRequest>(&mut stream) {
                     Ok(request) => {
-                        let response = handle_request(request, &start_time, &db);
+                        let response = handle_request(request, &start_time, &mut db);
                         let should_shutdown = matches!(response, DaemonResponse::ShuttingDown);
                         let _ = framing::write_message(&mut stream, &response);
                         if should_shutdown {
@@ -126,7 +126,11 @@ fn main() {
     tracing::info!("wokd stopped");
 }
 
-fn handle_request(request: DaemonRequest, start_time: &Instant, db: &Database) -> DaemonResponse {
+fn handle_request(
+    request: DaemonRequest,
+    start_time: &Instant,
+    db: &mut Database,
+) -> DaemonResponse {
     match request {
         DaemonRequest::Ping => DaemonResponse::Pong,
         DaemonRequest::Status => {

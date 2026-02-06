@@ -747,6 +747,19 @@ impl Database {
         Ok(deps)
     }
 
+    /// Get all dependencies targeting an issue.
+    pub fn get_deps_to(&self, to_id: &str) -> Result<Vec<Dependency>> {
+        let mut stmt = self
+            .conn
+            .prepare("SELECT from_id, to_id, rel, created_at FROM deps WHERE to_id = ?1")?;
+
+        let deps = stmt
+            .query_map(params![to_id], row_to_dependency)?
+            .collect::<std::result::Result<Vec<_>, _>>()?;
+
+        Ok(deps)
+    }
+
     /// Get issues that directly block the given issue.
     pub fn get_blockers(&self, issue_id: &str) -> Result<Vec<String>> {
         let mut stmt = self
@@ -782,6 +795,32 @@ impl Database {
             .collect::<std::result::Result<Vec<String>, _>>()?;
 
         Ok(ids)
+    }
+
+    /// Get all transitive blockers as full dependency records (active blockers only).
+    ///
+    /// Traverses all blocking chains regardless of intermediate issue status,
+    /// then filters to only return blockers that are still active (todo/in_progress).
+    pub fn get_transitive_blocker_deps(&self, issue_id: &str) -> Result<Vec<Dependency>> {
+        let mut stmt = self.conn.prepare(
+            "WITH RECURSIVE blockers(id) AS (
+                SELECT from_id FROM deps WHERE to_id = ?1 AND rel = 'blocks'
+                UNION
+                SELECT d.from_id FROM deps d
+                JOIN blockers b ON d.to_id = b.id
+                WHERE d.rel = 'blocks'
+            )
+            SELECT b.id as from_id, ?1 as to_id, 'blocks' as rel, i.created_at
+            FROM blockers b
+            JOIN issues i ON i.id = b.id
+            WHERE i.status IN ('todo', 'in_progress')",
+        )?;
+
+        let deps = stmt
+            .query_map(params![issue_id], row_to_dependency)?
+            .collect::<std::result::Result<Vec<_>, _>>()?;
+
+        Ok(deps)
     }
 
     /// Get issues that this issue blocks.
@@ -1016,6 +1055,15 @@ impl Database {
     pub fn remove_link(&self, link_id: i64) -> Result<()> {
         self.conn
             .execute("DELETE FROM links WHERE id = ?1", [link_id])?;
+        Ok(())
+    }
+
+    /// Remove an external link by issue ID and URL.
+    pub fn remove_link_by_url(&self, issue_id: &str, url: &str) -> Result<()> {
+        self.conn.execute(
+            "DELETE FROM links WHERE issue_id = ?1 AND url = ?2",
+            params![issue_id, url],
+        )?;
         Ok(())
     }
 

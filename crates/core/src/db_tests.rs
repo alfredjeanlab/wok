@@ -597,3 +597,69 @@ fn rename_nonexistent_prefix_is_noop() {
     let prefixes = db.list_prefixes().unwrap();
     assert!(prefixes.is_empty());
 }
+
+#[test]
+fn get_deps_to() {
+    let db = Database::open_in_memory().unwrap();
+    db.create_issue(&test_issue("a", "A")).unwrap();
+    db.create_issue(&test_issue("b", "B")).unwrap();
+    db.create_issue(&test_issue("c", "C")).unwrap();
+
+    db.add_dependency("a", "b", Relation::Blocks).unwrap();
+    db.add_dependency("c", "b", Relation::Tracks).unwrap();
+
+    let deps = db.get_deps_to("b").unwrap();
+    assert_eq!(deps.len(), 2);
+
+    let from_ids: Vec<&str> = deps.iter().map(|d| d.from_id.as_str()).collect();
+    assert!(from_ids.contains(&"a"));
+    assert!(from_ids.contains(&"c"));
+}
+
+#[test]
+fn get_transitive_blocker_deps() {
+    let mut db = Database::open_in_memory().unwrap();
+    db.create_issue(&test_issue("a", "A")).unwrap();
+    db.create_issue(&test_issue("b", "B")).unwrap();
+    db.create_issue(&test_issue("c", "C")).unwrap();
+
+    // a blocks b, b blocks c
+    db.add_dependency("a", "b", Relation::Blocks).unwrap();
+    db.add_dependency("b", "c", Relation::Blocks).unwrap();
+
+    let deps = db.get_transitive_blocker_deps("c").unwrap();
+    assert_eq!(deps.len(), 2);
+
+    let blocker_ids: Vec<&str> = deps.iter().map(|d| d.from_id.as_str()).collect();
+    assert!(blocker_ids.contains(&"a"));
+    assert!(blocker_ids.contains(&"b"));
+
+    // Mark b as done; only a should remain as transitive blocker
+    db.update_issue_status("b", Status::Done).unwrap();
+    let deps = db.get_transitive_blocker_deps("c").unwrap();
+    // b is done so filtered out, but a (still todo) is reachable through done b
+    assert_eq!(deps.len(), 1);
+    assert_eq!(deps[0].from_id, "a");
+}
+
+#[test]
+fn remove_link_by_url() {
+    let db = Database::open_in_memory().unwrap();
+    db.create_issue(&test_issue("test-1", "Test")).unwrap();
+
+    let link = Link {
+        id: 0,
+        issue_id: "test-1".to_string(),
+        link_type: None,
+        url: Some("https://example.com".to_string()),
+        external_id: None,
+        rel: None,
+        created_at: Utc::now(),
+    };
+    db.add_link(&link).unwrap();
+    assert_eq!(db.get_links("test-1").unwrap().len(), 1);
+
+    db.remove_link_by_url("test-1", "https://example.com")
+        .unwrap();
+    assert_eq!(db.get_links("test-1").unwrap().len(), 0);
+}
