@@ -174,6 +174,49 @@ impl Database {
             }
         }
 
+        // Add closed_at column if missing and backfill from events
+        let has_closed_at: bool = self
+            .conn
+            .query_row(
+                "SELECT COUNT(*) > 0 FROM pragma_table_info('issues') WHERE name = 'closed_at'",
+                [],
+                |row| row.get(0),
+            )
+            .unwrap_or(false);
+
+        if !has_closed_at {
+            // Handle concurrent migration: another connection may add the column
+            // between our check and this ALTER TABLE (shared database file).
+            match self
+                .conn
+                .execute("ALTER TABLE issues ADD COLUMN closed_at TEXT", [])
+            {
+                Ok(_) => {
+                    // Backfill: set closed_at from the most recent done/closed event
+                    // that has no later reopened event (matching the old subquery logic)
+                    self.conn
+                        .execute(
+                            "UPDATE issues SET closed_at = (
+                                SELECT MAX(e.created_at) FROM events e
+                                WHERE e.issue_id = issues.id AND e.action IN ('done', 'closed')
+                                AND NOT EXISTS (
+                                    SELECT 1 FROM events e2
+                                    WHERE e2.issue_id = e.issue_id
+                                    AND e2.action = 'reopened'
+                                    AND e2.created_at > e.created_at
+                                )
+                            )",
+                            [],
+                        )
+                        .map_err(|e| format!("closed_at backfill failed: {}", e))?;
+                }
+                Err(e) if e.to_string().contains("duplicate column") => {
+                    // Column was added by another connection concurrently
+                }
+                Err(e) => return Err(format!("migration failed: {}", e)),
+            }
+        }
+
         // Backfill prefixes table
         let prefix_count: i64 = self
             .conn
@@ -340,15 +383,7 @@ impl Database {
             .conn
             .query_row(
                 "SELECT i.id, i.type, i.title, i.description, i.status, i.assignee,
-                        i.created_at, i.updated_at,
-                        (SELECT MAX(e.created_at) FROM events e
-                         WHERE e.issue_id = i.id AND e.action IN ('done', 'closed')
-                         AND NOT EXISTS (
-                             SELECT 1 FROM events e2
-                             WHERE e2.issue_id = e.issue_id
-                             AND e2.action = 'reopened'
-                             AND e2.created_at > e.created_at
-                         )) as closed_at
+                        i.created_at, i.updated_at, i.closed_at
                  FROM issues i WHERE i.id = ?1",
                 [id],
                 |row| self.row_to_issue(row),
@@ -370,15 +405,7 @@ impl Database {
     ) -> Result<QueryResult, String> {
         let mut sql = String::from(
             "SELECT DISTINCT i.id, i.type, i.title, i.description, i.status, i.assignee,
-                    i.created_at, i.updated_at,
-                    (SELECT MAX(e.created_at) FROM events e
-                     WHERE e.issue_id = i.id AND e.action IN ('done', 'closed')
-                     AND NOT EXISTS (
-                         SELECT 1 FROM events e2
-                         WHERE e2.issue_id = e.issue_id
-                         AND e2.action = 'reopened'
-                         AND e2.created_at > e.created_at
-                     )) as closed_at
+                    i.created_at, i.updated_at, i.closed_at
              FROM issues i",
         );
 
@@ -435,15 +462,7 @@ impl Database {
             .conn
             .prepare(
                 "SELECT DISTINCT i.id, i.type, i.title, i.description, i.status, i.assignee,
-                    i.created_at, i.updated_at,
-                    (SELECT MAX(e.created_at) FROM events e
-                     WHERE e.issue_id = i.id AND e.action IN ('done', 'closed')
-                     AND NOT EXISTS (
-                         SELECT 1 FROM events e2
-                         WHERE e2.issue_id = e.issue_id
-                         AND e2.action = 'reopened'
-                         AND e2.created_at > e.created_at
-                     )) as closed_at
+                    i.created_at, i.updated_at, i.closed_at
              FROM issues i
              LEFT JOIN notes n ON n.issue_id = i.id
              LEFT JOIN labels l ON l.issue_id = i.id
@@ -780,8 +799,9 @@ impl Database {
     fn create_issue(&self, issue: &Issue) -> Result<MutateResult, String> {
         self.conn
             .execute(
-                "INSERT INTO issues (id, type, title, description, status, assignee, created_at, updated_at)
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)",
+                "INSERT INTO issues (id, type, title, description, status, assignee,
+             created_at, updated_at, closed_at)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)",
                 params![
                     issue.id,
                     issue.issue_type.as_str(),
@@ -791,6 +811,7 @@ impl Database {
                     issue.assignee,
                     issue.created_at.to_rfc3339(),
                     issue.updated_at.to_rfc3339(),
+                    issue.closed_at.map(|dt| dt.to_rfc3339()),
                 ],
             )
             .map_err(|e| e.to_string())?;
@@ -798,11 +819,17 @@ impl Database {
     }
 
     fn update_issue_status(&self, id: &str, status: Status) -> Result<MutateResult, String> {
+        let now = Utc::now().to_rfc3339();
+        let closed_at = if matches!(status, Status::Done | Status::Closed) {
+            Some(now.clone())
+        } else {
+            None
+        };
         let affected = self
             .conn
             .execute(
-                "UPDATE issues SET status = ?1, updated_at = ?2 WHERE id = ?3",
-                params![status.as_str(), Utc::now().to_rfc3339(), id],
+                "UPDATE issues SET status = ?1, updated_at = ?2, closed_at = ?3 WHERE id = ?4",
+                params![status.as_str(), now, closed_at, id],
             )
             .map_err(|e| e.to_string())?;
 

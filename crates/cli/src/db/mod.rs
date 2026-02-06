@@ -115,6 +115,7 @@ impl Database {
         self.conn.execute_batch(SCHEMA)?;
         self.migrate_add_assignee()?;
         self.migrate_add_hlc_columns()?;
+        self.migrate_add_closed_at()?;
         self.migrate_backfill_prefixes()?;
         Ok(())
     }
@@ -162,6 +163,53 @@ impl Database {
             }
         }
 
+        Ok(())
+    }
+
+    /// Migration: Add closed_at column and backfill from events.
+    ///
+    /// Stores the timestamp when an issue was closed (done/closed status) directly
+    /// on the issues table, replacing the correlated subquery that computed it.
+    fn migrate_add_closed_at(&self) -> Result<()> {
+        let has_column: bool = self
+            .conn
+            .query_row(
+                "SELECT COUNT(*) > 0 FROM pragma_table_info('issues') WHERE name = 'closed_at'",
+                [],
+                |row| row.get(0),
+            )
+            .unwrap_or(false);
+
+        if !has_column {
+            // Handle concurrent migration: another connection may add the column
+            // between our check and this ALTER TABLE (shared user-level database).
+            match self
+                .conn
+                .execute("ALTER TABLE issues ADD COLUMN closed_at TEXT", [])
+            {
+                Ok(_) => {
+                    // Backfill: set closed_at from the most recent done/closed event
+                    // that has no later reopened event (matching the old subquery logic)
+                    self.conn.execute(
+                        "UPDATE issues SET closed_at = (
+                            SELECT MAX(e.created_at) FROM events e
+                            WHERE e.issue_id = issues.id AND e.action IN ('done', 'closed')
+                            AND NOT EXISTS (
+                                SELECT 1 FROM events e2
+                                WHERE e2.issue_id = e.issue_id
+                                AND e2.action = 'reopened'
+                                AND e2.created_at > e.created_at
+                            )
+                        )",
+                        [],
+                    )?;
+                }
+                Err(e) if e.to_string().contains("duplicate column") => {
+                    // Column was added by another connection concurrently
+                }
+                Err(e) => return Err(e.into()),
+            }
+        }
         Ok(())
     }
 
