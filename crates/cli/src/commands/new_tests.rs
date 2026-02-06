@@ -5,7 +5,7 @@
 #![allow(clippy::expect_used)]
 
 use crate::cli::OutputFormat;
-use crate::commands::new::{expand_labels, run_impl};
+use crate::commands::new::{expand_ids, expand_labels, run_impl};
 use crate::commands::testing::TestContext;
 use crate::models::{Action, IssueType, Status};
 use yare::parameterized;
@@ -1057,4 +1057,21 @@ fn test_expand_labels_with_colons() {
     let input = vec!["project:auth,status:blocked".into()];
     let result = expand_labels(&input);
     assert_eq!(result, vec!["project:auth", "status:blocked"]);
+}
+
+// Parameterized tests for expand_ids function
+
+#[parameterized(
+    single_id = { vec!["prj-1".into()], vec!["prj-1"] },
+    multiple_ids = { vec!["prj-1".into(), "prj-2".into()], vec!["prj-1", "prj-2"] },
+    comma_separated = { vec!["prj-1,prj-2,prj-3".into()], vec!["prj-1", "prj-2", "prj-3"] },
+    mixed_comma_and_multiple = { vec!["prj-1,prj-2".into(), "prj-3".into()], vec!["prj-1", "prj-2", "prj-3"] },
+    whitespace_trimmed = { vec!["  prj-1  ,  prj-2  ".into()], vec!["prj-1", "prj-2"] },
+    empty_filtered = { vec!["prj-1,,prj-2".into()], vec!["prj-1", "prj-2"] },
+    all_empty = { vec![",,".into()], Vec::<&str>::new() },
+    empty_string = { vec!["".into()], Vec::<&str>::new() },
+)]
+fn test_expand_ids(input: Vec<String>, expected: Vec<&str>) {
+    let result = expand_ids(&input);
+    assert_eq!(result, expected);
 }

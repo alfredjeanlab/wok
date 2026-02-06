@@ -88,7 +88,7 @@ wok new task "My task" -o id                         # output only ID
 wok new "Task" --prefix other                        # use different prefix
 
 # Start work (todo → in_progress)
-wok start <id>...
+wok start <id>...                            # space-separated or comma-separated IDs
 
 # Complete work (in_progress → done, or todo → done with --reason)
 wok done <id>...
@@ -100,6 +100,10 @@ wok close <id>... --reason "duplicate of prj-a3f2"
 # Return to todo (in_progress/done/closed → todo)
 wok reopen <id>...                            # from in_progress: no reason needed
 wok reopen <id>... --reason "regression found" # from done/closed: reason required
+
+# All bulk ID commands accept comma-separated IDs:
+wok start prj-1,prj-2                       # same as: wok start prj-1 prj-2
+wok done prj-1,prj-2,prj-3                  # same as: wok done prj-1 prj-2 prj-3
 
 # Edit issue description, title, type, or assignee
 wok edit <id> description "new description"   # Update description
@@ -224,6 +228,7 @@ wok dep <from-id> <rel> <to-id>...
 # Examples:
 wok dep prj-a3f2 blocks prj-b4c1              # a3f2 blocks b4c1
 wok dep prj-a3f2 blocks prj-b4c1 prj-c5d2     # a3f2 blocks both
+wok dep prj-a3f2 blocks prj-b4c1,prj-c5d2     # comma-separated target IDs
 wok dep prj-feat contains prj-t1 prj-t2 prj-t3  # feature contains multiple tasks
 
 # Remove dependency
@@ -261,14 +266,15 @@ wok unlink prj-a3f2 jira://PE-5555
 ### Labels
 
 ```bash
-# Add label to one or more issues
-wok label <id>... <label>
+# Add label to one or more issues (IDs and labels accept comma-separated values)
+wok label <id>... <label>...
 # Examples:
 wok label prj-a3f2 project:auth
 wok label prj-a3f2 prj-b4c1 prj-c5d2 urgent
+wok label prj-a3f2,prj-b4c1 urgent,backend    # comma-separated IDs and labels
 
 # Remove label from one or more issues
-wok unlabel <id>... <label>
+wok unlabel <id>... <label>...
 ```
 
 ### Notes

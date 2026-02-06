@@ -25,8 +25,9 @@ struct IssueDetails {
 }
 
 pub fn run(ids: &[String], format: &str) -> Result<()> {
+    let ids = super::new::expand_ids(ids);
     let (db, _, _) = open_db()?;
-    run_impl(&db, ids, format)
+    run_impl(&db, &ids, format)
 }
 
 /// Internal implementation that accepts db for testing.

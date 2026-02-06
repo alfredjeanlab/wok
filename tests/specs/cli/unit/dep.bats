@@ -99,3 +99,18 @@ load '../../helpers/common'
     run "$WK_BIN" dep "$a" requires "$b"
     assert_failure
 }
+
+@test "dep with comma-separated target IDs" {
+    a=$(create_issue task "DepComma Task A")
+    b=$(create_issue task "DepComma Task B")
+    c=$(create_issue task "DepComma Task C")
+    run "$WK_BIN" dep "$a" blocks "$b,$c"
+    assert_success
+    run "$WK_BIN" list --blocked
+    assert_output --partial "$b"
+    assert_output --partial "$c"
+
+    # Undep with comma-separated target IDs
+    run "$WK_BIN" undep "$a" blocks "$b,$c"
+    assert_success
+}

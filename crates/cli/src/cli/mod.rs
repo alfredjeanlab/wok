@@ -151,6 +151,7 @@ Examples:
 Examples:
   wok done prj-1                     Complete in-progress issue
   wok done prj-1 prj-2               Complete multiple issues
+  wok done prj-1,prj-2               Comma-separated IDs
   wok done prj-1 -r \"Already done\"   Skip to done from todo")
     )]
     Done {
@@ -434,6 +435,7 @@ Examples:
 Examples:
   wok dep prj-1 blocks prj-2              prj-1 blocks prj-2
   wok dep prj-1 blocked-by prj-2 prj-3    prj-1 is blocked by prj-2 and prj-3
+  wok dep prj-1 blocks prj-2,prj-3        Comma-separated target IDs
   wok dep prj-feat tracks prj-task        Feature tracks a task
   wok dep prj-task tracked-by prj-feat    Task is tracked by feature")
     )]
@@ -470,6 +472,7 @@ Examples:
 Examples:
   wok label prj-1 urgent                     Add label to one issue
   wok label prj-1 prj-2 prj-3 urgent         Add label to multiple issues
+  wok label prj-1,prj-2 urgent,backend       Comma-separated IDs and labels
   wok label prj-1 prj-2 urgent backend       Add multiple labels to multiple issues")
     )]
     Label {
@@ -485,6 +488,7 @@ Examples:
 Examples:
   wok unlabel prj-1 urgent                   Remove label from one issue
   wok unlabel prj-1 prj-2 prj-3 urgent       Remove label from multiple issues
+  wok unlabel prj-1,prj-2 urgent,backend     Comma-separated IDs and labels
   wok unlabel prj-1 prj-2 urgent backend     Remove multiple labels from multiple issues")
     )]
     Unlabel {
