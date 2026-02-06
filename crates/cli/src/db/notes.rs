@@ -9,6 +9,21 @@ use crate::models::{Note, Status};
 
 use super::{parse_db, parse_timestamp, Database};
 
+/// Map a row to a Note.
+///
+/// Expected columns: id, issue_id, status, content, created_at
+fn row_to_note(row: &rusqlite::Row) -> rusqlite::Result<Note> {
+    let status_str: String = row.get(2)?;
+    let created_str: String = row.get(4)?;
+    Ok(Note {
+        id: row.get(0)?,
+        issue_id: row.get(1)?,
+        status: parse_db(&status_str, "status")?,
+        content: row.get(3)?,
+        created_at: parse_timestamp(&created_str, "created_at")?,
+    })
+}
+
 impl Database {
     /// Add a note to an issue
     pub fn add_note(&self, issue_id: &str, status: Status, content: &str) -> Result<i64> {
@@ -28,17 +43,7 @@ impl Database {
         )?;
 
         let notes = stmt
-            .query_map(params![issue_id], |row| {
-                let status_str: String = row.get(2)?;
-                let created_str: String = row.get(4)?;
-                Ok(Note {
-                    id: row.get(0)?,
-                    issue_id: row.get(1)?,
-                    status: parse_db(&status_str, "status")?,
-                    content: row.get(3)?,
-                    created_at: parse_timestamp(&created_str, "created_at")?,
-                })
-            })?
+            .query_map(params![issue_id], row_to_note)?
             .collect::<std::result::Result<Vec<_>, _>>()?;
 
         Ok(notes)

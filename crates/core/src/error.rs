@@ -11,6 +11,12 @@ pub enum Error {
     #[error("issue not found: {0}")]
     IssueNotFound(String),
 
+    #[error("ambiguous issue ID '{prefix}' matches: {}", matches.join(", "))]
+    AmbiguousId {
+        prefix: String,
+        matches: Vec<String>,
+    },
+
     #[error("invalid status transition: cannot go from {from} to {to}\n  hint: from '{from}' you can go to: {valid_targets}")]
     InvalidTransition {
         from: String,

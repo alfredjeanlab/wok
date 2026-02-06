@@ -219,6 +219,9 @@ impl From<wk_core::Error> for Error {
     fn from(e: wk_core::Error) -> Self {
         match e {
             wk_core::Error::IssueNotFound(id) => Error::IssueNotFound(id),
+            wk_core::Error::AmbiguousId { prefix, matches } => {
+                Error::AmbiguousId { prefix, matches }
+            }
             wk_core::Error::InvalidTransition {
                 from,
                 to,

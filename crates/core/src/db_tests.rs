@@ -255,3 +255,202 @@ fn get_all_labels() {
     let all_labels = db.get_all_labels().unwrap();
     assert_eq!(all_labels.len(), 2);
 }
+
+#[test]
+fn resolve_id_exact_match() {
+    let db = Database::open_in_memory().unwrap();
+    let issue = test_issue("proj-abc123", "Test");
+    db.create_issue(&issue).unwrap();
+
+    let resolved = db.resolve_id("proj-abc123").unwrap();
+    assert_eq!(resolved, "proj-abc123");
+}
+
+#[test]
+fn resolve_id_prefix_match() {
+    let db = Database::open_in_memory().unwrap();
+    let issue = test_issue("proj-abc123", "Test");
+    db.create_issue(&issue).unwrap();
+
+    let resolved = db.resolve_id("proj-abc").unwrap();
+    assert_eq!(resolved, "proj-abc123");
+}
+
+#[test]
+fn resolve_id_too_short() {
+    let db = Database::open_in_memory().unwrap();
+    let issue = test_issue("proj-abc123", "Test");
+    db.create_issue(&issue).unwrap();
+
+    let result = db.resolve_id("pr");
+    assert!(matches!(result, Err(Error::IssueNotFound(_))));
+}
+
+#[test]
+fn resolve_id_ambiguous() {
+    let db = Database::open_in_memory().unwrap();
+    db.create_issue(&test_issue("proj-abc1", "Issue 1"))
+        .unwrap();
+    db.create_issue(&test_issue("proj-abc2", "Issue 2"))
+        .unwrap();
+
+    let result = db.resolve_id("proj-abc");
+    assert!(matches!(result, Err(Error::AmbiguousId { .. })));
+}
+
+#[test]
+fn resolve_id_not_found() {
+    let db = Database::open_in_memory().unwrap();
+    let result = db.resolve_id("nonexistent");
+    assert!(matches!(result, Err(Error::IssueNotFound(_))));
+}
+
+#[test]
+fn search_issues_by_title() {
+    let db = Database::open_in_memory().unwrap();
+    db.create_issue(&test_issue("test-1", "Fix login bug"))
+        .unwrap();
+    db.create_issue(&test_issue("test-2", "Add dashboard"))
+        .unwrap();
+
+    let results = db.search_issues("login").unwrap();
+    assert_eq!(results.len(), 1);
+    assert_eq!(results[0].id, "test-1");
+}
+
+#[test]
+fn search_issues_case_insensitive() {
+    let db = Database::open_in_memory().unwrap();
+    db.create_issue(&test_issue("test-1", "Fix Login Bug"))
+        .unwrap();
+
+    let results = db.search_issues("login").unwrap();
+    assert_eq!(results.len(), 1);
+}
+
+#[test]
+fn update_issue_description() {
+    let mut db = Database::open_in_memory().unwrap();
+    let issue = test_issue("test-1", "Test issue");
+    db.create_issue(&issue).unwrap();
+
+    db.update_issue_description("test-1", "New description")
+        .unwrap();
+    let retrieved = db.get_issue("test-1").unwrap();
+    assert_eq!(retrieved.description.as_deref(), Some("New description"));
+}
+
+#[test]
+fn set_and_clear_assignee() {
+    let mut db = Database::open_in_memory().unwrap();
+    let issue = test_issue("test-1", "Test issue");
+    db.create_issue(&issue).unwrap();
+
+    db.set_assignee("test-1", "alice").unwrap();
+    let retrieved = db.get_issue("test-1").unwrap();
+    assert_eq!(retrieved.assignee.as_deref(), Some("alice"));
+
+    db.clear_assignee("test-1").unwrap();
+    let retrieved = db.get_issue("test-1").unwrap();
+    assert!(retrieved.assignee.is_none());
+}
+
+#[test]
+fn get_labels_batch() {
+    let db = Database::open_in_memory().unwrap();
+    db.create_issue(&test_issue("test-1", "Issue 1")).unwrap();
+    db.create_issue(&test_issue("test-2", "Issue 2")).unwrap();
+
+    db.add_label("test-1", "urgent").unwrap();
+    db.add_label("test-1", "backend").unwrap();
+    db.add_label("test-2", "frontend").unwrap();
+
+    let batch = db.get_labels_batch(&["test-1", "test-2"]).unwrap();
+    assert_eq!(batch.get("test-1").map(|v| v.len()), Some(2));
+    assert_eq!(batch.get("test-2").map(|v| v.len()), Some(1));
+}
+
+#[test]
+fn get_labels_batch_empty() {
+    let db = Database::open_in_memory().unwrap();
+    let batch = db.get_labels_batch(&[]).unwrap();
+    assert!(batch.is_empty());
+}
+
+#[test]
+fn add_and_get_links() {
+    let db = Database::open_in_memory().unwrap();
+    let issue = test_issue("test-1", "Test issue");
+    db.create_issue(&issue).unwrap();
+
+    let link = Link {
+        id: 0,
+        issue_id: "test-1".to_string(),
+        link_type: Some(LinkType::Github),
+        url: Some("https://github.com/org/repo/issues/1".to_string()),
+        external_id: Some("1".to_string()),
+        rel: None,
+        created_at: Utc::now(),
+    };
+    db.add_link(&link).unwrap();
+
+    let links = db.get_links("test-1").unwrap();
+    assert_eq!(links.len(), 1);
+    assert_eq!(links[0].link_type, Some(LinkType::Github));
+}
+
+#[test]
+fn get_link_by_url() {
+    let db = Database::open_in_memory().unwrap();
+    let issue = test_issue("test-1", "Test issue");
+    db.create_issue(&issue).unwrap();
+
+    let link = Link {
+        id: 0,
+        issue_id: "test-1".to_string(),
+        link_type: None,
+        url: Some("https://example.com".to_string()),
+        external_id: None,
+        rel: None,
+        created_at: Utc::now(),
+    };
+    db.add_link(&link).unwrap();
+
+    let found = db.get_link_by_url("test-1", "https://example.com").unwrap();
+    assert!(found.is_some());
+
+    let not_found = db.get_link_by_url("test-1", "https://other.com").unwrap();
+    assert!(not_found.is_none());
+}
+
+#[test]
+fn remove_all_links() {
+    let db = Database::open_in_memory().unwrap();
+    let issue = test_issue("test-1", "Test issue");
+    db.create_issue(&issue).unwrap();
+
+    let link1 = Link {
+        id: 0,
+        issue_id: "test-1".to_string(),
+        link_type: None,
+        url: Some("https://a.com".to_string()),
+        external_id: None,
+        rel: None,
+        created_at: Utc::now(),
+    };
+    let link2 = Link {
+        id: 0,
+        issue_id: "test-1".to_string(),
+        link_type: None,
+        url: Some("https://b.com".to_string()),
+        external_id: None,
+        rel: None,
+        created_at: Utc::now(),
+    };
+    db.add_link(&link1).unwrap();
+    db.add_link(&link2).unwrap();
+
+    assert_eq!(db.get_links("test-1").unwrap().len(), 2);
+    db.remove_all_links("test-1").unwrap();
+    assert_eq!(db.get_links("test-1").unwrap().len(), 0);
+}

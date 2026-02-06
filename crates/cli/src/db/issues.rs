@@ -9,6 +9,32 @@ use crate::models::{Issue, IssueType, Status};
 
 use super::{parse_db, parse_timestamp, Database};
 
+/// Map a row to an Issue.
+///
+/// Expected columns: id, type, title, description, status, assignee,
+/// created_at, updated_at, closed_at
+fn row_to_issue(row: &rusqlite::Row) -> rusqlite::Result<Issue> {
+    let type_str: String = row.get(1)?;
+    let status_str: String = row.get(4)?;
+    let created_str: String = row.get(6)?;
+    let updated_str: String = row.get(7)?;
+    let closed_str: Option<String> = row.get(8)?;
+    Ok(Issue {
+        id: row.get(0)?,
+        issue_type: parse_db(&type_str, "type")?,
+        title: row.get(2)?,
+        description: row.get(3)?,
+        status: parse_db(&status_str, "status")?,
+        assignee: row.get(5)?,
+        created_at: parse_timestamp(&created_str, "created_at")?,
+        updated_at: parse_timestamp(&updated_str, "updated_at")?,
+        closed_at: closed_str
+            .as_ref()
+            .map(|s| parse_timestamp(s, "closed_at"))
+            .transpose()?,
+    })
+}
+
 impl Database {
     /// Create a new issue
     pub fn create_issue(&self, issue: &Issue) -> Result<()> {
@@ -46,27 +72,7 @@ impl Database {
                          )) as closed_at
                  FROM issues i WHERE i.id = ?1",
                 params![id],
-                |row| {
-                    let type_str: String = row.get(1)?;
-                    let status_str: String = row.get(4)?;
-                    let created_str: String = row.get(6)?;
-                    let updated_str: String = row.get(7)?;
-                    let closed_str: Option<String> = row.get(8)?;
-                    Ok(Issue {
-                        id: row.get(0)?,
-                        issue_type: parse_db(&type_str, "type")?,
-                        title: row.get(2)?,
-                        description: row.get(3)?,
-                        status: parse_db(&status_str, "status")?,
-                        assignee: row.get(5)?,
-                        created_at: parse_timestamp(&created_str, "created_at")?,
-                        updated_at: parse_timestamp(&updated_str, "updated_at")?,
-                        closed_at: closed_str
-                            .as_ref()
-                            .map(|s| parse_timestamp(s, "closed_at"))
-                            .transpose()?,
-                    })
-                },
+                row_to_issue,
             )
             .optional()?;
 
@@ -262,27 +268,7 @@ impl Database {
             .collect();
 
         let issues = stmt
-            .query_map(params_refs.as_slice(), |row| {
-                let type_str: String = row.get(1)?;
-                let status_str: String = row.get(4)?;
-                let created_str: String = row.get(6)?;
-                let updated_str: String = row.get(7)?;
-                let closed_str: Option<String> = row.get(8)?;
-                Ok(Issue {
-                    id: row.get(0)?,
-                    issue_type: parse_db(&type_str, "type")?,
-                    title: row.get(2)?,
-                    description: row.get(3)?,
-                    status: parse_db(&status_str, "status")?,
-                    assignee: row.get(5)?,
-                    created_at: parse_timestamp(&created_str, "created_at")?,
-                    updated_at: parse_timestamp(&updated_str, "updated_at")?,
-                    closed_at: closed_str
-                        .as_ref()
-                        .map(|s| parse_timestamp(s, "closed_at"))
-                        .transpose()?,
-                })
-            })?
+            .query_map(params_refs.as_slice(), row_to_issue)?
             .collect::<std::result::Result<Vec<_>, _>>()?;
 
         Ok(issues)
@@ -320,27 +306,7 @@ impl Database {
         )?;
 
         let issues = stmt
-            .query_map(params![&pattern], |row| {
-                let type_str: String = row.get(1)?;
-                let status_str: String = row.get(4)?;
-                let created_str: String = row.get(6)?;
-                let updated_str: String = row.get(7)?;
-                let closed_str: Option<String> = row.get(8)?;
-                Ok(Issue {
-                    id: row.get(0)?,
-                    issue_type: parse_db(&type_str, "type")?,
-                    title: row.get(2)?,
-                    description: row.get(3)?,
-                    status: parse_db(&status_str, "status")?,
-                    assignee: row.get(5)?,
-                    created_at: parse_timestamp(&created_str, "created_at")?,
-                    updated_at: parse_timestamp(&updated_str, "updated_at")?,
-                    closed_at: closed_str
-                        .as_ref()
-                        .map(|s| parse_timestamp(s, "closed_at"))
-                        .transpose()?,
-                })
-            })?
+            .query_map(params![&pattern], row_to_issue)?
             .collect::<std::result::Result<Vec<_>, _>>()?;
 
         Ok(issues)

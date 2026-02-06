@@ -8,6 +8,23 @@ use crate::models::Event;
 
 use super::{parse_db, parse_timestamp, Database};
 
+/// Map a row to an Event.
+///
+/// Expected columns: id, issue_id, action, old_value, new_value, reason, created_at
+fn row_to_event(row: &rusqlite::Row) -> rusqlite::Result<Event> {
+    let action_str: String = row.get(2)?;
+    let created_str: String = row.get(6)?;
+    Ok(Event {
+        id: row.get(0)?,
+        issue_id: row.get(1)?,
+        action: parse_db(&action_str, "action")?,
+        old_value: row.get(3)?,
+        new_value: row.get(4)?,
+        reason: row.get(5)?,
+        created_at: parse_timestamp(&created_str, "created_at")?,
+    })
+}
+
 impl Database {
     /// Log an event
     pub fn log_event(&self, event: &Event) -> Result<i64> {
@@ -34,19 +51,7 @@ impl Database {
         )?;
 
         let events = stmt
-            .query_map(params![issue_id], |row| {
-                let action_str: String = row.get(2)?;
-                let created_str: String = row.get(6)?;
-                Ok(Event {
-                    id: row.get(0)?,
-                    issue_id: row.get(1)?,
-                    action: parse_db(&action_str, "action")?,
-                    old_value: row.get(3)?,
-                    new_value: row.get(4)?,
-                    reason: row.get(5)?,
-                    created_at: parse_timestamp(&created_str, "created_at")?,
-                })
-            })?
+            .query_map(params![issue_id], row_to_event)?
             .collect::<std::result::Result<Vec<_>, _>>()?;
 
         Ok(events)
@@ -60,19 +65,7 @@ impl Database {
         )?;
 
         let events = stmt
-            .query_map(params![limit as i64], |row| {
-                let action_str: String = row.get(2)?;
-                let created_str: String = row.get(6)?;
-                Ok(Event {
-                    id: row.get(0)?,
-                    issue_id: row.get(1)?,
-                    action: parse_db(&action_str, "action")?,
-                    old_value: row.get(3)?,
-                    new_value: row.get(4)?,
-                    reason: row.get(5)?,
-                    created_at: parse_timestamp(&created_str, "created_at")?,
-                })
-            })?
+            .query_map(params![limit as i64], row_to_event)?
             .collect::<std::result::Result<Vec<_>, _>>()?;
 
         Ok(events)
