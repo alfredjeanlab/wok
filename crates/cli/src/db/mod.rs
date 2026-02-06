@@ -213,7 +213,7 @@ impl Database {
                                 AND e2.action = 'reopened'
                                 AND e2.created_at > e.created_at
                             )
-                        )",
+                        ) WHERE status IN ('done', 'closed')",
                         [],
                     )?;
                 }

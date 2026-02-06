@@ -7,26 +7,26 @@
 //! the `wok` CLI and the `wokd` daemon. Messages are serialized as JSON
 //! with length-prefixed framing.
 //!
-//! Model types (Status, Action, Issue, Event, etc.) are defined in `wk_core`
-//! and re-exported here. Only the IPC-specific `Issue` type (without HLC
-//! fields) and protocol enums are defined locally.
+//! Domain model types (enums, structs) are re-exported from `wk_core`.
+//! Only the IPC `Issue` struct differs from `wk_core::Issue`: it omits
+//! HLC fields used for CRDT sync and includes `closed_at` for display.
 
 use std::collections::HashMap;
 
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
-// Re-export shared model types from core (canonical definitions).
+// Re-export domain model types from core (canonical definitions).
 pub use wk_core::{
     Action, Dependency, Event, IssueType, Link, LinkRel, LinkType, Note, PrefixInfo, Relation,
     Status,
 };
 
-/// The primary entity representing a tracked work item (IPC view).
+/// IPC representation of a tracked work item.
 ///
-/// This is the IPC projection of [`wk_core::Issue`] — it omits the HLC
-/// fields used for conflict resolution and includes `closed_at` which is
-/// computed from the event log at query time.
+/// This differs from [`wk_core::Issue`] which includes HLC fields for CRDT
+/// conflict resolution. The IPC Issue omits those fields and includes
+/// `closed_at` for display purposes.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Issue {
     /// Unique identifier (format: `{prefix}-{hash}`).
@@ -69,6 +69,10 @@ impl Issue {
         }
     }
 }
+
+// ============================================================================
+// Protocol types
+// ============================================================================
 
 /// Request sent from CLI to daemon.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]

@@ -47,7 +47,7 @@ pub enum Error {
     #[error("invalid status: '{0}'\n  hint: valid statuses are: todo, in_progress, done, closed")]
     InvalidStatus(String),
 
-    #[error("invalid relation: '{0}'\n  hint: valid relations are: blocks, tracks")]
+    #[error("invalid relation: '{0}'\n  hint: valid relations are: blocks, tracked-by, tracks")]
     InvalidRelation(String),
 
     #[error("invalid action: '{0}'")]

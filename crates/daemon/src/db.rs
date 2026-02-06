@@ -213,7 +213,7 @@ impl Database {
                                     AND e2.action = 'reopened'
                                     AND e2.created_at > e.created_at
                                 )
-                            )",
+                            ) WHERE status IN ('done', 'closed')",
                             [],
                         )
                         .map_err(|e| format!("closed_at backfill failed: {}", e))?;
@@ -827,17 +827,18 @@ impl Database {
     }
 
     fn update_issue_status(&self, id: &str, status: Status) -> Result<MutateResult, String> {
-        let now = Utc::now().to_rfc3339();
-        let closed_at = if matches!(status, Status::Done | Status::Closed) {
-            Some(now.clone())
+        let now = Utc::now();
+        let closed_at = if status.is_terminal() {
+            Some(now.to_rfc3339())
         } else {
             None
         };
+
         let affected = self
             .conn
             .execute(
                 "UPDATE issues SET status = ?1, updated_at = ?2, closed_at = ?3 WHERE id = ?4",
-                params![status.as_str(), now, closed_at, id],
+                params![status.as_str(), now.to_rfc3339(), closed_at, id],
             )
             .map_err(|e| e.to_string())?;
 

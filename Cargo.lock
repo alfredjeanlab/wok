@@ -1821,6 +1821,7 @@ dependencies = [
  "is-terminal",
  "nix",
  "rusqlite",
+ "schemars",
  "serde",
  "serde_json",
  "tempfile",

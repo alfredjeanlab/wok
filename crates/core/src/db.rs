@@ -306,19 +306,48 @@ impl Database {
     /// Run database migrations.
     fn migrate(&self) -> Result<()> {
         self.conn.execute_batch(SCHEMA)?;
-        self.migrate_tracked_by_relation()?;
+        self.migrate_relation_kebab_case()?;
+        self.migrate_add_closed_at()?;
         Ok(())
     }
 
-    /// Migration: Rewrite "tracked_by" to "tracked-by" in deps table.
-    ///
-    /// Early versions serialized TrackedBy as "tracked_by" (underscore).
-    /// The canonical form is "tracked-by" (kebab-case).
-    fn migrate_tracked_by_relation(&self) -> Result<()> {
+    /// Migrate relation values from snake_case to kebab-case.
+    fn migrate_relation_kebab_case(&self) -> Result<()> {
         self.conn.execute(
             "UPDATE deps SET rel = 'tracked-by' WHERE rel = 'tracked_by'",
             [],
         )?;
+        Ok(())
+    }
+
+    /// Add closed_at column and backfill from events.
+    fn migrate_add_closed_at(&self) -> Result<()> {
+        let has_col: bool = self.conn.query_row(
+            "SELECT COUNT(*) > 0 FROM pragma_table_info('issues') WHERE name = 'closed_at'",
+            [],
+            |row| row.get(0),
+        )?;
+
+        if !has_col {
+            self.conn
+                .execute("ALTER TABLE issues ADD COLUMN closed_at TEXT", [])?;
+
+            // Backfill closed_at from events table
+            self.conn.execute(
+                "UPDATE issues SET closed_at = (
+                    SELECT MAX(e.created_at) FROM events e
+                    WHERE e.issue_id = issues.id AND e.action IN ('done', 'closed')
+                    AND NOT EXISTS (
+                        SELECT 1 FROM events e2
+                        WHERE e2.issue_id = e.issue_id
+                        AND e2.action = 'reopened'
+                        AND e2.created_at > e.created_at
+                    )
+                ) WHERE status IN ('done', 'closed')",
+                [],
+            )?;
+        }
+
         Ok(())
     }
 
@@ -382,15 +411,16 @@ impl Database {
     /// Sets `closed_at` to now when transitioning to a terminal state (done/closed),
     /// and clears it when transitioning to an active state (todo/in_progress).
     pub fn update_issue_status(&mut self, id: &str, status: Status) -> Result<()> {
-        let now = Utc::now().to_rfc3339();
+        let now = Utc::now();
         let closed_at = if status.is_terminal() {
-            Some(now.clone())
+            Some(now.to_rfc3339())
         } else {
             None
         };
+
         let affected = self.conn.execute(
             "UPDATE issues SET status = ?1, updated_at = ?2, closed_at = ?3 WHERE id = ?4",
-            params![status.as_str(), now, closed_at, id],
+            params![status.as_str(), now.to_rfc3339(), closed_at, id],
         )?;
 
         if affected == 0 {

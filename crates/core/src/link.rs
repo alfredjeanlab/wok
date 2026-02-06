@@ -15,6 +15,7 @@ use crate::error::{Error, Result};
 
 /// Type of external link (auto-detected from URL).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
 #[serde(rename_all = "snake_case")]
 pub enum LinkType {
     Github,
@@ -57,6 +58,7 @@ impl FromStr for LinkType {
 
 /// Relationship of external link to issue.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
 #[serde(rename_all = "kebab-case")]
 pub enum LinkRel {
     /// Issue was imported from this external source.
@@ -103,6 +105,7 @@ impl FromStr for LinkRel {
 
 /// An external link attached to an issue.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
 pub struct Link {
     /// Database-assigned identifier.
     pub id: i64,
@@ -165,6 +168,7 @@ impl Link {
 
 /// Information about a prefix in the issue tracker.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
 pub struct PrefixInfo {
     /// The prefix string (e.g., "proj", "api").
     pub prefix: String,

@@ -201,7 +201,7 @@ pub enum Error {
 /// A specialized Result type for wkrs operations.
 pub type Result<T> = std::result::Result<T, Error>;
 
-// TODO(refactor): Remove once deprecated wk_core::Error variants are removed
+// NOTE(compat): maps core errors that hit the deprecated InvalidInput variant
 #[allow(deprecated)]
 impl From<wk_core::Error> for Error {
     fn from(e: wk_core::Error) -> Self {

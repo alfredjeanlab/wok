@@ -131,15 +131,16 @@ impl Database {
     /// Sets `closed_at` to now when transitioning to a terminal state (done/closed),
     /// and clears it when transitioning to an active state (todo/in_progress).
     pub fn update_issue_status(&self, id: &str, status: Status) -> Result<()> {
-        let now = Utc::now().to_rfc3339();
-        let closed_at = if matches!(status, Status::Done | Status::Closed) {
-            Some(now.clone())
+        let now = Utc::now();
+        let closed_at = if status.is_terminal() {
+            Some(now.to_rfc3339())
         } else {
             None
         };
+
         let affected = self.conn.execute(
             "UPDATE issues SET status = ?1, updated_at = ?2, closed_at = ?3 WHERE id = ?4",
-            params![status.as_str(), now, closed_at, id],
+            params![status.as_str(), now.to_rfc3339(), closed_at, id],
         )?;
 
         if affected == 0 {

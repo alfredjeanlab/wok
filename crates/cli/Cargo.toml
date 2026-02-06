@@ -12,7 +12,7 @@ name = "wok"
 path = "src/main.rs"
 
 [dependencies]
-wk-core = { path = "../core" }
+wk-core = { path = "../core", features = ["schemars"] }
 wk-ipc = { path = "../ipc" }
 clap = { version = "4", features = ["derive", "color"] }
 anstyle = "1"

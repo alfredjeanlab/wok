@@ -150,7 +150,8 @@ fn action_from_str_invalid() {
 // Relation parsing tests
 #[parameterized(
     blocks = { "blocks", Relation::Blocks },
-    tracked_by = { "tracked-by", Relation::TrackedBy },
+    tracked_by_kebab = { "tracked-by", Relation::TrackedBy },
+    tracked_by_snake = { "tracked_by", Relation::TrackedBy },
     tracks = { "tracks", Relation::Tracks },
 )]
 fn relation_from_str_valid(input: &str, expected: Relation) {
