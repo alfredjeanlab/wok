@@ -730,7 +730,7 @@ impl Database {
                 params![issue_id],
                 |row| row.get(0),
             )
-            .ok();
+            .optional()?;
 
         match note_id {
             Some(id) => {
@@ -740,14 +740,18 @@ impl Database {
                 )?;
                 Ok(id)
             }
-            None => Err(Error::NoNotesToReplace(issue_id.to_string())),
+            None => Err(Error::NoNotesToReplace {
+                issue_id: issue_id.to_string(),
+            }),
         }
     }
 
-    /// Get notes grouped by status.
+    /// Get notes grouped by status, preserving first-occurrence order.
     pub fn get_notes_by_status(&self, issue_id: &str) -> Result<Vec<(Status, Vec<Note>)>> {
         let notes = self.get_notes(issue_id)?;
+
         let mut grouped: Vec<(Status, Vec<Note>)> = Vec::new();
+
         for note in notes {
             if let Some((_, notes_vec)) = grouped.iter_mut().find(|(s, _)| *s == note.status) {
                 notes_vec.push(note);
@@ -755,6 +759,7 @@ impl Database {
                 grouped.push((note.status, vec![note]));
             }
         }
+
         Ok(grouped)
     }
 
@@ -1255,10 +1260,11 @@ impl Database {
         Ok(())
     }
 
-    /// Extract priority from label list.
+    /// Extract priority from tag list.
+    ///
     /// Prefers "priority:" over "p:" if both present.
     /// Returns 0-4 where 0 is highest priority.
-    /// Default (no priority label): 2 (medium)
+    /// Default (no priority tag): 2 (medium).
     pub fn priority_from_tags(tags: &[String]) -> u8 {
         for tag in tags {
             if let Some(value) = tag.strip_prefix("priority:") {
@@ -1277,6 +1283,7 @@ impl Database {
         2
     }
 
+    /// Parse priority value (numeric 0-4 or named).
     fn parse_priority_value(value: &str) -> Option<u8> {
         match value {
             "0" | "highest" => Some(0),
