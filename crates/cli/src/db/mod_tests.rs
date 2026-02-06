@@ -5,7 +5,6 @@
 #![allow(clippy::expect_used)]
 
 use super::*;
-use crate::models::Status;
 use tempfile::tempdir;
 
 #[test]
@@ -14,6 +13,7 @@ fn test_open_in_memory() {
 
     // Verify tables exist
     let mut stmt = db
+        .core()
         .conn
         .prepare("SELECT name FROM sqlite_master WHERE type='table' ORDER BY name")
         .unwrap();
@@ -31,49 +31,6 @@ fn test_open_in_memory() {
     assert!(tables.contains(&"events".to_string()));
 }
 
-// Tests for parse_db error paths
-
-#[test]
-fn test_parse_db_invalid_status() {
-    let result = parse_db::<Status>("INVALID_STATUS", "status");
-    assert!(result.is_err());
-    let err = result.unwrap_err();
-    assert!(matches!(err, rusqlite::Error::FromSqlConversionFailure(..)));
-}
-
-#[test]
-fn test_parse_db_valid_status() {
-    let result = parse_db::<Status>("todo", "status");
-    assert!(result.is_ok());
-    assert_eq!(result.unwrap(), Status::Todo);
-}
-
-// Tests for parse_timestamp error paths
-
-#[test]
-fn test_parse_timestamp_invalid() {
-    let result = parse_timestamp("NOT-A-TIMESTAMP", "created_at");
-    assert!(result.is_err());
-    let err = result.unwrap_err();
-    assert!(matches!(err, rusqlite::Error::FromSqlConversionFailure(..)));
-}
-
-#[test]
-fn test_parse_timestamp_malformed() {
-    let result = parse_timestamp("2024-13-45T99:99:99Z", "created_at");
-    assert!(result.is_err());
-}
-
-#[test]
-fn test_parse_timestamp_valid() {
-    let result = parse_timestamp("2024-01-15T10:30:00Z", "created_at");
-    assert!(result.is_ok());
-    let dt = result.unwrap();
-    assert_eq!(dt.year(), 2024);
-}
-
-use chrono::Datelike;
-
 #[test]
 fn test_wal_mode_enabled_for_file_db() {
     let dir = tempdir().unwrap();
@@ -83,6 +40,7 @@ fn test_wal_mode_enabled_for_file_db() {
 
     // Check WAL mode is enabled
     let journal_mode: String = db
+        .core()
         .conn
         .query_row("PRAGMA journal_mode;", [], |row| row.get(0))
         .unwrap();
@@ -90,6 +48,7 @@ fn test_wal_mode_enabled_for_file_db() {
 
     // Check busy_timeout is set
     let busy_timeout: i32 = db
+        .core()
         .conn
         .query_row("PRAGMA busy_timeout;", [], |row| row.get(0))
         .unwrap();
@@ -102,6 +61,7 @@ fn test_busy_timeout_for_in_memory_db() {
 
     // Check busy_timeout is set (WAL not supported in memory)
     let busy_timeout: i32 = db
+        .core()
         .conn
         .query_row("PRAGMA busy_timeout;", [], |row| row.get(0))
         .unwrap();

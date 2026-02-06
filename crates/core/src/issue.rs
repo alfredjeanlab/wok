@@ -177,6 +177,9 @@ pub struct Issue {
     /// HLC timestamp of last assignee change (for conflict resolution).
     #[serde(skip_serializing_if = "Option::is_none")]
     pub last_assignee_hlc: Option<Hlc>,
+    /// When the issue was closed (done or closed status). Computed from event log.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub closed_at: Option<DateTime<Utc>>,
 }
 
 impl Issue {
@@ -201,6 +204,7 @@ impl Issue {
             last_type_hlc: None,
             last_description_hlc: None,
             last_assignee_hlc: None,
+            closed_at: None,
         }
     }
 }

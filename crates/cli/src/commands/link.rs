@@ -3,10 +3,9 @@
 
 //! External link management command.
 
-use crate::db::links::new_link;
 use crate::db::Database;
 use crate::error::{Error, Result};
-use crate::models::{parse_link_url, Action, Event, LinkRel};
+use crate::models::{parse_link_url, Action, Event, Link, LinkRel};
 
 use super::{apply_mutation, open_db};
 
@@ -47,7 +46,7 @@ fn add_impl_with_reason(db: &Database, id: &str, url: &str, reason: Option<Strin
     }
 
     // Create link
-    let mut link = new_link(&resolved_id);
+    let mut link = Link::new(resolved_id.clone());
     link.link_type = link_type;
     link.url = Some(url.to_string());
     link.external_id = external_id;
@@ -111,7 +110,7 @@ fn remove_impl(db: &Database, id: &str, url: &str) -> Result<()> {
 pub(crate) fn add_link_impl(db: &Database, issue_id: &str, url: &str) -> Result<()> {
     let (link_type, external_id) = parse_link_url(url);
 
-    let mut link = new_link(issue_id);
+    let mut link = Link::new(issue_id.to_string());
     link.link_type = link_type;
     link.url = Some(url.to_string());
     link.external_id = external_id;

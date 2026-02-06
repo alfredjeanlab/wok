@@ -3,208 +3,301 @@
 
 //! SQLite-backed database for issue storage.
 //!
-//! The [`Database`] struct provides all data access operations for issues,
-//! events, notes, tags, dependencies, and external links. Data is stored in
-//! a SQLite file (typically `.work/issues.db`).
+//! The [`Database`] struct wraps [`wk_core::Database`] and provides all data
+//! access operations for issues, events, notes, labels, dependencies, and
+//! external links. It converts between `wk_core::Issue` (with HLC fields)
+//! and `wk_ipc::Issue` (with `closed_at`, no HLC) at the boundary.
 
-pub mod deps;
-pub mod events;
-pub mod issues;
-pub mod labels;
-pub mod links;
-pub mod notes;
-pub mod prefixes;
-mod schema;
-
-use chrono::{DateTime, Utc};
-use rusqlite::Connection;
+use std::collections::HashMap;
 use std::path::Path;
 
-use crate::error::{Error, Result};
-use schema::SCHEMA;
-
-/// Parse a string value from the database, returning a rusqlite error on parse failure.
-fn parse_db<T: std::str::FromStr>(
-    value: &str,
-    column: &str,
-) -> std::result::Result<T, rusqlite::Error> {
-    value.parse().map_err(|_| {
-        rusqlite::Error::FromSqlConversionFailure(
-            0,
-            rusqlite::types::Type::Text,
-            Box::new(Error::CorruptedData(format!(
-                "invalid value '{}' in column '{}'",
-                value, column
-            ))),
-        )
-    })
-}
-
-/// Parse an RFC3339 timestamp from the database.
-fn parse_timestamp(
-    value: &str,
-    column: &str,
-) -> std::result::Result<DateTime<Utc>, rusqlite::Error> {
-    DateTime::parse_from_rfc3339(value)
-        .map(|dt| dt.with_timezone(&Utc))
-        .map_err(|_| {
-            rusqlite::Error::FromSqlConversionFailure(
-                0,
-                rusqlite::types::Type::Text,
-                Box::new(Error::CorruptedData(format!(
-                    "invalid timestamp '{}' in column '{}'",
-                    value, column
-                ))),
-            )
-        })
-}
+use crate::error::Result;
+use crate::models::{
+    Dependency, Event, Issue, IssueType, Link, Note, PrefixInfo, Relation, Status,
+};
 
 /// SQLite database connection with issue tracker operations.
 ///
-/// Database provides methods for managing issues, events, notes, tags, and dependencies.
-/// Operations are split across submodules: [`issues`], [`events`], [`notes`], [`tags`], [`deps`].
+/// Wraps `wk_core::Database` and converts `wk_core::Issue` to `wk_ipc::Issue`
+/// (which omits HLC fields and includes `closed_at`).
 pub struct Database {
-    /// The underlying SQLite connection.
-    pub conn: Connection,
+    inner: wk_core::Database,
 }
 
 impl Database {
-    /// Open a database connection at the given path, creating and migrating if needed
+    /// Open a database connection at the given path, creating and migrating if needed.
     pub fn open(path: &Path) -> Result<Self> {
-        // Ensure parent directory exists
-        if let Some(parent) = path.parent() {
-            if !parent.exists() {
-                std::fs::create_dir_all(parent)?;
-            }
-        }
-
-        let conn = Connection::open(path)?;
-
-        // Configure SQLite for concurrent access:
-        // - WAL mode allows multiple readers with a single writer
-        // - busy_timeout prevents immediate SQLITE_BUSY errors
-        // - foreign_keys ensures referential integrity
-        conn.execute_batch(
-            "PRAGMA journal_mode = WAL;
-             PRAGMA busy_timeout = 5000;
-             PRAGMA foreign_keys = ON;",
-        )?;
-
-        let db = Database { conn };
-        db.migrate()?;
-        Ok(db)
+        let inner = wk_core::Database::open(path)?;
+        Ok(Database { inner })
     }
 
-    /// Open an in-memory database (for testing and benchmarks)
-    ///
-    /// Note: In-memory databases don't support WAL mode, so we only enable
-    /// foreign keys and busy_timeout.
+    /// Open an in-memory database (for testing and benchmarks).
     pub fn open_in_memory() -> Result<Self> {
-        let conn = Connection::open_in_memory()?;
-        conn.execute_batch(
-            "PRAGMA busy_timeout = 5000;
-             PRAGMA foreign_keys = ON;",
-        )?;
-        let db = Database { conn };
-        db.migrate()?;
-        Ok(db)
+        let inner = wk_core::Database::open_in_memory()?;
+        Ok(Database { inner })
     }
 
-    /// Run database migrations
-    fn migrate(&self) -> Result<()> {
-        self.conn.execute_batch(SCHEMA)?;
-        self.migrate_add_assignee()?;
-        self.migrate_add_hlc_columns()?;
-        self.migrate_backfill_prefixes()?;
-        self.migrate_tracked_by_relation()?;
+    /// Access the underlying core database.
+    pub fn core(&self) -> &wk_core::Database {
+        &self.inner
+    }
+
+    // -- Issue operations (with type conversion) -------------------------------
+
+    /// Create a new issue.
+    pub fn create_issue(&self, issue: &Issue) -> Result<()> {
+        let core_issue: wk_core::Issue = issue.clone().into();
+        self.inner.create_issue(&core_issue)?;
         Ok(())
     }
 
-    /// Migration: Rewrite "tracked_by" to "tracked-by" in deps table.
-    ///
-    /// Early versions serialized TrackedBy as "tracked_by" (underscore).
-    /// The canonical form is "tracked-by" (kebab-case).
-    fn migrate_tracked_by_relation(&self) -> Result<()> {
-        self.conn.execute(
-            "UPDATE deps SET rel = 'tracked-by' WHERE rel = 'tracked_by'",
-            [],
-        )?;
+    /// Get an issue by ID.
+    pub fn get_issue(&self, id: &str) -> Result<Issue> {
+        let core_issue = self.inner.get_issue(id)?;
+        Ok(core_issue.into())
+    }
+
+    /// Check if an issue exists.
+    pub fn issue_exists(&self, id: &str) -> Result<bool> {
+        Ok(self.inner.issue_exists(id)?)
+    }
+
+    /// Resolve a potentially partial issue ID to a full ID.
+    pub fn resolve_id(&self, partial_id: &str) -> Result<String> {
+        Ok(self.inner.resolve_id(partial_id)?)
+    }
+
+    /// Update issue status.
+    pub fn update_issue_status(&self, id: &str, status: Status) -> Result<()> {
+        self.inner.update_issue_status(id, status)?;
         Ok(())
     }
 
-    /// Migration: Add assignee column to existing databases
-    fn migrate_add_assignee(&self) -> Result<()> {
-        // Check if assignee column exists
-        let has_assignee: bool = self
-            .conn
-            .query_row(
-                "SELECT COUNT(*) > 0 FROM pragma_table_info('issues') WHERE name = 'assignee'",
-                [],
-                |row| row.get(0),
-            )
-            .unwrap_or(false);
-
-        if !has_assignee {
-            self.conn
-                .execute("ALTER TABLE issues ADD COLUMN assignee TEXT", [])?;
-        }
+    /// Update issue title.
+    pub fn update_issue_title(&self, id: &str, title: &str) -> Result<()> {
+        self.inner.update_issue_title(id, title)?;
         Ok(())
     }
 
-    /// Migration: Add HLC columns for CRDT sync compatibility.
-    ///
-    /// The core database (wk_core) uses HLC (Hybrid Logical Clock) columns for
-    /// conflict resolution during sync. We add these columns to CLI's database
-    /// so that both can share the same SQLite file.
-    fn migrate_add_hlc_columns(&self) -> Result<()> {
-        let columns = ["last_status_hlc", "last_title_hlc", "last_type_hlc"];
-
-        for column in columns {
-            let has_column: bool = self
-                .conn
-                .query_row(
-                    "SELECT COUNT(*) > 0 FROM pragma_table_info('issues') WHERE name = ?1",
-                    [column],
-                    |row| row.get(0),
-                )
-                .unwrap_or(false);
-
-            if !has_column {
-                let sql = format!("ALTER TABLE issues ADD COLUMN {} TEXT", column);
-                self.conn.execute(&sql, [])?;
-            }
-        }
-
+    /// Update issue description.
+    pub fn update_issue_description(&self, id: &str, description: &str) -> Result<()> {
+        self.inner.update_issue_description(id, description)?;
         Ok(())
     }
 
-    /// Migration: Backfill prefixes table from existing issues.
-    ///
-    /// Extracts prefixes from issue IDs and populates the prefixes table
-    /// with correct issue counts. Only runs if the table is empty but
-    /// issues exist.
-    fn migrate_backfill_prefixes(&self) -> Result<()> {
-        // Check if migration is needed (prefixes table empty but issues exist)
-        let prefix_count: i64 = self
-            .conn
-            .query_row("SELECT COUNT(*) FROM prefixes", [], |row| row.get(0))
-            .unwrap_or(0);
+    /// Update issue type.
+    pub fn update_issue_type(&self, id: &str, issue_type: IssueType) -> Result<()> {
+        self.inner.update_issue_type(id, issue_type)?;
+        Ok(())
+    }
 
-        if prefix_count == 0 {
-            // Backfill from existing issues by extracting prefix from ID
-            // Issue IDs follow pattern: {prefix}-{hash} where prefix is before first '-'
-            self.conn.execute(
-                "INSERT OR IGNORE INTO prefixes (prefix, created_at, issue_count)
-                 SELECT
-                     substr(id, 1, instr(id, '-') - 1) as prefix,
-                     MIN(created_at) as created_at,
-                     COUNT(*) as issue_count
-                 FROM issues
-                 WHERE id LIKE '%-%'
-                 GROUP BY prefix",
-                [],
-            )?;
-        }
+    /// Set issue assignee.
+    pub fn set_assignee(&self, id: &str, assignee: &str) -> Result<()> {
+        self.inner.set_assignee(id, assignee)?;
+        Ok(())
+    }
+
+    /// Clear issue assignee.
+    pub fn clear_assignee(&self, id: &str) -> Result<()> {
+        self.inner.clear_assignee(id)?;
+        Ok(())
+    }
+
+    /// List issues with optional filters.
+    pub fn list_issues(
+        &self,
+        status: Option<Status>,
+        issue_type: Option<IssueType>,
+        label: Option<&str>,
+    ) -> Result<Vec<Issue>> {
+        let core_issues = self.inner.list_issues(status, issue_type, label)?;
+        Ok(core_issues.into_iter().map(Into::into).collect())
+    }
+
+    /// Search issues by query string.
+    pub fn search_issues(&self, query: &str) -> Result<Vec<Issue>> {
+        let core_issues = self.inner.search_issues(query)?;
+        Ok(core_issues.into_iter().map(Into::into).collect())
+    }
+
+    /// Get all issues.
+    pub fn get_all_issues(&self) -> Result<Vec<Issue>> {
+        self.list_issues(None, None, None)
+    }
+
+    /// Get IDs of blocked issues.
+    pub fn get_blocked_issue_ids(&self) -> Result<Vec<String>> {
+        Ok(self.inner.get_blocked_issue_ids()?)
+    }
+
+    /// Extract priority from label list.
+    pub fn priority_from_tags(tags: &[String]) -> u8 {
+        wk_core::Database::priority_from_tags(tags)
+    }
+
+    // -- Event operations ------------------------------------------------------
+
+    /// Log an event.
+    pub fn log_event(&self, event: &Event) -> Result<i64> {
+        Ok(self.inner.log_event(event)?)
+    }
+
+    /// Get all events for an issue.
+    pub fn get_events(&self, issue_id: &str) -> Result<Vec<Event>> {
+        Ok(self.inner.get_events(issue_id)?)
+    }
+
+    /// Get recent events across all issues.
+    pub fn get_recent_events(&self, limit: usize) -> Result<Vec<Event>> {
+        Ok(self.inner.get_recent_events(limit)?)
+    }
+
+    // -- Note operations -------------------------------------------------------
+
+    /// Add a note to an issue.
+    pub fn add_note(&self, issue_id: &str, status: Status, content: &str) -> Result<i64> {
+        Ok(self.inner.add_note(issue_id, status, content)?)
+    }
+
+    /// Get all notes for an issue.
+    pub fn get_notes(&self, issue_id: &str) -> Result<Vec<Note>> {
+        Ok(self.inner.get_notes(issue_id)?)
+    }
+
+    /// Replace the most recent note for an issue.
+    pub fn replace_note(&self, issue_id: &str, status: Status, content: &str) -> Result<i64> {
+        Ok(self.inner.replace_note(issue_id, status, content)?)
+    }
+
+    /// Get notes grouped by status.
+    pub fn get_notes_by_status(&self, issue_id: &str) -> Result<Vec<(Status, Vec<Note>)>> {
+        Ok(self.inner.get_notes_by_status(issue_id)?)
+    }
+
+    // -- Label operations ------------------------------------------------------
+
+    /// Add a label to an issue.
+    pub fn add_label(&self, issue_id: &str, label: &str) -> Result<()> {
+        self.inner.add_label(issue_id, label)?;
+        Ok(())
+    }
+
+    /// Remove a label from an issue.
+    pub fn remove_label(&self, issue_id: &str, label: &str) -> Result<bool> {
+        Ok(self.inner.remove_label(issue_id, label)?)
+    }
+
+    /// Get all labels for an issue.
+    pub fn get_labels(&self, issue_id: &str) -> Result<Vec<String>> {
+        Ok(self.inner.get_labels(issue_id)?)
+    }
+
+    /// Get labels for multiple issues.
+    pub fn get_labels_batch(&self, issue_ids: &[&str]) -> Result<HashMap<String, Vec<String>>> {
+        Ok(self.inner.get_labels_batch(issue_ids)?)
+    }
+
+    // -- Dependency operations -------------------------------------------------
+
+    /// Add a dependency between two issues.
+    pub fn add_dependency(&self, from_id: &str, to_id: &str, relation: Relation) -> Result<()> {
+        self.inner.add_dependency(from_id, to_id, relation)?;
+        Ok(())
+    }
+
+    /// Remove a dependency between two issues.
+    pub fn remove_dependency(&self, from_id: &str, to_id: &str, relation: Relation) -> Result<()> {
+        self.inner.remove_dependency(from_id, to_id, relation)?;
+        Ok(())
+    }
+
+    /// Get all dependencies from an issue.
+    pub fn get_deps_from(&self, from_id: &str) -> Result<Vec<Dependency>> {
+        Ok(self.inner.get_deps_from(from_id)?)
+    }
+
+    /// Get issues that directly block the given issue.
+    pub fn get_blockers(&self, issue_id: &str) -> Result<Vec<String>> {
+        Ok(self.inner.get_blockers(issue_id)?)
+    }
+
+    /// Get all issues that transitively block the given issue.
+    pub fn get_transitive_blockers(&self, issue_id: &str) -> Result<Vec<String>> {
+        Ok(self.inner.get_transitive_blockers(issue_id)?)
+    }
+
+    /// Get issues that this issue blocks.
+    pub fn get_blocking(&self, issue_id: &str) -> Result<Vec<String>> {
+        Ok(self.inner.get_blocking(issue_id)?)
+    }
+
+    /// Get tracking issues.
+    pub fn get_tracking(&self, issue_id: &str) -> Result<Vec<String>> {
+        Ok(self.inner.get_tracking(issue_id)?)
+    }
+
+    /// Get tracked issues.
+    pub fn get_tracked(&self, issue_id: &str) -> Result<Vec<String>> {
+        Ok(self.inner.get_tracked(issue_id)?)
+    }
+
+    // -- Link operations -------------------------------------------------------
+
+    /// Add an external link to an issue.
+    pub fn add_link(&self, link: &Link) -> Result<i64> {
+        Ok(self.inner.add_link(link)?)
+    }
+
+    /// Get all external links for an issue.
+    pub fn get_links(&self, issue_id: &str) -> Result<Vec<Link>> {
+        Ok(self.inner.get_links(issue_id)?)
+    }
+
+    /// Get a specific link by issue ID and URL.
+    pub fn get_link_by_url(&self, issue_id: &str, url: &str) -> Result<Option<Link>> {
+        Ok(self.inner.get_link_by_url(issue_id, url)?)
+    }
+
+    /// Remove an external link by its ID.
+    pub fn remove_link(&self, link_id: i64) -> Result<()> {
+        self.inner.remove_link(link_id)?;
+        Ok(())
+    }
+
+    /// Remove all links for an issue.
+    pub fn remove_all_links(&self, issue_id: &str) -> Result<()> {
+        self.inner.remove_all_links(issue_id)?;
+        Ok(())
+    }
+
+    // -- Prefix operations -----------------------------------------------------
+
+    /// Ensure a prefix exists in the prefixes table.
+    pub fn ensure_prefix(&self, prefix: &str) -> Result<()> {
+        self.inner.ensure_prefix(prefix)?;
+        Ok(())
+    }
+
+    /// Increment the issue count for a prefix.
+    pub fn increment_prefix_count(&self, prefix: &str) -> Result<()> {
+        self.inner.increment_prefix_count(prefix)?;
+        Ok(())
+    }
+
+    /// Decrement the issue count for a prefix.
+    pub fn decrement_prefix_count(&self, prefix: &str) -> Result<()> {
+        self.inner.decrement_prefix_count(prefix)?;
+        Ok(())
+    }
+
+    /// List all prefixes with their issue counts.
+    pub fn list_prefixes(&self) -> Result<Vec<PrefixInfo>> {
+        Ok(self.inner.list_prefixes()?)
+    }
+
+    /// Rename a prefix.
+    pub fn rename_prefix(&self, old: &str, new: &str) -> Result<()> {
+        self.inner.rename_prefix(old, new)?;
         Ok(())
     }
 }

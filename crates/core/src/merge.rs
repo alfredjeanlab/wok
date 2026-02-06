@@ -67,6 +67,7 @@ impl Merge for Database {
                     last_type_hlc: None,
                     last_description_hlc: None,
                     last_assignee_hlc: None,
+                    closed_at: None,
                 };
                 self.create_issue(&issue)?;
 

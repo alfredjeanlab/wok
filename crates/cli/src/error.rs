@@ -239,6 +239,7 @@ impl From<wk_core::Error> for Error {
             wk_core::Error::CorruptedData(s) => Error::CorruptedData(s),
             wk_core::Error::DuplicateOp(s) => Error::InvalidInput(format!("duplicate op: {}", s)),
             wk_core::Error::InvalidHlc(s) => Error::InvalidInput(format!("invalid HLC: {}", s)),
+            wk_core::Error::NoNotesToReplace { issue_id } => Error::NoNotesToReplace { issue_id },
             wk_core::Error::Oplog(s) => Error::Daemon(format!("oplog error: {}", s)),
         }
     }

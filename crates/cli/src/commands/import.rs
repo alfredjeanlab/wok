@@ -7,7 +7,6 @@ use std::io::{self, BufRead, BufReader};
 use serde::Deserialize;
 
 use crate::config::Config;
-use crate::db::links::new_link;
 use crate::db::Database;
 use crate::error::{Error, Result};
 use crate::models::{Action, Event, Issue, IssueType, Link, LinkRel, LinkType, Relation, Status};
@@ -522,7 +521,7 @@ pub(crate) fn run_impl(
                     for imported_link in links {
                         let url_exists = existing_links.iter().any(|l| l.url == imported_link.url);
                         if !url_exists {
-                            let mut link = new_link(&issue.id);
+                            let mut link = Link::new(issue.id.clone());
                             link.link_type = imported_link.link_type;
                             link.url = imported_link.url.clone();
                             link.external_id = imported_link.external_id.clone();
@@ -569,7 +568,7 @@ pub(crate) fn run_impl(
 
                     // Add links
                     for imported_link in links {
-                        let mut link = new_link(&issue.id);
+                        let mut link = Link::new(issue.id.clone());
                         link.link_type = imported_link.link_type;
                         link.url = imported_link.url.clone();
                         link.external_id = imported_link.external_id.clone();

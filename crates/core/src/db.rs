@@ -15,7 +15,7 @@ use std::collections::HashMap;
 use crate::error::{Error, Result};
 use crate::hlc::Hlc;
 use crate::issue::{Dependency, Event, Issue, IssueType, Note, Relation, Status};
-use crate::link::{Link, LinkRel, LinkType};
+use crate::link::{Link, LinkRel, LinkType, PrefixInfo};
 
 /// SQL schema for the issue tracker database.
 const SCHEMA: &str = r#"
@@ -159,18 +159,19 @@ fn parse_hlc_opt(value: Option<String>) -> std::result::Result<Option<Hlc>, rusq
 /// Map a row to an Issue.
 ///
 /// Expected columns: id, type, title, description, status, assignee,
-/// created_at, updated_at, last_status_hlc, last_title_hlc,
+/// created_at, updated_at, closed_at, last_status_hlc, last_title_hlc,
 /// last_type_hlc, last_description_hlc, last_assignee_hlc
 fn row_to_issue(row: &rusqlite::Row) -> rusqlite::Result<Issue> {
     let type_str: String = row.get(1)?;
     let status_str: String = row.get(4)?;
     let created_str: String = row.get(6)?;
     let updated_str: String = row.get(7)?;
-    let status_hlc: Option<String> = row.get(8)?;
-    let title_hlc: Option<String> = row.get(9)?;
-    let type_hlc: Option<String> = row.get(10)?;
-    let desc_hlc: Option<String> = row.get(11)?;
-    let assignee_hlc: Option<String> = row.get(12)?;
+    let closed_str: Option<String> = row.get(8)?;
+    let status_hlc: Option<String> = row.get(9)?;
+    let title_hlc: Option<String> = row.get(10)?;
+    let type_hlc: Option<String> = row.get(11)?;
+    let desc_hlc: Option<String> = row.get(12)?;
+    let assignee_hlc: Option<String> = row.get(13)?;
 
     Ok(Issue {
         id: row.get(0)?,
@@ -186,6 +187,10 @@ fn row_to_issue(row: &rusqlite::Row) -> rusqlite::Result<Issue> {
         last_type_hlc: parse_hlc_opt(type_hlc)?,
         last_description_hlc: parse_hlc_opt(desc_hlc)?,
         last_assignee_hlc: parse_hlc_opt(assignee_hlc)?,
+        closed_at: closed_str
+            .as_ref()
+            .map(|s| parse_timestamp(s, "closed_at"))
+            .transpose()?,
     })
 }
 
@@ -259,6 +264,24 @@ fn row_to_link(row: &rusqlite::Row) -> rusqlite::Result<Link> {
     })
 }
 
+/// SQL subquery to compute closed_at from the event log.
+const CLOSED_AT_SUBQUERY: &str = "(SELECT MAX(e.created_at) FROM events e
+      WHERE e.issue_id = i.id AND e.action IN ('done', 'closed')
+      AND NOT EXISTS (
+          SELECT 1 FROM events e2
+          WHERE e2.issue_id = e.issue_id
+          AND e2.action = 'reopened'
+          AND e2.created_at > e.created_at
+      ))";
+
+/// Common issue columns for SELECT queries including closed_at subquery.
+const ISSUE_COLUMNS: &str = "i.id, i.type, i.title, i.description, i.status, i.assignee,
+     i.created_at, i.updated_at";
+
+/// HLC columns appended after closed_at in issue queries.
+const ISSUE_HLC_COLUMNS: &str = "i.last_status_hlc, i.last_title_hlc, i.last_type_hlc,
+     i.last_description_hlc, i.last_assignee_hlc";
+
 /// SQLite database connection with issue tracker operations.
 pub struct Database {
     /// The underlying SQLite connection.
@@ -301,7 +324,79 @@ impl Database {
     /// Run database migrations.
     fn migrate(&self) -> Result<()> {
         self.conn.execute_batch(SCHEMA)?;
+        self.migrate_add_assignee()?;
+        self.migrate_add_hlc_columns()?;
+        self.migrate_backfill_prefixes()?;
         self.migrate_tracked_by_relation()?;
+        Ok(())
+    }
+
+    /// Migration: Add assignee column to existing databases.
+    fn migrate_add_assignee(&self) -> Result<()> {
+        let has_assignee: bool = self
+            .conn
+            .query_row(
+                "SELECT COUNT(*) > 0 FROM pragma_table_info('issues') WHERE name = 'assignee'",
+                [],
+                |row| row.get(0),
+            )
+            .unwrap_or(false);
+
+        if !has_assignee {
+            self.conn
+                .execute("ALTER TABLE issues ADD COLUMN assignee TEXT", [])?;
+        }
+        Ok(())
+    }
+
+    /// Migration: Add HLC columns for CRDT sync compatibility.
+    fn migrate_add_hlc_columns(&self) -> Result<()> {
+        let columns = [
+            "last_status_hlc",
+            "last_title_hlc",
+            "last_type_hlc",
+            "last_description_hlc",
+            "last_assignee_hlc",
+        ];
+
+        for column in columns {
+            let has_column: bool = self
+                .conn
+                .query_row(
+                    "SELECT COUNT(*) > 0 FROM pragma_table_info('issues') WHERE name = ?1",
+                    [column],
+                    |row| row.get(0),
+                )
+                .unwrap_or(false);
+
+            if !has_column {
+                let sql = format!("ALTER TABLE issues ADD COLUMN {} TEXT", column);
+                self.conn.execute(&sql, [])?;
+            }
+        }
+        Ok(())
+    }
+
+    /// Migration: Backfill prefixes table from existing issues.
+    fn migrate_backfill_prefixes(&self) -> Result<()> {
+        let prefix_count: i64 = self
+            .conn
+            .query_row("SELECT COUNT(*) FROM prefixes", [], |row| row.get(0))
+            .unwrap_or(0);
+
+        if prefix_count == 0 {
+            self.conn.execute(
+                "INSERT OR IGNORE INTO prefixes (prefix, created_at, issue_count)
+                 SELECT
+                     substr(id, 1, instr(id, '-') - 1) as prefix,
+                     MIN(created_at) as created_at,
+                     COUNT(*) as issue_count
+                 FROM issues
+                 WHERE id LIKE '%-%'
+                 GROUP BY prefix",
+                [],
+            )?;
+        }
         Ok(())
     }
 
@@ -345,16 +440,13 @@ impl Database {
 
     /// Get an issue by ID.
     pub fn get_issue(&self, id: &str) -> Result<Issue> {
+        let sql = format!(
+            "SELECT {ISSUE_COLUMNS}, {CLOSED_AT_SUBQUERY} as closed_at, {ISSUE_HLC_COLUMNS}
+             FROM issues i WHERE i.id = ?1"
+        );
         let issue = self
             .conn
-            .query_row(
-                "SELECT id, type, title, description, status, assignee,
-                        created_at, updated_at, last_status_hlc, last_title_hlc,
-                        last_type_hlc, last_description_hlc, last_assignee_hlc
-                 FROM issues WHERE id = ?1",
-                params![id],
-                row_to_issue,
-            )
+            .query_row(&sql, params![id], row_to_issue)
             .optional()?;
 
         issue.ok_or_else(|| Error::IssueNotFound(id.to_string()))
@@ -371,7 +463,7 @@ impl Database {
     }
 
     /// Update issue status.
-    pub fn update_issue_status(&mut self, id: &str, status: Status) -> Result<()> {
+    pub fn update_issue_status(&self, id: &str, status: Status) -> Result<()> {
         let affected = self.conn.execute(
             "UPDATE issues SET status = ?1, updated_at = ?2 WHERE id = ?3",
             params![status.as_str(), Utc::now().to_rfc3339(), id],
@@ -384,7 +476,7 @@ impl Database {
     }
 
     /// Update issue status HLC.
-    pub fn update_issue_status_hlc(&mut self, id: &str, hlc: Hlc) -> Result<()> {
+    pub fn update_issue_status_hlc(&self, id: &str, hlc: Hlc) -> Result<()> {
         self.conn.execute(
             "UPDATE issues SET last_status_hlc = ?1 WHERE id = ?2",
             params![hlc.to_string(), id],
@@ -393,7 +485,7 @@ impl Database {
     }
 
     /// Update issue title.
-    pub fn update_issue_title(&mut self, id: &str, title: &str) -> Result<()> {
+    pub fn update_issue_title(&self, id: &str, title: &str) -> Result<()> {
         let affected = self.conn.execute(
             "UPDATE issues SET title = ?1, updated_at = ?2 WHERE id = ?3",
             params![title, Utc::now().to_rfc3339(), id],
@@ -406,7 +498,7 @@ impl Database {
     }
 
     /// Update issue title HLC.
-    pub fn update_issue_title_hlc(&mut self, id: &str, hlc: Hlc) -> Result<()> {
+    pub fn update_issue_title_hlc(&self, id: &str, hlc: Hlc) -> Result<()> {
         self.conn.execute(
             "UPDATE issues SET last_title_hlc = ?1 WHERE id = ?2",
             params![hlc.to_string(), id],
@@ -415,7 +507,7 @@ impl Database {
     }
 
     /// Update issue type.
-    pub fn update_issue_type(&mut self, id: &str, issue_type: IssueType) -> Result<()> {
+    pub fn update_issue_type(&self, id: &str, issue_type: IssueType) -> Result<()> {
         let affected = self.conn.execute(
             "UPDATE issues SET type = ?1, updated_at = ?2 WHERE id = ?3",
             params![issue_type.as_str(), Utc::now().to_rfc3339(), id],
@@ -428,7 +520,7 @@ impl Database {
     }
 
     /// Update issue type HLC.
-    pub fn update_issue_type_hlc(&mut self, id: &str, hlc: Hlc) -> Result<()> {
+    pub fn update_issue_type_hlc(&self, id: &str, hlc: Hlc) -> Result<()> {
         self.conn.execute(
             "UPDATE issues SET last_type_hlc = ?1 WHERE id = ?2",
             params![hlc.to_string(), id],
@@ -443,11 +535,9 @@ impl Database {
         issue_type: Option<IssueType>,
         label: Option<&str>,
     ) -> Result<Vec<Issue>> {
-        let mut sql = String::from(
-            "SELECT DISTINCT i.id, i.type, i.title, i.description, i.status, i.assignee,
-             i.created_at, i.updated_at, i.last_status_hlc, i.last_title_hlc,
-             i.last_type_hlc, i.last_description_hlc, i.last_assignee_hlc
-             FROM issues i",
+        let mut sql = format!(
+            "SELECT DISTINCT {ISSUE_COLUMNS}, {CLOSED_AT_SUBQUERY} as closed_at, {ISSUE_HLC_COLUMNS}
+             FROM issues i"
         );
 
         let mut conditions = Vec::new();
@@ -822,10 +912,8 @@ impl Database {
     pub fn search_issues(&self, query: &str) -> Result<Vec<Issue>> {
         let escaped_query = query.replace('%', "\\%").replace('_', "\\_");
         let pattern = format!("%{}%", escaped_query);
-        let mut stmt = self.conn.prepare(
-            "SELECT DISTINCT i.id, i.type, i.title, i.description, i.status, i.assignee,
-                    i.created_at, i.updated_at, i.last_status_hlc, i.last_title_hlc,
-                    i.last_type_hlc, i.last_description_hlc, i.last_assignee_hlc
+        let sql = format!(
+            "SELECT DISTINCT {ISSUE_COLUMNS}, {CLOSED_AT_SUBQUERY} as closed_at, {ISSUE_HLC_COLUMNS}
              FROM issues i
              LEFT JOIN notes n ON n.issue_id = i.id
              LEFT JOIN labels l ON l.issue_id = i.id
@@ -837,8 +925,9 @@ impl Database {
                 OR l.label LIKE ?1 COLLATE NOCASE ESCAPE '\\'
                 OR lk.url LIKE ?1 COLLATE NOCASE ESCAPE '\\'
                 OR lk.external_id LIKE ?1 COLLATE NOCASE ESCAPE '\\'
-             ORDER BY i.created_at DESC",
-        )?;
+             ORDER BY i.created_at DESC"
+        );
+        let mut stmt = self.conn.prepare(&sql)?;
 
         let issues = stmt
             .query_map(params![&pattern], row_to_issue)?
@@ -848,7 +937,7 @@ impl Database {
     }
 
     /// Update issue description.
-    pub fn update_issue_description(&mut self, id: &str, description: &str) -> Result<()> {
+    pub fn update_issue_description(&self, id: &str, description: &str) -> Result<()> {
         let affected = self.conn.execute(
             "UPDATE issues SET description = ?1, updated_at = ?2 WHERE id = ?3",
             params![description, Utc::now().to_rfc3339(), id],
@@ -861,7 +950,7 @@ impl Database {
     }
 
     /// Set issue assignee.
-    pub fn set_assignee(&mut self, id: &str, assignee: &str) -> Result<()> {
+    pub fn set_assignee(&self, id: &str, assignee: &str) -> Result<()> {
         let affected = self.conn.execute(
             "UPDATE issues SET assignee = ?1, updated_at = ?2 WHERE id = ?3",
             params![assignee, Utc::now().to_rfc3339(), id],
@@ -874,7 +963,7 @@ impl Database {
     }
 
     /// Clear issue assignee.
-    pub fn clear_assignee(&mut self, id: &str) -> Result<()> {
+    pub fn clear_assignee(&self, id: &str) -> Result<()> {
         let affected = self.conn.execute(
             "UPDATE issues SET assignee = NULL, updated_at = ?1 WHERE id = ?2",
             params![Utc::now().to_rfc3339(), id],
@@ -977,6 +1066,180 @@ impl Database {
         self.conn
             .execute("DELETE FROM links WHERE issue_id = ?1", [issue_id])?;
         Ok(())
+    }
+
+    // -- Upstreamed from CLI: prefix operations --------------------------------
+
+    /// Ensure a prefix exists in the prefixes table.
+    pub fn ensure_prefix(&self, prefix: &str) -> Result<()> {
+        self.conn.execute(
+            "INSERT OR IGNORE INTO prefixes (prefix, created_at, issue_count) VALUES (?1, ?2, 0)",
+            params![prefix, Utc::now().to_rfc3339()],
+        )?;
+        Ok(())
+    }
+
+    /// Increment the issue count for a prefix.
+    pub fn increment_prefix_count(&self, prefix: &str) -> Result<()> {
+        self.conn.execute(
+            "UPDATE prefixes SET issue_count = issue_count + 1 WHERE prefix = ?1",
+            params![prefix],
+        )?;
+        Ok(())
+    }
+
+    /// Decrement the issue count for a prefix.
+    pub fn decrement_prefix_count(&self, prefix: &str) -> Result<()> {
+        self.conn.execute(
+            "UPDATE prefixes SET issue_count = issue_count - 1 WHERE prefix = ?1",
+            params![prefix],
+        )?;
+        Ok(())
+    }
+
+    /// List all prefixes with their issue counts.
+    pub fn list_prefixes(&self) -> Result<Vec<PrefixInfo>> {
+        let mut stmt = self.conn.prepare(
+            "SELECT prefix, created_at, issue_count FROM prefixes ORDER BY issue_count DESC, prefix ASC",
+        )?;
+        let rows = stmt.query_map([], |row| {
+            let prefix: String = row.get(0)?;
+            let created_at_str: String = row.get(1)?;
+            let created_at = parse_timestamp(&created_at_str, "created_at")?;
+            let issue_count: i64 = row.get(2)?;
+            Ok(PrefixInfo {
+                prefix,
+                issue_count,
+                created_at,
+            })
+        })?;
+
+        let mut prefixes = Vec::new();
+        for row in rows {
+            prefixes.push(row?);
+        }
+        Ok(prefixes)
+    }
+
+    /// Rename a prefix in the prefixes table.
+    pub fn rename_prefix(&self, old: &str, new: &str) -> Result<()> {
+        let old_info: Option<(String, i64)> = self
+            .conn
+            .query_row(
+                "SELECT created_at, issue_count FROM prefixes WHERE prefix = ?1",
+                params![old],
+                |row| Ok((row.get(0)?, row.get(1)?)),
+            )
+            .optional()?;
+
+        if let Some((created_at, issue_count)) = old_info {
+            let new_exists: bool = self
+                .conn
+                .query_row(
+                    "SELECT COUNT(*) > 0 FROM prefixes WHERE prefix = ?1",
+                    params![new],
+                    |row| row.get(0),
+                )
+                .unwrap_or(false);
+
+            if new_exists {
+                self.conn.execute(
+                    "UPDATE prefixes SET
+                        issue_count = issue_count + ?1,
+                        created_at = MIN(created_at, ?2)
+                     WHERE prefix = ?3",
+                    params![issue_count, created_at, new],
+                )?;
+            } else {
+                self.conn.execute(
+                    "INSERT INTO prefixes (prefix, created_at, issue_count) VALUES (?1, ?2, ?3)",
+                    params![new, created_at, issue_count],
+                )?;
+            }
+
+            self.conn
+                .execute("DELETE FROM prefixes WHERE prefix = ?1", params![old])?;
+        }
+
+        Ok(())
+    }
+
+    // -- Upstreamed from CLI: note operations ----------------------------------
+
+    /// Replace the most recent note for an issue with new content.
+    pub fn replace_note(&self, issue_id: &str, status: Status, content: &str) -> Result<i64> {
+        let note_id: Option<i64> = self
+            .conn
+            .query_row(
+                "SELECT id FROM notes WHERE issue_id = ?1 ORDER BY created_at DESC LIMIT 1",
+                params![issue_id],
+                |row| row.get(0),
+            )
+            .optional()?;
+
+        match note_id {
+            Some(id) => {
+                self.conn.execute(
+                    "UPDATE notes SET content = ?1, status = ?2, created_at = ?3 WHERE id = ?4",
+                    params![content, status.as_str(), Utc::now().to_rfc3339(), id],
+                )?;
+                Ok(id)
+            }
+            None => Err(Error::NoNotesToReplace {
+                issue_id: issue_id.to_string(),
+            }),
+        }
+    }
+
+    /// Get notes grouped by status.
+    pub fn get_notes_by_status(&self, issue_id: &str) -> Result<Vec<(Status, Vec<Note>)>> {
+        let notes = self.get_notes(issue_id)?;
+
+        let mut grouped: Vec<(Status, Vec<Note>)> = Vec::new();
+        for note in notes {
+            if let Some((_, notes_vec)) = grouped.iter_mut().find(|(s, _)| *s == note.status) {
+                notes_vec.push(note);
+            } else {
+                grouped.push((note.status, vec![note]));
+            }
+        }
+
+        Ok(grouped)
+    }
+
+    // -- Upstreamed from CLI: priority helpers ---------------------------------
+
+    /// Extract priority from label list.
+    /// Prefers "priority:" over "p:" if both present.
+    /// Returns 0-4 where 0 is highest priority.
+    /// Default (no priority label): 2 (medium)
+    pub fn priority_from_tags(tags: &[String]) -> u8 {
+        for tag in tags {
+            if let Some(value) = tag.strip_prefix("priority:") {
+                if let Some(p) = Self::parse_priority_value(value) {
+                    return p;
+                }
+            }
+        }
+        for tag in tags {
+            if let Some(value) = tag.strip_prefix("p:") {
+                if let Some(p) = Self::parse_priority_value(value) {
+                    return p;
+                }
+            }
+        }
+        2
+    }
+
+    fn parse_priority_value(value: &str) -> Option<u8> {
+        match value {
+            "0" | "highest" => Some(0),
+            "1" | "high" => Some(1),
+            "2" | "medium" | "med" => Some(2),
+            "3" | "low" => Some(3),
+            "4" | "lowest" => Some(4),
+            _ => None,
+        }
     }
 }
 
