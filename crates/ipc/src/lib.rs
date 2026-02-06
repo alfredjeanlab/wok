@@ -733,6 +733,14 @@ pub enum QueryOp {
     ListPrefixes,
 }
 
+/// Identifies a dependency between two issues with its relationship type.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct DependencyRef {
+    pub from_id: String,
+    pub to_id: String,
+    pub relation: Relation,
+}
+
 /// Mutation operations for writing to the database.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(tag = "op")]
@@ -764,17 +772,9 @@ pub enum MutateOp {
     /// Log an event.
     LogEvent { event: Event },
     /// Add a dependency.
-    AddDependency {
-        from_id: String,
-        to_id: String,
-        relation: Relation,
-    },
+    AddDependency(DependencyRef),
     /// Remove a dependency.
-    RemoveDependency {
-        from_id: String,
-        to_id: String,
-        relation: Relation,
-    },
+    RemoveDependency(DependencyRef),
     /// Add a link to an issue.
     AddLink {
         id: String,

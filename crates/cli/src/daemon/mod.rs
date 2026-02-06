@@ -13,7 +13,7 @@ pub use client::DaemonClient;
 pub use lifecycle::{
     detect_daemon, get_daemon_status, get_socket_path, spawn_daemon, stop_daemon_forcefully,
 };
-pub use wk_ipc::{MutateOp, MutateResult, QueryOp, QueryResult};
+pub use wk_ipc::{DependencyRef, MutateOp, MutateResult, QueryOp, QueryResult};
 
 #[cfg(test)]
 #[path = "lifecycle_tests.rs"]
