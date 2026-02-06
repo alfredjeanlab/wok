@@ -12,8 +12,8 @@ use chrono::{DateTime, Utc};
 use rusqlite::{params, Connection, OptionalExtension};
 
 use crate::ipc::{
-    Action, Dependency, Event, Issue, IssueType, Link, LinkRel, LinkType, MutateOp, MutateResult,
-    Note, PrefixInfo, QueryOp, QueryResult, Relation, Status,
+    Action, Dependency, DependencyRef, Event, Issue, IssueType, Link, LinkRel, LinkType, MutateOp,
+    MutateResult, Note, PrefixInfo, QueryOp, QueryResult, Relation, Status,
 };
 
 /// SQL schema for the issue tracker database.
@@ -249,16 +249,16 @@ impl Database {
                 content,
             } => self.add_note(&id, status, &content),
             MutateOp::LogEvent { event } => self.log_event(&event),
-            MutateOp::AddDependency {
+            MutateOp::AddDependency(DependencyRef {
                 from_id,
                 to_id,
                 relation,
-            } => self.add_dependency(&from_id, &to_id, relation),
-            MutateOp::RemoveDependency {
+            }) => self.add_dependency(&from_id, &to_id, relation),
+            MutateOp::RemoveDependency(DependencyRef {
                 from_id,
                 to_id,
                 relation,
-            } => self.remove_dependency(&from_id, &to_id, relation),
+            }) => self.remove_dependency(&from_id, &to_id, relation),
             MutateOp::AddLink {
                 id,
                 link_type,
