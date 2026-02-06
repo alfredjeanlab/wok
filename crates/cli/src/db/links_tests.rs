@@ -150,25 +150,6 @@ fn test_remove_link_nonexistent() {
 }
 
 #[test]
-fn test_remove_all_links() {
-    let db = setup_db();
-    create_issue(&db, "test-1");
-
-    let mut link1 = new_link("test-1");
-    link1.url = Some("first".to_string());
-    db.add_link(&link1).unwrap();
-
-    let mut link2 = new_link("test-1");
-    link2.url = Some("second".to_string());
-    db.add_link(&link2).unwrap();
-
-    db.remove_all_links("test-1").unwrap();
-
-    let links = db.get_links("test-1").unwrap();
-    assert!(links.is_empty());
-}
-
-#[test]
 fn test_links_different_issues() {
     let db = setup_db();
     create_issue(&db, "test-1");

@@ -81,15 +81,6 @@ impl Database {
             .execute("DELETE FROM links WHERE id = ?1", [link_id])?;
         Ok(())
     }
-
-    /// Remove all links for an issue.
-    ///
-    /// This is useful when deleting an issue.
-    pub fn remove_all_links(&self, issue_id: &str) -> Result<()> {
-        self.conn
-            .execute("DELETE FROM links WHERE issue_id = ?1", [issue_id])?;
-        Ok(())
-    }
 }
 
 /// Create a new Link with default values and the current timestamp.

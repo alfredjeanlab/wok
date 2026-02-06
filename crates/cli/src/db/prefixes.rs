@@ -34,17 +34,6 @@ impl Database {
         Ok(())
     }
 
-    /// Decrement the issue count for a prefix.
-    ///
-    /// Should be called after deleting an issue with this prefix.
-    pub fn decrement_prefix_count(&self, prefix: &str) -> Result<()> {
-        self.conn.execute(
-            "UPDATE prefixes SET issue_count = issue_count - 1 WHERE prefix = ?1",
-            params![prefix],
-        )?;
-        Ok(())
-    }
-
     /// List all prefixes with their issue counts.
     ///
     /// Results are ordered by issue count (descending).

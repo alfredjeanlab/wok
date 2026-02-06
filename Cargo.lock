@@ -1875,12 +1875,8 @@ dependencies = [
 name = "wokd"
 version = "0.4.1"
 dependencies = [
- "chrono",
  "dirs",
  "fs2",
- "rusqlite",
- "serde",
- "serde_json",
  "tracing",
  "tracing-subscriber",
  "wk-core",
