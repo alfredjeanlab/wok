@@ -7,6 +7,8 @@
 
 use std::io::Cursor;
 
+use chrono::Utc;
+
 use super::*;
 use yare::parameterized;
 
@@ -115,4 +117,91 @@ fn event_builder() {
     assert_eq!(event.new_value.as_deref(), Some("new"));
     assert_eq!(event.reason.as_deref(), Some("fixing typo"));
     assert_eq!(event.id, 0);
+}
+
+#[test]
+fn core_to_ipc_issue_drops_hlc() {
+    let now = Utc::now();
+    let core_issue = wk_core::Issue {
+        id: "test-abc123".to_string(),
+        issue_type: IssueType::Task,
+        title: "A task".to_string(),
+        description: Some("Details".to_string()),
+        status: Status::InProgress,
+        assignee: Some("alice".to_string()),
+        created_at: now,
+        updated_at: now,
+        closed_at: None,
+        last_status_hlc: Some(wk_core::hlc::Hlc::new(42, 1, 100)),
+        last_title_hlc: None,
+        last_type_hlc: None,
+        last_description_hlc: None,
+        last_assignee_hlc: None,
+    };
+
+    let ipc_issue: Issue = core_issue.clone().into();
+
+    assert_eq!(ipc_issue.id, core_issue.id);
+    assert_eq!(ipc_issue.issue_type, core_issue.issue_type);
+    assert_eq!(ipc_issue.title, core_issue.title);
+    assert_eq!(ipc_issue.description, core_issue.description);
+    assert_eq!(ipc_issue.status, core_issue.status);
+    assert_eq!(ipc_issue.assignee, core_issue.assignee);
+    assert_eq!(ipc_issue.created_at, core_issue.created_at);
+    assert_eq!(ipc_issue.updated_at, core_issue.updated_at);
+    assert_eq!(ipc_issue.closed_at, core_issue.closed_at);
+}
+
+#[test]
+fn ipc_to_core_issue_sets_hlc_none() {
+    let now = Utc::now();
+    let ipc_issue = Issue {
+        id: "test-def456".to_string(),
+        issue_type: IssueType::Bug,
+        title: "A bug".to_string(),
+        description: None,
+        status: Status::Done,
+        assignee: None,
+        created_at: now,
+        updated_at: now,
+        closed_at: Some(now),
+    };
+
+    let core_issue: wk_core::Issue = ipc_issue.clone().into();
+
+    assert_eq!(core_issue.id, ipc_issue.id);
+    assert_eq!(core_issue.issue_type, ipc_issue.issue_type);
+    assert_eq!(core_issue.title, ipc_issue.title);
+    assert_eq!(core_issue.description, ipc_issue.description);
+    assert_eq!(core_issue.status, ipc_issue.status);
+    assert_eq!(core_issue.assignee, ipc_issue.assignee);
+    assert_eq!(core_issue.created_at, ipc_issue.created_at);
+    assert_eq!(core_issue.updated_at, ipc_issue.updated_at);
+    assert_eq!(core_issue.closed_at, ipc_issue.closed_at);
+    assert!(core_issue.last_status_hlc.is_none());
+    assert!(core_issue.last_title_hlc.is_none());
+    assert!(core_issue.last_type_hlc.is_none());
+    assert!(core_issue.last_description_hlc.is_none());
+    assert!(core_issue.last_assignee_hlc.is_none());
+}
+
+#[test]
+fn roundtrip_preserves_non_hlc_fields() {
+    let now = Utc::now();
+    let original = Issue {
+        id: "test-rt789".to_string(),
+        issue_type: IssueType::Feature,
+        title: "Round trip".to_string(),
+        description: Some("Should survive".to_string()),
+        status: Status::Todo,
+        assignee: Some("bob".to_string()),
+        created_at: now,
+        updated_at: now,
+        closed_at: None,
+    };
+
+    let core_issue: wk_core::Issue = original.clone().into();
+    let back: Issue = core_issue.into();
+
+    assert_eq!(back, original);
 }

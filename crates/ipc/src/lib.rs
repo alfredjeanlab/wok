@@ -70,6 +70,43 @@ impl Issue {
     }
 }
 
+impl From<wk_core::Issue> for Issue {
+    fn from(core: wk_core::Issue) -> Self {
+        Issue {
+            id: core.id,
+            issue_type: core.issue_type,
+            title: core.title,
+            description: core.description,
+            status: core.status,
+            assignee: core.assignee,
+            created_at: core.created_at,
+            updated_at: core.updated_at,
+            closed_at: core.closed_at,
+        }
+    }
+}
+
+impl From<Issue> for wk_core::Issue {
+    fn from(ipc: Issue) -> Self {
+        wk_core::Issue {
+            id: ipc.id,
+            issue_type: ipc.issue_type,
+            title: ipc.title,
+            description: ipc.description,
+            status: ipc.status,
+            assignee: ipc.assignee,
+            created_at: ipc.created_at,
+            updated_at: ipc.updated_at,
+            closed_at: ipc.closed_at,
+            last_status_hlc: None,
+            last_title_hlc: None,
+            last_type_hlc: None,
+            last_description_hlc: None,
+            last_assignee_hlc: None,
+        }
+    }
+}
+
 // ============================================================================
 // Protocol types
 // ============================================================================
