@@ -69,7 +69,7 @@ fn update_issue_status_hlc() {
 
 #[test]
 fn update_issue_status_sets_closed_at() {
-    let mut db = Database::open_in_memory().unwrap();
+    let db = Database::open_in_memory().unwrap();
     let issue = test_issue("test-1", "Test issue");
     db.create_issue(&issue).unwrap();
 
