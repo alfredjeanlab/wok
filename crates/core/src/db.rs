@@ -159,18 +159,19 @@ fn parse_hlc_opt(value: Option<String>) -> std::result::Result<Option<Hlc>, rusq
 /// Map a row to an Issue.
 ///
 /// Expected columns: id, type, title, description, status, assignee,
-/// created_at, updated_at, last_status_hlc, last_title_hlc,
+/// created_at, updated_at, closed_at, last_status_hlc, last_title_hlc,
 /// last_type_hlc, last_description_hlc, last_assignee_hlc
 fn row_to_issue(row: &rusqlite::Row) -> rusqlite::Result<Issue> {
     let type_str: String = row.get(1)?;
     let status_str: String = row.get(4)?;
     let created_str: String = row.get(6)?;
     let updated_str: String = row.get(7)?;
-    let status_hlc: Option<String> = row.get(8)?;
-    let title_hlc: Option<String> = row.get(9)?;
-    let type_hlc: Option<String> = row.get(10)?;
-    let desc_hlc: Option<String> = row.get(11)?;
-    let assignee_hlc: Option<String> = row.get(12)?;
+    let closed_str: Option<String> = row.get(8)?;
+    let status_hlc: Option<String> = row.get(9)?;
+    let title_hlc: Option<String> = row.get(10)?;
+    let type_hlc: Option<String> = row.get(11)?;
+    let desc_hlc: Option<String> = row.get(12)?;
+    let assignee_hlc: Option<String> = row.get(13)?;
 
     Ok(Issue {
         id: row.get(0)?,
@@ -181,6 +182,9 @@ fn row_to_issue(row: &rusqlite::Row) -> rusqlite::Result<Issue> {
         assignee: row.get(5)?,
         created_at: parse_timestamp(&created_str, "created_at")?,
         updated_at: parse_timestamp(&updated_str, "updated_at")?,
+        closed_at: closed_str
+            .map(|s| parse_timestamp(&s, "closed_at"))
+            .transpose()?,
         last_status_hlc: parse_hlc_opt(status_hlc)?,
         last_title_hlc: parse_hlc_opt(title_hlc)?,
         last_type_hlc: parse_hlc_opt(type_hlc)?,
@@ -349,7 +353,16 @@ impl Database {
             .conn
             .query_row(
                 "SELECT id, type, title, description, status, assignee,
-                        created_at, updated_at, last_status_hlc, last_title_hlc,
+                        created_at, updated_at,
+                        (SELECT MAX(e.created_at) FROM events e
+                         WHERE e.issue_id = issues.id AND e.action IN ('done', 'closed')
+                         AND NOT EXISTS (
+                             SELECT 1 FROM events e2
+                             WHERE e2.issue_id = e.issue_id
+                             AND e2.action = 'reopened'
+                             AND e2.created_at > e.created_at
+                         )) as closed_at,
+                        last_status_hlc, last_title_hlc,
                         last_type_hlc, last_description_hlc, last_assignee_hlc
                  FROM issues WHERE id = ?1",
                 params![id],
@@ -445,7 +458,16 @@ impl Database {
     ) -> Result<Vec<Issue>> {
         let mut sql = String::from(
             "SELECT DISTINCT i.id, i.type, i.title, i.description, i.status, i.assignee,
-             i.created_at, i.updated_at, i.last_status_hlc, i.last_title_hlc,
+             i.created_at, i.updated_at,
+             (SELECT MAX(e.created_at) FROM events e
+              WHERE e.issue_id = i.id AND e.action IN ('done', 'closed')
+              AND NOT EXISTS (
+                  SELECT 1 FROM events e2
+                  WHERE e2.issue_id = e.issue_id
+                  AND e2.action = 'reopened'
+                  AND e2.created_at > e.created_at
+              )) as closed_at,
+             i.last_status_hlc, i.last_title_hlc,
              i.last_type_hlc, i.last_description_hlc, i.last_assignee_hlc
              FROM issues i",
         );
@@ -824,7 +846,16 @@ impl Database {
         let pattern = format!("%{}%", escaped_query);
         let mut stmt = self.conn.prepare(
             "SELECT DISTINCT i.id, i.type, i.title, i.description, i.status, i.assignee,
-                    i.created_at, i.updated_at, i.last_status_hlc, i.last_title_hlc,
+                    i.created_at, i.updated_at,
+                    (SELECT MAX(e.created_at) FROM events e
+                     WHERE e.issue_id = i.id AND e.action IN ('done', 'closed')
+                     AND NOT EXISTS (
+                         SELECT 1 FROM events e2
+                         WHERE e2.issue_id = e.issue_id
+                         AND e2.action = 'reopened'
+                         AND e2.created_at > e.created_at
+                     )) as closed_at,
+                    i.last_status_hlc, i.last_title_hlc,
                     i.last_type_hlc, i.last_description_hlc, i.last_assignee_hlc
              FROM issues i
              LEFT JOIN notes n ON n.issue_id = i.id

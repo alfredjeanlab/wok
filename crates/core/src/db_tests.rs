@@ -454,3 +454,82 @@ fn remove_all_links() {
     db.remove_all_links("test-1").unwrap();
     assert_eq!(db.get_links("test-1").unwrap().len(), 0);
 }
+
+#[test]
+fn closed_at_none_for_open_issue() {
+    let db = Database::open_in_memory().unwrap();
+    let issue = test_issue("test-1", "Open issue");
+    db.create_issue(&issue).unwrap();
+
+    let retrieved = db.get_issue("test-1").unwrap();
+    assert!(retrieved.closed_at.is_none());
+}
+
+#[test]
+fn closed_at_set_when_done() {
+    let mut db = Database::open_in_memory().unwrap();
+    let issue = test_issue("test-1", "Done issue");
+    db.create_issue(&issue).unwrap();
+
+    db.update_issue_status("test-1", Status::Done).unwrap();
+    let event = Event::new("test-1".to_string(), Action::Done)
+        .with_values(Some("todo".to_string()), Some("done".to_string()));
+    db.log_event(&event).unwrap();
+
+    let retrieved = db.get_issue("test-1").unwrap();
+    assert!(retrieved.closed_at.is_some());
+}
+
+#[test]
+fn closed_at_set_when_closed() {
+    let mut db = Database::open_in_memory().unwrap();
+    let issue = test_issue("test-1", "Closed issue");
+    db.create_issue(&issue).unwrap();
+
+    db.update_issue_status("test-1", Status::Closed).unwrap();
+    let event = Event::new("test-1".to_string(), Action::Closed)
+        .with_values(Some("todo".to_string()), Some("closed".to_string()));
+    db.log_event(&event).unwrap();
+
+    let retrieved = db.get_issue("test-1").unwrap();
+    assert!(retrieved.closed_at.is_some());
+}
+
+#[test]
+fn closed_at_none_after_reopen() {
+    let mut db = Database::open_in_memory().unwrap();
+    let issue = test_issue("test-1", "Reopened issue");
+    db.create_issue(&issue).unwrap();
+
+    // Close the issue
+    db.update_issue_status("test-1", Status::Done).unwrap();
+    let event = Event::new("test-1".to_string(), Action::Done)
+        .with_values(Some("todo".to_string()), Some("done".to_string()));
+    db.log_event(&event).unwrap();
+
+    // Reopen the issue
+    db.update_issue_status("test-1", Status::InProgress)
+        .unwrap();
+    let event = Event::new("test-1".to_string(), Action::Reopened)
+        .with_values(Some("done".to_string()), Some("in_progress".to_string()));
+    db.log_event(&event).unwrap();
+
+    let retrieved = db.get_issue("test-1").unwrap();
+    assert!(retrieved.closed_at.is_none());
+}
+
+#[test]
+fn closed_at_in_list_issues() {
+    let mut db = Database::open_in_memory().unwrap();
+    let issue = test_issue("test-1", "Done issue");
+    db.create_issue(&issue).unwrap();
+
+    db.update_issue_status("test-1", Status::Done).unwrap();
+    let event = Event::new("test-1".to_string(), Action::Done)
+        .with_values(Some("todo".to_string()), Some("done".to_string()));
+    db.log_event(&event).unwrap();
+
+    let issues = db.list_issues(Some(Status::Done), None, None).unwrap();
+    assert_eq!(issues.len(), 1);
+    assert!(issues[0].closed_at.is_some());
+}
