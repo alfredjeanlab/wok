@@ -71,6 +71,9 @@ pub enum Error {
     #[error("json error: {0}")]
     Json(#[from] serde_json::Error),
 
+    #[error("no notes to replace for issue {0}")]
+    NoNotesToReplace(String),
+
     #[error("corrupted data: {0}")]
     CorruptedData(String),
 

@@ -110,7 +110,7 @@ CREATE INDEX IF NOT EXISTS idx_prefixes_count ON prefixes(issue_count DESC);
 "#;
 
 /// Parse a string value from the database, returning a rusqlite error on parse failure.
-fn parse_db<T: std::str::FromStr>(
+pub fn parse_db<T: std::str::FromStr>(
     value: &str,
     column: &str,
 ) -> std::result::Result<T, rusqlite::Error> {
@@ -126,7 +126,7 @@ fn parse_db<T: std::str::FromStr>(
 }
 
 /// Parse an RFC3339 timestamp from the database.
-fn parse_timestamp(
+pub fn parse_timestamp(
     value: &str,
     column: &str,
 ) -> std::result::Result<DateTime<Utc>, rusqlite::Error> {
@@ -719,6 +719,43 @@ impl Database {
             .collect::<std::result::Result<Vec<_>, _>>()?;
 
         Ok(notes)
+    }
+
+    /// Replace the most recent note for an issue with new content.
+    pub fn replace_note(&self, issue_id: &str, status: Status, content: &str) -> Result<i64> {
+        let note_id: Option<i64> = self
+            .conn
+            .query_row(
+                "SELECT id FROM notes WHERE issue_id = ?1 ORDER BY created_at DESC LIMIT 1",
+                params![issue_id],
+                |row| row.get(0),
+            )
+            .ok();
+
+        match note_id {
+            Some(id) => {
+                self.conn.execute(
+                    "UPDATE notes SET content = ?1, status = ?2, created_at = ?3 WHERE id = ?4",
+                    params![content, status.as_str(), Utc::now().to_rfc3339(), id],
+                )?;
+                Ok(id)
+            }
+            None => Err(Error::NoNotesToReplace(issue_id.to_string())),
+        }
+    }
+
+    /// Get notes grouped by status.
+    pub fn get_notes_by_status(&self, issue_id: &str) -> Result<Vec<(Status, Vec<Note>)>> {
+        let notes = self.get_notes(issue_id)?;
+        let mut grouped: Vec<(Status, Vec<Note>)> = Vec::new();
+        for note in notes {
+            if let Some((_, notes_vec)) = grouped.iter_mut().find(|(s, _)| *s == note.status) {
+                notes_vec.push(note);
+            } else {
+                grouped.push((note.status, vec![note]));
+            }
+        }
+        Ok(grouped)
     }
 
     /// Add a label to an issue.
