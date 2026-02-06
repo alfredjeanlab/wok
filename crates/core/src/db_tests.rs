@@ -424,6 +424,28 @@ fn get_link_by_url() {
 }
 
 #[test]
+fn remove_link() {
+    let db = Database::open_in_memory().unwrap();
+    let issue = test_issue("test-1", "Test issue");
+    db.create_issue(&issue).unwrap();
+
+    let link = Link {
+        id: 0,
+        issue_id: "test-1".to_string(),
+        link_type: Some(LinkType::Github),
+        url: Some("https://github.com/org/repo/issues/1".to_string()),
+        external_id: Some("1".to_string()),
+        rel: None,
+        created_at: Utc::now(),
+    };
+    let link_id = db.add_link(&link).unwrap();
+
+    assert_eq!(db.get_links("test-1").unwrap().len(), 1);
+    db.remove_link(link_id).unwrap();
+    assert_eq!(db.get_links("test-1").unwrap().len(), 0);
+}
+
+#[test]
 fn remove_all_links() {
     let db = Database::open_in_memory().unwrap();
     let issue = test_issue("test-1", "Test issue");
