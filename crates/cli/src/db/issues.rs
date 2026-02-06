@@ -35,15 +35,7 @@ impl Database {
             .conn
             .query_row(
                 "SELECT i.id, i.type, i.title, i.description, i.status, i.assignee,
-                        i.created_at, i.updated_at,
-                        (SELECT MAX(e.created_at) FROM events e
-                         WHERE e.issue_id = i.id AND e.action IN ('done', 'closed')
-                         AND NOT EXISTS (
-                             SELECT 1 FROM events e2
-                             WHERE e2.issue_id = e.issue_id
-                             AND e2.action = 'reopened'
-                             AND e2.created_at > e.created_at
-                         )) as closed_at
+                        i.created_at, i.updated_at, i.closed_at
                  FROM issues i WHERE i.id = ?1",
                 params![id],
                 |row| {
@@ -128,9 +120,16 @@ impl Database {
 
     /// Update issue status
     pub fn update_issue_status(&self, id: &str, status: Status) -> Result<()> {
+        let now = Utc::now();
+        let closed_at = if status.is_terminal() {
+            Some(now.to_rfc3339())
+        } else {
+            None
+        };
+
         let affected = self.conn.execute(
-            "UPDATE issues SET status = ?1, updated_at = ?2 WHERE id = ?3",
-            params![status.as_str(), Utc::now().to_rfc3339(), id],
+            "UPDATE issues SET status = ?1, updated_at = ?2, closed_at = ?3 WHERE id = ?4",
+            params![status.as_str(), now.to_rfc3339(), closed_at, id],
         )?;
 
         if affected == 0 {
@@ -213,15 +212,7 @@ impl Database {
     ) -> Result<Vec<Issue>> {
         let mut sql = String::from(
             "SELECT DISTINCT i.id, i.type, i.title, i.description, i.status, i.assignee,
-                    i.created_at, i.updated_at,
-                    (SELECT MAX(e.created_at) FROM events e
-                     WHERE e.issue_id = i.id AND e.action IN ('done', 'closed')
-                     AND NOT EXISTS (
-                         SELECT 1 FROM events e2
-                         WHERE e2.issue_id = e.issue_id
-                         AND e2.action = 'reopened'
-                         AND e2.created_at > e.created_at
-                     )) as closed_at
+                    i.created_at, i.updated_at, i.closed_at
              FROM issues i",
         );
 
@@ -296,15 +287,7 @@ impl Database {
         let pattern = format!("%{}%", escaped_query);
         let mut stmt = self.conn.prepare(
             "SELECT DISTINCT i.id, i.type, i.title, i.description, i.status, i.assignee,
-                    i.created_at, i.updated_at,
-                    (SELECT MAX(e.created_at) FROM events e
-                     WHERE e.issue_id = i.id AND e.action IN ('done', 'closed')
-                     AND NOT EXISTS (
-                         SELECT 1 FROM events e2
-                         WHERE e2.issue_id = e.issue_id
-                         AND e2.action = 'reopened'
-                         AND e2.created_at > e.created_at
-                     )) as closed_at
+                    i.created_at, i.updated_at, i.closed_at
              FROM issues i
              LEFT JOIN notes n ON n.issue_id = i.id
              LEFT JOIN labels l ON l.issue_id = i.id

@@ -3,6 +3,9 @@ name = "wk-core"
 version.workspace = true
 edition.workspace = true
 
+[features]
+schemars = ["dep:schemars"]
+
 [dependencies]
 rusqlite = { version = "0.38", features = ["bundled"] }
 serde = { version = "1", features = ["derive"] }
@@ -11,6 +14,7 @@ chrono = { version = "0.4", features = ["serde"] }
 thiserror = "2"
 is-terminal = "0.4"
 dirs = "6"
+schemars = { version = "0.8", features = ["chrono"], optional = true }
 
 [target.'cfg(unix)'.dependencies]
 nix = { version = "0.31", features = ["process", "term"] }

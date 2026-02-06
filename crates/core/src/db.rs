@@ -30,7 +30,8 @@ CREATE TABLE IF NOT EXISTS issues (
     last_title_hlc TEXT,
     last_type_hlc TEXT,
     last_description_hlc TEXT,
-    last_assignee_hlc TEXT
+    last_assignee_hlc TEXT,
+    closed_at TEXT
 );
 
 -- Dependencies with relationship types
@@ -195,6 +196,48 @@ impl Database {
     /// Run database migrations.
     fn migrate(&self) -> Result<()> {
         self.conn.execute_batch(SCHEMA)?;
+        self.migrate_relation_kebab_case()?;
+        self.migrate_add_closed_at()?;
+        Ok(())
+    }
+
+    /// Migrate relation values from snake_case to kebab-case.
+    fn migrate_relation_kebab_case(&self) -> Result<()> {
+        self.conn.execute(
+            "UPDATE deps SET rel = 'tracked-by' WHERE rel = 'tracked_by'",
+            [],
+        )?;
+        Ok(())
+    }
+
+    /// Add closed_at column and backfill from events.
+    fn migrate_add_closed_at(&self) -> Result<()> {
+        let has_col: bool = self.conn.query_row(
+            "SELECT COUNT(*) > 0 FROM pragma_table_info('issues') WHERE name = 'closed_at'",
+            [],
+            |row| row.get(0),
+        )?;
+
+        if !has_col {
+            self.conn
+                .execute("ALTER TABLE issues ADD COLUMN closed_at TEXT", [])?;
+
+            // Backfill closed_at from events table
+            self.conn.execute(
+                "UPDATE issues SET closed_at = (
+                    SELECT MAX(e.created_at) FROM events e
+                    WHERE e.issue_id = issues.id AND e.action IN ('done', 'closed')
+                    AND NOT EXISTS (
+                        SELECT 1 FROM events e2
+                        WHERE e2.issue_id = e.issue_id
+                        AND e2.action = 'reopened'
+                        AND e2.created_at > e.created_at
+                    )
+                ) WHERE status IN ('done', 'closed')",
+                [],
+            )?;
+        }
+
         Ok(())
     }
 
@@ -203,8 +246,8 @@ impl Database {
         self.conn.execute(
             "INSERT INTO issues (id, type, title, description, status, assignee,
              created_at, updated_at, last_status_hlc, last_title_hlc, last_type_hlc,
-             last_description_hlc, last_assignee_hlc)
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13)",
+             last_description_hlc, last_assignee_hlc, closed_at)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14)",
             params![
                 issue.id,
                 issue.issue_type.as_str(),
@@ -219,6 +262,7 @@ impl Database {
                 issue.last_type_hlc.map(|h| h.to_string()),
                 issue.last_description_hlc.map(|h| h.to_string()),
                 issue.last_assignee_hlc.map(|h| h.to_string()),
+                issue.closed_at.map(|dt| dt.to_rfc3339()),
             ],
         )?;
         Ok(())
@@ -231,7 +275,7 @@ impl Database {
             .query_row(
                 "SELECT id, type, title, description, status, assignee,
                         created_at, updated_at, last_status_hlc, last_title_hlc,
-                        last_type_hlc, last_description_hlc, last_assignee_hlc
+                        last_type_hlc, last_description_hlc, last_assignee_hlc, closed_at
                  FROM issues WHERE id = ?1",
                 params![id],
                 |row| {
@@ -244,6 +288,7 @@ impl Database {
                     let type_hlc: Option<String> = row.get(10)?;
                     let desc_hlc: Option<String> = row.get(11)?;
                     let assignee_hlc: Option<String> = row.get(12)?;
+                    let closed_str: Option<String> = row.get(13)?;
 
                     Ok(Issue {
                         id: row.get(0)?,
@@ -259,6 +304,9 @@ impl Database {
                         last_type_hlc: parse_hlc_opt(type_hlc)?,
                         last_description_hlc: parse_hlc_opt(desc_hlc)?,
                         last_assignee_hlc: parse_hlc_opt(assignee_hlc)?,
+                        closed_at: closed_str
+                            .map(|s| parse_timestamp(&s, "closed_at"))
+                            .transpose()?,
                     })
                 },
             )
@@ -279,9 +327,16 @@ impl Database {
 
     /// Update issue status.
     pub fn update_issue_status(&mut self, id: &str, status: Status) -> Result<()> {
+        let now = Utc::now();
+        let closed_at = if status.is_terminal() {
+            Some(now.to_rfc3339())
+        } else {
+            None
+        };
+
         let affected = self.conn.execute(
-            "UPDATE issues SET status = ?1, updated_at = ?2 WHERE id = ?3",
-            params![status.as_str(), Utc::now().to_rfc3339(), id],
+            "UPDATE issues SET status = ?1, updated_at = ?2, closed_at = ?3 WHERE id = ?4",
+            params![status.as_str(), now.to_rfc3339(), closed_at, id],
         )?;
 
         if affected == 0 {
@@ -353,7 +408,7 @@ impl Database {
         let mut sql = String::from(
             "SELECT DISTINCT i.id, i.type, i.title, i.description, i.status, i.assignee,
              i.created_at, i.updated_at, i.last_status_hlc, i.last_title_hlc,
-             i.last_type_hlc, i.last_description_hlc, i.last_assignee_hlc
+             i.last_type_hlc, i.last_description_hlc, i.last_assignee_hlc, i.closed_at
              FROM issues i",
         );
 
@@ -404,6 +459,7 @@ impl Database {
                 let type_hlc: Option<String> = row.get(10)?;
                 let desc_hlc: Option<String> = row.get(11)?;
                 let assignee_hlc: Option<String> = row.get(12)?;
+                let closed_str: Option<String> = row.get(13)?;
 
                 Ok(Issue {
                     id: row.get(0)?,
@@ -419,6 +475,9 @@ impl Database {
                     last_type_hlc: parse_hlc_opt(type_hlc)?,
                     last_description_hlc: parse_hlc_opt(desc_hlc)?,
                     last_assignee_hlc: parse_hlc_opt(assignee_hlc)?,
+                    closed_at: closed_str
+                        .map(|s| parse_timestamp(&s, "closed_at"))
+                        .transpose()?,
                 })
             })?
             .collect::<std::result::Result<Vec<_>, _>>()?;
@@ -731,7 +790,7 @@ impl Database {
     pub fn get_tracking(&self, issue_id: &str) -> Result<Vec<String>> {
         let mut stmt = self
             .conn
-            .prepare("SELECT to_id FROM deps WHERE from_id = ?1 AND rel = 'tracked_by'")?;
+            .prepare("SELECT to_id FROM deps WHERE from_id = ?1 AND rel = 'tracked-by'")?;
 
         let ids = stmt
             .query_map(params![issue_id], |row| row.get(0))?

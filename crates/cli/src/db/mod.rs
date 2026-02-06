@@ -115,6 +115,8 @@ impl Database {
         self.conn.execute_batch(SCHEMA)?;
         self.migrate_add_assignee()?;
         self.migrate_add_hlc_columns()?;
+        self.migrate_add_closed_at()?;
+        self.migrate_relation_kebab_case()?;
         self.migrate_backfill_prefixes()?;
         Ok(())
     }
@@ -162,6 +164,48 @@ impl Database {
             }
         }
 
+        Ok(())
+    }
+
+    /// Migration: Add closed_at column and backfill from events.
+    fn migrate_add_closed_at(&self) -> Result<()> {
+        let has_col: bool = self
+            .conn
+            .query_row(
+                "SELECT COUNT(*) > 0 FROM pragma_table_info('issues') WHERE name = 'closed_at'",
+                [],
+                |row| row.get(0),
+            )
+            .unwrap_or(false);
+
+        if !has_col {
+            self.conn
+                .execute("ALTER TABLE issues ADD COLUMN closed_at TEXT", [])?;
+
+            // Backfill closed_at from events table
+            self.conn.execute(
+                "UPDATE issues SET closed_at = (
+                    SELECT MAX(e.created_at) FROM events e
+                    WHERE e.issue_id = issues.id AND e.action IN ('done', 'closed')
+                    AND NOT EXISTS (
+                        SELECT 1 FROM events e2
+                        WHERE e2.issue_id = e.issue_id
+                        AND e2.action = 'reopened'
+                        AND e2.created_at > e.created_at
+                    )
+                ) WHERE status IN ('done', 'closed')",
+                [],
+            )?;
+        }
+        Ok(())
+    }
+
+    /// Migration: Normalize relation values to kebab-case.
+    fn migrate_relation_kebab_case(&self) -> Result<()> {
+        self.conn.execute(
+            "UPDATE deps SET rel = 'tracked-by' WHERE rel = 'tracked_by'",
+            [],
+        )?;
         Ok(())
     }
 

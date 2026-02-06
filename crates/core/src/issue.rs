@@ -16,6 +16,7 @@ use crate::hlc::Hlc;
 
 /// Classification of issues by their nature and scope.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
 #[serde(rename_all = "snake_case")]
 pub enum IssueType {
     /// Large feature or initiative containing multiple tasks.
@@ -70,6 +71,7 @@ impl FromStr for IssueType {
 
 /// Workflow status of an issue.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
 #[serde(rename_all = "snake_case")]
 pub enum Status {
     /// Not yet started. Initial state for new issues.
@@ -177,6 +179,9 @@ pub struct Issue {
     /// HLC timestamp of last assignee change (for conflict resolution).
     #[serde(skip_serializing_if = "Option::is_none")]
     pub last_assignee_hlc: Option<Hlc>,
+    /// When the issue was closed (done or closed status). None if not closed.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub closed_at: Option<DateTime<Utc>>,
 }
 
 impl Issue {
@@ -201,12 +206,14 @@ impl Issue {
             last_type_hlc: None,
             last_description_hlc: None,
             last_assignee_hlc: None,
+            closed_at: None,
         }
     }
 }
 
 /// Types of actions that can be recorded in the event log.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
 #[serde(rename_all = "snake_case")]
 pub enum Action {
     /// Issue was created.
@@ -304,7 +311,8 @@ impl FromStr for Action {
 }
 
 /// An audit log entry recording a change to an issue.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
 pub struct Event {
     /// Database-assigned identifier.
     pub id: i64,
@@ -313,10 +321,13 @@ pub struct Event {
     /// What type of change occurred.
     pub action: Action,
     /// Previous value (for edits, status changes).
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub old_value: Option<String>,
     /// New value (for edits, tags, related issues).
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub new_value: Option<String>,
     /// User-provided explanation (for closes, reopens).
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub reason: Option<String>,
     /// When the event occurred.
     pub created_at: DateTime<Utc>,
@@ -358,6 +369,7 @@ impl Event {
 
 /// Relation types for dependencies between issues.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
 #[serde(rename_all = "kebab-case")]
 pub enum Relation {
     /// The from_id blocks to_id (to_id cannot proceed until from_id is done).
@@ -373,7 +385,7 @@ impl Relation {
     pub fn as_str(&self) -> &'static str {
         match self {
             Relation::Blocks => "blocks",
-            Relation::TrackedBy => "tracked_by",
+            Relation::TrackedBy => "tracked-by",
             Relation::Tracks => "tracks",
         }
     }
@@ -391,7 +403,7 @@ impl FromStr for Relation {
     fn from_str(s: &str) -> Result<Self> {
         match s.to_lowercase().as_str() {
             "blocks" => Ok(Relation::Blocks),
-            "tracked_by" => Ok(Relation::TrackedBy),
+            "tracked-by" | "tracked_by" => Ok(Relation::TrackedBy),
             "tracks" => Ok(Relation::Tracks),
             _ => Err(Error::InvalidRelation(s.to_string())),
         }
@@ -399,7 +411,8 @@ impl FromStr for Relation {
 }
 
 /// A dependency relationship between two issues.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
 pub struct Dependency {
     /// The source issue ID.
     pub from_id: String,
@@ -412,7 +425,8 @@ pub struct Dependency {
 }
 
 /// A note attached to an issue.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
 pub struct Note {
     /// Database-assigned identifier.
     pub id: i64,
