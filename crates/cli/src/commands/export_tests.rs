@@ -20,7 +20,7 @@ fn test_get_all_issues() {
 
 #[test]
 fn test_get_all_issues_empty() {
-    let mut ctx = TestContext::new();
+    let ctx = TestContext::new();
 
     let all = ctx.db.get_all_issues().unwrap();
     assert!(all.is_empty());

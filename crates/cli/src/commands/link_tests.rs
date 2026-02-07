@@ -165,7 +165,7 @@ fn test_add_link_import_success() {
 
 #[test]
 fn test_add_link_nonexistent_issue() {
-    let mut ctx = TestContext::new();
+    let ctx = TestContext::new();
 
     let result = add_impl_with_reason(
         &ctx.db,
@@ -259,7 +259,7 @@ fn test_remove_link_nonexistent_url() {
 
 #[test]
 fn test_remove_link_nonexistent_issue() {
-    let mut ctx = TestContext::new();
+    let ctx = TestContext::new();
 
     let result = remove_impl(
         &ctx.db,

@@ -79,7 +79,7 @@ fn test_note_logs_event() {
 
 #[test]
 fn test_note_on_nonexistent_issue_fails() {
-    let mut ctx = TestContext::new();
+    let ctx = TestContext::new();
 
     let result = ctx.db.get_issue("nonexistent");
     assert!(result.is_err());
@@ -164,7 +164,7 @@ fn test_run_impl_replace_note() {
 
 #[test]
 fn test_run_impl_nonexistent_issue() {
-    let mut ctx = TestContext::new();
+    let ctx = TestContext::new();
 
     let result = run_impl(&ctx.db, "nonexistent", "A note", false);
     assert!(result.is_err());

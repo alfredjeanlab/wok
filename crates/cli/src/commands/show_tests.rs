@@ -21,7 +21,7 @@ fn test_get_issue_details() {
 
 #[test]
 fn test_get_nonexistent_issue() {
-    let mut ctx = TestContext::new();
+    let ctx = TestContext::new();
 
     let result = ctx.db.get_issue("nonexistent");
     assert!(result.is_err());
@@ -244,7 +244,7 @@ fn test_run_impl_with_labels() {
 
 #[test]
 fn test_run_impl_nonexistent_issue() {
-    let mut ctx = TestContext::new();
+    let ctx = TestContext::new();
 
     let result = run_impl(&ctx.db, &["nonexistent".to_string()], "text");
     assert!(result.is_err());

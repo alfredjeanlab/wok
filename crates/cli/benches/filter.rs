@@ -66,6 +66,11 @@ fn create_issue(created_at: chrono::DateTime<Utc>) -> Issue {
         created_at,
         updated_at: created_at,
         closed_at: None,
+        last_status_hlc: None,
+        last_title_hlc: None,
+        last_type_hlc: None,
+        last_description_hlc: None,
+        last_assignee_hlc: None,
     }
 }
 

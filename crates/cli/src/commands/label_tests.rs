@@ -56,7 +56,7 @@ fn test_add_duplicate_label_is_idempotent() {
 
 #[test]
 fn test_add_label_to_nonexistent_issue_fails() {
-    let mut ctx = TestContext::new();
+    let ctx = TestContext::new();
 
     // Trying to add label to non-existent issue should fail
     let result = ctx.db.get_issue("nonexistent");
@@ -153,7 +153,7 @@ fn test_add_impl_success() {
 
 #[test]
 fn test_add_impl_nonexistent_issue() {
-    let mut ctx = TestContext::new();
+    let ctx = TestContext::new();
 
     let result = add_impl(&ctx.db, &["nonexistent".to_string()], "label");
     assert!(result.is_err());
@@ -184,7 +184,7 @@ fn test_remove_impl_nonexistent_label() {
 
 #[test]
 fn test_remove_impl_nonexistent_issue() {
-    let mut ctx = TestContext::new();
+    let ctx = TestContext::new();
 
     let result = remove_impl(&ctx.db, &["nonexistent".to_string()], "label");
     assert!(result.is_err());

@@ -71,6 +71,11 @@ fn create_test_issue(id: &str) -> Issue {
         created_at: now,
         updated_at: now,
         closed_at: None,
+        last_status_hlc: None,
+        last_title_hlc: None,
+        last_type_hlc: None,
+        last_description_hlc: None,
+        last_assignee_hlc: None,
     }
 }
 

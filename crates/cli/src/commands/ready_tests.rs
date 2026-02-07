@@ -165,7 +165,7 @@ fn test_run_impl_with_label() {
 
 #[test]
 fn test_run_impl_empty() {
-    let mut ctx = TestContext::new();
+    let ctx = TestContext::new();
 
     let result = run_impl(
         &ctx.db,
@@ -406,7 +406,7 @@ fn test_run_impl_json_format_with_label() {
 
 #[test]
 fn test_run_impl_json_format_empty() {
-    let mut ctx = TestContext::new();
+    let ctx = TestContext::new();
 
     let result = run_impl(
         &ctx.db,

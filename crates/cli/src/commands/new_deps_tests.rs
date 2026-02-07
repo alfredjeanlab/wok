@@ -225,7 +225,7 @@ fn test_run_impl_with_comma_separated_blocks() {
 
 #[test]
 fn test_run_impl_with_invalid_target_fails() {
-    let mut ctx = TestContext::new();
+    let ctx = TestContext::new();
 
     // Create new issue that blocks nonexistent target
     let result = run_impl(

@@ -151,7 +151,7 @@ fn test_run_impl_leaf_node() {
 
 #[test]
 fn test_run_impl_nonexistent() {
-    let mut ctx = TestContext::new();
+    let ctx = TestContext::new();
 
     let result = run_impl(&ctx.db, &["nonexistent".to_string()]);
     assert!(result.is_err());

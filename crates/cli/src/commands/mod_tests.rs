@@ -218,13 +218,13 @@ mod tests {
 
     #[test]
     fn test_context_creation() {
-        let mut ctx = TestContext::new();
+        let ctx = TestContext::new();
         assert_eq!(ctx.config.prefix, "test");
     }
 
     #[test]
     fn test_context_with_custom_prefix() {
-        let mut ctx = TestContext::with_prefix("myproj");
+        let ctx = TestContext::with_prefix("myproj");
         assert_eq!(ctx.config.prefix, "myproj");
     }
 

@@ -975,7 +975,7 @@ fn get_deps_to() {
 
 #[test]
 fn get_transitive_blocker_deps() {
-    let mut db = Database::open_in_memory().unwrap();
+    let db = Database::open_in_memory().unwrap();
     db.create_issue(&test_issue("a", "A")).unwrap();
     db.create_issue(&test_issue("b", "B")).unwrap();
     db.create_issue(&test_issue("c", "C")).unwrap();

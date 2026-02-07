@@ -11,7 +11,7 @@ use chrono::Utc;
 
 #[test]
 fn search_finds_title_match() {
-    let mut db = Database::open_in_memory().unwrap();
+    let db = Database::open_in_memory().unwrap();
     let issue1 = Issue::new(
         "test-1".to_string(),
         IssueType::Task,
@@ -46,7 +46,7 @@ fn search_finds_title_match() {
 
 #[test]
 fn search_with_status_filter() {
-    let mut db = Database::open_in_memory().unwrap();
+    let db = Database::open_in_memory().unwrap();
     let issue1 = Issue::new(
         "test-1".to_string(),
         IssueType::Task,
@@ -83,7 +83,7 @@ fn search_with_status_filter() {
 
 #[test]
 fn search_with_type_filter() {
-    let mut db = Database::open_in_memory().unwrap();
+    let db = Database::open_in_memory().unwrap();
     let bug = Issue::new(
         "test-1".to_string(),
         IssueType::Bug,
@@ -118,7 +118,7 @@ fn search_with_type_filter() {
 
 #[test]
 fn search_with_label_filter() {
-    let mut db = Database::open_in_memory().unwrap();
+    let db = Database::open_in_memory().unwrap();
     let issue1 = Issue::new(
         "test-1".to_string(),
         IssueType::Task,
@@ -155,7 +155,7 @@ fn search_with_label_filter() {
 
 #[test]
 fn search_no_matches_returns_empty() {
-    let mut db = Database::open_in_memory().unwrap();
+    let db = Database::open_in_memory().unwrap();
     let issue = Issue::new(
         "test-1".to_string(),
         IssueType::Task,
@@ -183,7 +183,7 @@ fn search_no_matches_returns_empty() {
 
 #[test]
 fn search_json_output() {
-    let mut db = Database::open_in_memory().unwrap();
+    let db = Database::open_in_memory().unwrap();
     let issue = Issue::new(
         "test-1".to_string(),
         IssueType::Task,
@@ -211,7 +211,7 @@ fn search_json_output() {
 
 #[test]
 fn search_limits_results_to_25() {
-    let mut db = Database::open_in_memory().unwrap();
+    let db = Database::open_in_memory().unwrap();
 
     // Create 30 issues that match the query
     for i in 0..30 {
@@ -247,7 +247,7 @@ fn search_limits_results_to_25() {
 
 #[test]
 fn search_json_includes_more_count() {
-    let mut db = Database::open_in_memory().unwrap();
+    let db = Database::open_in_memory().unwrap();
 
     // Create 30 issues
     for i in 0..30 {

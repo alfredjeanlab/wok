@@ -142,7 +142,7 @@ fn test_run_impl_issue_log() {
 
 #[test]
 fn test_run_impl_nonexistent_issue() {
-    let mut ctx = TestContext::new();
+    let ctx = TestContext::new();
 
     let result = run_impl(&ctx.db, Some("nonexistent".to_string()), 10);
     assert!(result.is_err());
