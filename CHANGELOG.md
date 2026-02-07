@@ -4,6 +4,24 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [0.4.2]
+
+### Added
+
+- **Comma-separated bulk IDs**: Accept comma-separated values in all bulk ID operations (e.g., `wok done a,b,c`).
+- **`closed_at` field**: Issues now expose a `closed_at` timestamp as a stored column.
+
+### Changed
+
+- **Consolidated database layer**: Unified the database implementation into `wk-core`, retiring separate CLI and daemon implementations.
+- **Immutable database references**: Core `Database` update methods now take `&self` instead of `&mut self`.
+- **IPC type deduplication**: IPC types replaced with re-exports from `wk_core`, reducing duplication.
+
+### Fixed
+
+- **HLC migration columns**: Added missing HLC columns to CLI and daemon migrations.
+- **`TrackedBy` serialization**: Standardized `Relation::TrackedBy` serialization to kebab-case.
+
 ## [0.4.1]
 
 ### Added
