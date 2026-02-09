@@ -51,17 +51,9 @@ fn all_collided_ids_are_valid() {
     let id1 = create_issue(&temp, "task", "Collision test");
     let id2 = create_issue(&temp, "task", "Collision test");
 
-    wk().arg("show")
-        .arg(&id1)
-        .current_dir(temp.path())
-        .assert()
-        .success();
+    wk().arg("show").arg(&id1).current_dir(temp.path()).assert().success();
 
-    wk().arg("show")
-        .arg(&id2)
-        .current_dir(temp.path())
-        .assert()
-        .success();
+    wk().arg("show").arg(&id2).current_dir(temp.path()).assert().success();
 }
 
 #[test]
@@ -70,11 +62,7 @@ fn collided_ids_can_be_used_independently() {
     let id1 = create_issue(&temp, "task", "Same name");
     let id2 = create_issue(&temp, "task", "Same name");
 
-    wk().arg("start")
-        .arg(&id1)
-        .current_dir(temp.path())
-        .assert()
-        .success();
+    wk().arg("start").arg(&id1).current_dir(temp.path()).assert().success();
 
     // id1 should be in_progress, id2 should still be todo
     wk().arg("show")

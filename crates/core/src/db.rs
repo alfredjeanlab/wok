@@ -118,9 +118,7 @@ pub fn parse_db<T: std::str::FromStr>(
         rusqlite::Error::FromSqlConversionFailure(
             0,
             rusqlite::types::Type::Text,
-            Box::new(Error::CorruptedData(format!(
-                "invalid value '{value}' in column '{column}'"
-            ))),
+            Box::new(Error::CorruptedData(format!("invalid value '{value}' in column '{column}'"))),
         )
     })
 }
@@ -130,17 +128,15 @@ pub fn parse_timestamp(
     value: &str,
     column: &str,
 ) -> std::result::Result<DateTime<Utc>, rusqlite::Error> {
-    DateTime::parse_from_rfc3339(value)
-        .map(|dt| dt.with_timezone(&Utc))
-        .map_err(|_| {
-            rusqlite::Error::FromSqlConversionFailure(
-                0,
-                rusqlite::types::Type::Text,
-                Box::new(Error::CorruptedData(format!(
-                    "invalid timestamp '{value}' in column '{column}'"
-                ))),
-            )
-        })
+    DateTime::parse_from_rfc3339(value).map(|dt| dt.with_timezone(&Utc)).map_err(|_| {
+        rusqlite::Error::FromSqlConversionFailure(
+            0,
+            rusqlite::types::Type::Text,
+            Box::new(Error::CorruptedData(format!(
+                "invalid timestamp '{value}' in column '{column}'"
+            ))),
+        )
+    })
 }
 
 /// Parse an optional HLC from the database.
@@ -183,9 +179,7 @@ fn row_to_issue(row: &rusqlite::Row) -> rusqlite::Result<Issue> {
         assignee: row.get(5)?,
         created_at: parse_timestamp(&created_str, "created_at")?,
         updated_at: parse_timestamp(&updated_str, "updated_at")?,
-        closed_at: closed_str
-            .map(|s| parse_timestamp(&s, "closed_at"))
-            .transpose()?,
+        closed_at: closed_str.map(|s| parse_timestamp(&s, "closed_at")).transpose()?,
         last_status_hlc: parse_hlc_opt(status_hlc)?,
         last_title_hlc: parse_hlc_opt(title_hlc)?,
         last_type_hlc: parse_hlc_opt(type_hlc)?,
@@ -245,13 +239,9 @@ fn row_to_dependency(row: &rusqlite::Row) -> rusqlite::Result<Dependency> {
 /// Expected columns: id, issue_id, link_type, url, external_id, rel, created_at
 fn row_to_link(row: &rusqlite::Row) -> rusqlite::Result<Link> {
     let link_type_str: Option<String> = row.get(2)?;
-    let link_type = link_type_str
-        .map(|s| parse_db::<LinkType>(&s, "link_type"))
-        .transpose()?;
+    let link_type = link_type_str.map(|s| parse_db::<LinkType>(&s, "link_type")).transpose()?;
     let rel_str: Option<String> = row.get(5)?;
-    let rel = rel_str
-        .map(|s| parse_db::<LinkRel>(&s, "rel"))
-        .transpose()?;
+    let rel = rel_str.map(|s| parse_db::<LinkRel>(&s, "rel")).transpose()?;
     let created_at_str: String = row.get(6)?;
     Ok(Link {
         id: row.get(0)?,
@@ -365,9 +355,8 @@ fn migrate_add_closed_at(conn: &Connection) -> Result<()> {
 /// with correct issue counts. Only runs if the table is empty but
 /// issues exist.
 fn migrate_backfill_prefixes(conn: &Connection) -> Result<()> {
-    let prefix_count: i64 = conn
-        .query_row("SELECT COUNT(*) FROM prefixes", [], |row| row.get(0))
-        .unwrap_or(0);
+    let prefix_count: i64 =
+        conn.query_row("SELECT COUNT(*) FROM prefixes", [], |row| row.get(0)).unwrap_or(0);
 
     if prefix_count == 0 {
         conn.execute(
@@ -390,10 +379,7 @@ fn migrate_backfill_prefixes(conn: &Connection) -> Result<()> {
 /// Early versions serialized TrackedBy as "tracked_by" (underscore).
 /// The canonical form is "tracked-by" (kebab-case).
 fn migrate_tracked_by_relation(conn: &Connection) -> Result<()> {
-    conn.execute(
-        "UPDATE deps SET rel = 'tracked-by' WHERE rel = 'tracked_by'",
-        [],
-    )?;
+    conn.execute("UPDATE deps SET rel = 'tracked-by' WHERE rel = 'tracked_by'", [])?;
     Ok(())
 }
 
@@ -497,11 +483,7 @@ impl Database {
     /// and clears it when transitioning to an active state (todo/in_progress).
     pub fn update_issue_status(&self, id: &str, status: Status) -> Result<()> {
         let now = Utc::now();
-        let closed_at = if status.is_terminal() {
-            Some(now.to_rfc3339())
-        } else {
-            None
-        };
+        let closed_at = if status.is_terminal() { Some(now.to_rfc3339()) } else { None };
 
         let affected = self.conn.execute(
             "UPDATE issues SET status = ?1, updated_at = ?2, closed_at = ?3 WHERE id = ?4",
@@ -612,10 +594,8 @@ impl Database {
 
         let mut stmt = self.conn.prepare(&sql)?;
 
-        let params_refs: Vec<&dyn rusqlite::ToSql> = params_vec
-            .iter()
-            .map(|s| s as &dyn rusqlite::ToSql)
-            .collect();
+        let params_refs: Vec<&dyn rusqlite::ToSql> =
+            params_vec.iter().map(|s| s as &dyn rusqlite::ToSql).collect();
 
         let issues = stmt
             .query_map(params_refs.as_slice(), row_to_issue)?
@@ -740,9 +720,7 @@ impl Database {
                 )?;
                 Ok(id)
             }
-            None => Err(Error::NoNotesToReplace {
-                issue_id: issue_id.to_string(),
-            }),
+            None => Err(Error::NoNotesToReplace { issue_id: issue_id.to_string() }),
         }
     }
 
@@ -783,9 +761,8 @@ impl Database {
 
     /// Get all labels for an issue.
     pub fn get_labels(&self, issue_id: &str) -> Result<Vec<String>> {
-        let mut stmt = self
-            .conn
-            .prepare("SELECT label FROM labels WHERE issue_id = ?1 ORDER BY label")?;
+        let mut stmt =
+            self.conn.prepare("SELECT label FROM labels WHERE issue_id = ?1 ORDER BY label")?;
 
         let labels = stmt
             .query_map(params![issue_id], |row| row.get(0))?
@@ -796,9 +773,8 @@ impl Database {
 
     /// Get all labels as (issue_id, label) pairs.
     pub fn get_all_labels(&self) -> Result<Vec<(String, String)>> {
-        let mut stmt = self
-            .conn
-            .prepare("SELECT issue_id, label FROM labels ORDER BY issue_id, label")?;
+        let mut stmt =
+            self.conn.prepare("SELECT issue_id, label FROM labels ORDER BY issue_id, label")?;
 
         let labels = stmt
             .query_map([], |row| Ok((row.get(0)?, row.get(1)?)))?
@@ -889,9 +865,8 @@ impl Database {
 
     /// Get issues that directly block the given issue.
     pub fn get_blockers(&self, issue_id: &str) -> Result<Vec<String>> {
-        let mut stmt = self
-            .conn
-            .prepare("SELECT from_id FROM deps WHERE to_id = ?1 AND rel = 'blocks'")?;
+        let mut stmt =
+            self.conn.prepare("SELECT from_id FROM deps WHERE to_id = ?1 AND rel = 'blocks'")?;
 
         let ids = stmt
             .query_map(params![issue_id], |row| row.get(0))?
@@ -952,9 +927,8 @@ impl Database {
 
     /// Get issues that this issue blocks.
     pub fn get_blocking(&self, issue_id: &str) -> Result<Vec<String>> {
-        let mut stmt = self
-            .conn
-            .prepare("SELECT to_id FROM deps WHERE from_id = ?1 AND rel = 'blocks'")?;
+        let mut stmt =
+            self.conn.prepare("SELECT to_id FROM deps WHERE from_id = ?1 AND rel = 'blocks'")?;
 
         let ids = stmt
             .query_map(params![issue_id], |row| row.get(0))?
@@ -978,9 +952,8 @@ impl Database {
 
     /// Get tracked issues (issues this tracks).
     pub fn get_tracked(&self, issue_id: &str) -> Result<Vec<String>> {
-        let mut stmt = self
-            .conn
-            .prepare("SELECT to_id FROM deps WHERE from_id = ?1 AND rel = 'tracks'")?;
+        let mut stmt =
+            self.conn.prepare("SELECT to_id FROM deps WHERE from_id = ?1 AND rel = 'tracks'")?;
 
         let ids = stmt
             .query_map(params![issue_id], |row| row.get(0))?
@@ -1010,9 +983,7 @@ impl Database {
         }
 
         let pattern = format!("{}%", partial_id);
-        let mut stmt = self
-            .conn
-            .prepare("SELECT id FROM issues WHERE id LIKE ?1")?;
+        let mut stmt = self.conn.prepare("SELECT id FROM issues WHERE id LIKE ?1")?;
 
         let matches: Vec<String> = stmt
             .query_map([&pattern], |row| row.get(0))?
@@ -1021,10 +992,7 @@ impl Database {
         match matches.as_slice() {
             [] => Err(Error::IssueNotFound(partial_id.to_string())),
             [single] => Ok(single.clone()),
-            _ => Err(Error::AmbiguousId {
-                prefix: partial_id.to_string(),
-                matches,
-            }),
+            _ => Err(Error::AmbiguousId { prefix: partial_id.to_string(), matches }),
         }
     }
 
@@ -1112,10 +1080,8 @@ impl Database {
         );
 
         let mut stmt = self.conn.prepare(&sql)?;
-        let params: Vec<&dyn rusqlite::ToSql> = issue_ids
-            .iter()
-            .map(|s| s as &dyn rusqlite::ToSql)
-            .collect();
+        let params: Vec<&dyn rusqlite::ToSql> =
+            issue_ids.iter().map(|s| s as &dyn rusqlite::ToSql).collect();
 
         let mut map: HashMap<String, Vec<String>> = HashMap::new();
         let mut rows = stmt.query(params.as_slice())?;
@@ -1135,9 +1101,8 @@ impl Database {
              FROM links WHERE issue_id = ?1 ORDER BY created_at ASC",
         )?;
 
-        let links = stmt
-            .query_map([issue_id], row_to_link)?
-            .collect::<std::result::Result<Vec<_>, _>>()?;
+        let links =
+            stmt.query_map([issue_id], row_to_link)?.collect::<std::result::Result<Vec<_>, _>>()?;
 
         Ok(links)
     }
@@ -1180,8 +1145,7 @@ impl Database {
 
     /// Remove an external link by its ID.
     pub fn remove_link(&self, link_id: i64) -> Result<()> {
-        self.conn
-            .execute("DELETE FROM links WHERE id = ?1", [link_id])?;
+        self.conn.execute("DELETE FROM links WHERE id = ?1", [link_id])?;
         Ok(())
     }
 
@@ -1196,8 +1160,7 @@ impl Database {
 
     /// Remove all links for an issue.
     pub fn remove_all_links(&self, issue_id: &str) -> Result<()> {
-        self.conn
-            .execute("DELETE FROM links WHERE issue_id = ?1", [issue_id])?;
+        self.conn.execute("DELETE FROM links WHERE issue_id = ?1", [issue_id])?;
         Ok(())
     }
 
@@ -1247,11 +1210,7 @@ impl Database {
             let created_at_str: String = row.get(1)?;
             let created_at = parse_timestamp(&created_at_str, "created_at")?;
             let issue_count: i64 = row.get(2)?;
-            Ok(PrefixInfo {
-                prefix,
-                created_at,
-                issue_count,
-            })
+            Ok(PrefixInfo { prefix, created_at, issue_count })
         })?;
 
         let mut prefixes = Vec::new();
@@ -1278,11 +1237,7 @@ impl Database {
         if let Some((created_at, issue_count)) = old_info {
             let new_exists: bool = self
                 .conn
-                .query_row(
-                    "SELECT 1 FROM prefixes WHERE prefix = ?1",
-                    params![new],
-                    |_| Ok(true),
-                )
+                .query_row("SELECT 1 FROM prefixes WHERE prefix = ?1", params![new], |_| Ok(true))
                 .unwrap_or(false);
 
             if new_exists {
@@ -1301,8 +1256,7 @@ impl Database {
                 )?;
             }
 
-            self.conn
-                .execute("DELETE FROM prefixes WHERE prefix = ?1", params![old])?;
+            self.conn.execute("DELETE FROM prefixes WHERE prefix = ?1", params![old])?;
         }
 
         Ok(())

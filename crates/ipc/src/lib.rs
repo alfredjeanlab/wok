@@ -140,11 +140,7 @@ pub enum QueryOp {
     /// Get a single issue by ID.
     GetIssue { id: String },
     /// List issues with optional filters.
-    ListIssues {
-        status: Option<Status>,
-        issue_type: Option<IssueType>,
-        label: Option<String>,
-    },
+    ListIssues { status: Option<Status>, issue_type: Option<IssueType>, label: Option<String> },
     /// Search issues by query string.
     SearchIssues { query: String },
     /// Get IDs of blocked issues.
@@ -210,11 +206,7 @@ pub enum MutateOp {
     /// Remove a label from an issue.
     RemoveLabel { id: String, label: String },
     /// Add a note to an issue.
-    AddNote {
-        id: String,
-        status: Status,
-        content: String,
-    },
+    AddNote { id: String, status: Status, content: String },
     /// Log an event.
     LogEvent { event: Event },
     /// Add a dependency.
@@ -274,9 +266,7 @@ pub enum QueryResult {
     /// List of labels.
     Labels { labels: Vec<String> },
     /// Labels for multiple issues.
-    LabelsBatch {
-        labels: HashMap<String, Vec<String>>,
-    },
+    LabelsBatch { labels: HashMap<String, Vec<String>> },
     /// List of notes.
     Notes { notes: Vec<Note> },
     /// List of events.

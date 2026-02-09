@@ -9,12 +9,7 @@ use crate::issue::Action;
 use chrono::Utc;
 
 fn test_issue(id: &str, title: &str) -> Issue {
-    Issue::new(
-        id.to_string(),
-        IssueType::Task,
-        title.to_string(),
-        Utc::now(),
-    )
+    Issue::new(id.to_string(), IssueType::Task, title.to_string(), Utc::now())
 }
 
 #[test]
@@ -48,8 +43,7 @@ fn update_issue_status() {
     let issue = test_issue("test-1", "Test issue");
     db.create_issue(&issue).unwrap();
 
-    db.update_issue_status("test-1", Status::InProgress)
-        .unwrap();
+    db.update_issue_status("test-1", Status::InProgress).unwrap();
     let retrieved = db.get_issue("test-1").unwrap();
     assert_eq!(retrieved.status, Status::InProgress);
 }
@@ -130,9 +124,7 @@ fn list_issues_filter_status() {
     assert_eq!(todos.len(), 1);
     assert_eq!(todos[0].id, "test-1");
 
-    let in_progress = db
-        .list_issues(Some(Status::InProgress), None, None)
-        .unwrap();
+    let in_progress = db.list_issues(Some(Status::InProgress), None, None).unwrap();
     assert_eq!(in_progress.len(), 1);
     assert_eq!(in_progress[0].id, "test-2");
 }
@@ -158,8 +150,7 @@ fn add_and_get_notes() {
     db.create_issue(&issue).unwrap();
 
     db.add_note("test-1", Status::Todo, "First note").unwrap();
-    db.add_note("test-1", Status::InProgress, "Second note")
-        .unwrap();
+    db.add_note("test-1", Status::InProgress, "Second note").unwrap();
 
     let notes = db.get_notes("test-1").unwrap();
     assert_eq!(notes.len(), 2);
@@ -204,8 +195,7 @@ fn add_and_get_dependencies() {
     db.create_issue(&issue1).unwrap();
     db.create_issue(&issue2).unwrap();
 
-    db.add_dependency("test-1", "test-2", Relation::Blocks)
-        .unwrap();
+    db.add_dependency("test-1", "test-2", Relation::Blocks).unwrap();
 
     let deps = db.get_deps_from("test-1").unwrap();
     assert_eq!(deps.len(), 1);
@@ -234,10 +224,8 @@ fn cycle_detection() {
     db.create_issue(&issue2).unwrap();
     db.create_issue(&issue3).unwrap();
 
-    db.add_dependency("test-1", "test-2", Relation::Blocks)
-        .unwrap();
-    db.add_dependency("test-2", "test-3", Relation::Blocks)
-        .unwrap();
+    db.add_dependency("test-1", "test-2", Relation::Blocks).unwrap();
+    db.add_dependency("test-2", "test-3", Relation::Blocks).unwrap();
 
     // This would create a cycle: test-3 -> test-1 -> test-2 -> test-3
     let result = db.add_dependency("test-3", "test-1", Relation::Blocks);
@@ -252,8 +240,7 @@ fn get_blockers() {
     db.create_issue(&issue1).unwrap();
     db.create_issue(&issue2).unwrap();
 
-    db.add_dependency("test-1", "test-2", Relation::Blocks)
-        .unwrap();
+    db.add_dependency("test-1", "test-2", Relation::Blocks).unwrap();
 
     let blockers = db.get_blockers("test-2").unwrap();
     assert_eq!(blockers.len(), 1);
@@ -315,10 +302,8 @@ fn resolve_id_too_short() {
 #[test]
 fn resolve_id_ambiguous() {
     let db = Database::open_in_memory().unwrap();
-    db.create_issue(&test_issue("proj-abc1", "Issue 1"))
-        .unwrap();
-    db.create_issue(&test_issue("proj-abc2", "Issue 2"))
-        .unwrap();
+    db.create_issue(&test_issue("proj-abc1", "Issue 1")).unwrap();
+    db.create_issue(&test_issue("proj-abc2", "Issue 2")).unwrap();
 
     let result = db.resolve_id("proj-abc");
     assert!(matches!(result, Err(Error::AmbiguousId { .. })));
@@ -334,10 +319,8 @@ fn resolve_id_not_found() {
 #[test]
 fn search_issues_by_title() {
     let db = Database::open_in_memory().unwrap();
-    db.create_issue(&test_issue("test-1", "Fix login bug"))
-        .unwrap();
-    db.create_issue(&test_issue("test-2", "Add dashboard"))
-        .unwrap();
+    db.create_issue(&test_issue("test-1", "Fix login bug")).unwrap();
+    db.create_issue(&test_issue("test-2", "Add dashboard")).unwrap();
 
     let results = db.search_issues("login").unwrap();
     assert_eq!(results.len(), 1);
@@ -347,8 +330,7 @@ fn search_issues_by_title() {
 #[test]
 fn search_issues_case_insensitive() {
     let db = Database::open_in_memory().unwrap();
-    db.create_issue(&test_issue("test-1", "Fix Login Bug"))
-        .unwrap();
+    db.create_issue(&test_issue("test-1", "Fix Login Bug")).unwrap();
 
     let results = db.search_issues("login").unwrap();
     assert_eq!(results.len(), 1);
@@ -360,8 +342,7 @@ fn update_issue_description() {
     let issue = test_issue("test-1", "Test issue");
     db.create_issue(&issue).unwrap();
 
-    db.update_issue_description("test-1", "New description")
-        .unwrap();
+    db.update_issue_description("test-1", "New description").unwrap();
     let retrieved = db.get_issue("test-1").unwrap();
     assert_eq!(retrieved.description.as_deref(), Some("New description"));
 }
@@ -477,8 +458,7 @@ fn replace_note() {
     let issue = test_issue("test-1", "Test issue");
     db.create_issue(&issue).unwrap();
 
-    db.add_note("test-1", Status::Todo, "Original note")
-        .unwrap();
+    db.add_note("test-1", Status::Todo, "Original note").unwrap();
 
     let result = db.replace_note("test-1", Status::Todo, "Replaced note");
     assert!(result.is_ok());
@@ -508,8 +488,7 @@ fn replace_note_updates_status() {
     let issue = test_issue("test-1", "Test issue");
     db.create_issue(&issue).unwrap();
 
-    db.add_note("test-1", Status::Todo, "Original note")
-        .unwrap();
+    db.add_note("test-1", Status::Todo, "Original note").unwrap();
 
     let result = db.replace_note("test-1", Status::InProgress, "Updated note");
     assert!(result.is_ok());
@@ -528,8 +507,7 @@ fn get_notes_by_status() {
 
     db.add_note("test-1", Status::Todo, "Todo note 1").unwrap();
     db.add_note("test-1", Status::Todo, "Todo note 2").unwrap();
-    db.add_note("test-1", Status::InProgress, "Progress note")
-        .unwrap();
+    db.add_note("test-1", Status::InProgress, "Progress note").unwrap();
 
     let grouped = db.get_notes_by_status("test-1").unwrap();
     assert_eq!(grouped.len(), 2);
@@ -560,10 +538,7 @@ fn priority_from_tags_numeric() {
 
 #[test]
 fn priority_from_tags_named() {
-    assert_eq!(
-        Database::priority_from_tags(&["priority:highest".into()]),
-        0
-    );
+    assert_eq!(Database::priority_from_tags(&["priority:highest".into()]), 0);
     assert_eq!(Database::priority_from_tags(&["priority:high".into()]), 1);
     assert_eq!(Database::priority_from_tags(&["priority:medium".into()]), 2);
     assert_eq!(Database::priority_from_tags(&["priority:med".into()]), 2);
@@ -584,10 +559,7 @@ fn priority_from_tags_prefers_priority_over_p() {
 fn priority_from_tags_default() {
     assert_eq!(Database::priority_from_tags(&[]), 2);
     assert_eq!(Database::priority_from_tags(&["unrelated".into()]), 2);
-    assert_eq!(
-        Database::priority_from_tags(&["team:backend".into(), "urgent".into()]),
-        2
-    );
+    assert_eq!(Database::priority_from_tags(&["team:backend".into(), "urgent".into()]), 2);
 }
 
 #[test]
@@ -599,10 +571,7 @@ fn priority_from_tags_p_fallback() {
 
 #[test]
 fn priority_from_tags_invalid_values_ignored() {
-    assert_eq!(
-        Database::priority_from_tags(&["priority:invalid".into()]),
-        2
-    );
+    assert_eq!(Database::priority_from_tags(&["priority:invalid".into()]), 2);
     assert_eq!(Database::priority_from_tags(&["priority:5".into()]), 2);
     assert_eq!(Database::priority_from_tags(&["priority:-1".into()]), 2);
     assert_eq!(Database::priority_from_tags(&["priority:".into()]), 2);
@@ -800,8 +769,7 @@ fn closed_at_none_after_reopen() {
     db.log_event(&event).unwrap();
 
     // Reopen the issue
-    db.update_issue_status("test-1", Status::InProgress)
-        .unwrap();
+    db.update_issue_status("test-1", Status::InProgress).unwrap();
     let event = Event::new("test-1".to_string(), Action::Reopened)
         .with_values(Some("done".to_string()), Some("in_progress".to_string()));
     db.log_event(&event).unwrap();
@@ -934,10 +902,7 @@ fn migrate_old_schema_adds_missing_columns_and_backfills() {
 
     // Verify closed_at was backfilled for the done issue
     assert!(issue.closed_at.is_some());
-    assert_eq!(
-        issue.closed_at.unwrap().to_rfc3339(),
-        "2026-01-02T00:00:00+00:00"
-    );
+    assert_eq!(issue.closed_at.unwrap().to_rfc3339(), "2026-01-02T00:00:00+00:00");
 
     // Verify the todo issue has no closed_at
     let bug = db.get_issue("proj-def2").unwrap();
@@ -1016,7 +981,6 @@ fn remove_link_by_url() {
     db.add_link(&link).unwrap();
     assert_eq!(db.get_links("test-1").unwrap().len(), 1);
 
-    db.remove_link_by_url("test-1", "https://example.com")
-        .unwrap();
+    db.remove_link_by_url("test-1", "https://example.com").unwrap();
     assert_eq!(db.get_links("test-1").unwrap().len(), 0);
 }

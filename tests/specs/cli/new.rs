@@ -160,12 +160,8 @@ fn new_with_comma_separated_labels() {
 #[test]
 fn new_comma_labels_trim_whitespace() {
     let temp = init_temp();
-    let id = create_issue_with_opts(
-        &temp,
-        "task",
-        "Whitespace labels",
-        &["--label", "  x  ,  y  "],
-    );
+    let id =
+        create_issue_with_opts(&temp, "task", "Whitespace labels", &["--label", "  x  ,  y  "]);
 
     wk().arg("show")
         .arg(&id)
@@ -178,12 +174,8 @@ fn new_comma_labels_trim_whitespace() {
 #[test]
 fn new_with_mixed_labels() {
     let temp = init_temp();
-    let id = create_issue_with_opts(
-        &temp,
-        "task",
-        "Mixed labels",
-        &["--label", "a,b", "--label", "c"],
-    );
+    let id =
+        create_issue_with_opts(&temp, "task", "Mixed labels", &["--label", "a,b", "--label", "c"]);
 
     wk().arg("show")
         .arg(&id)
@@ -332,22 +324,13 @@ fn new_requires_title() {
 #[test]
 fn new_empty_title_fails() {
     let temp = init_temp();
-    wk().arg("new")
-        .arg("")
-        .current_dir(temp.path())
-        .assert()
-        .failure();
+    wk().arg("new").arg("").current_dir(temp.path()).assert().failure();
 }
 
 #[test]
 fn new_invalid_type_fails() {
     let temp = init_temp();
-    wk().arg("new")
-        .arg("bogus")
-        .arg("My bogus")
-        .current_dir(temp.path())
-        .assert()
-        .failure();
+    wk().arg("new").arg("bogus").arg("My bogus").current_dir(temp.path()).assert().failure();
 }
 
 // =============================================================================
@@ -357,12 +340,7 @@ fn new_invalid_type_fails() {
 #[test]
 fn new_id_uses_configured_prefix() {
     let temp = TempDir::new().unwrap();
-    wk().arg("init")
-        .arg("--prefix")
-        .arg("myproj")
-        .current_dir(temp.path())
-        .assert()
-        .success();
+    wk().arg("init").arg("--prefix").arg("myproj").current_dir(temp.path()).assert().success();
 
     wk().arg("new")
         .arg("Test task")
@@ -375,12 +353,7 @@ fn new_id_uses_configured_prefix() {
 #[test]
 fn new_prefix_flag_overrides_config() {
     let temp = TempDir::new().unwrap();
-    wk().arg("init")
-        .arg("--prefix")
-        .arg("main")
-        .current_dir(temp.path())
-        .assert()
-        .success();
+    wk().arg("init").arg("--prefix").arg("main").current_dir(temp.path()).assert().success();
 
     let output = wk()
         .arg("new")
@@ -394,22 +367,13 @@ fn new_prefix_flag_overrides_config() {
         .unwrap();
 
     let id = String::from_utf8_lossy(&output.stdout).trim().to_string();
-    assert!(
-        id.starts_with("other-"),
-        "Expected other- prefix, got: {}",
-        id
-    );
+    assert!(id.starts_with("other-"), "Expected other- prefix, got: {}", id);
 }
 
 #[test]
 fn new_prefix_short_flag() {
     let temp = TempDir::new().unwrap();
-    wk().arg("init")
-        .arg("--prefix")
-        .arg("main")
-        .current_dir(temp.path())
-        .assert()
-        .success();
+    wk().arg("init").arg("--prefix").arg("main").current_dir(temp.path()).assert().success();
 
     let output = wk()
         .arg("new")
@@ -423,11 +387,7 @@ fn new_prefix_short_flag() {
         .unwrap();
 
     let id = String::from_utf8_lossy(&output.stdout).trim().to_string();
-    assert!(
-        id.starts_with("short-"),
-        "Expected short- prefix, got: {}",
-        id
-    );
+    assert!(id.starts_with("short-"), "Expected short- prefix, got: {}", id);
 }
 
 #[test]
@@ -447,21 +407,14 @@ fn new_id_format_prefix_hex() {
     // ID format: prefix-xxxx where xxxx is hex
     // Validate without regex: should have format like "test-abc123"
     let parts: Vec<&str> = id.splitn(2, '-').collect();
-    assert_eq!(
-        parts.len(),
-        2,
-        "ID should have prefix-suffix format: {}",
-        id
-    );
+    assert_eq!(parts.len(), 2, "ID should have prefix-suffix format: {}", id);
     assert!(
         parts[0].chars().all(|c| c.is_ascii_lowercase()),
         "Prefix should be lowercase letters: {}",
         id
     );
     assert!(
-        parts[1]
-            .chars()
-            .all(|c| c.is_ascii_hexdigit() && !c.is_ascii_uppercase()),
+        parts[1].chars().all(|c| c.is_ascii_hexdigit() && !c.is_ascii_uppercase()),
         "Suffix should be lowercase hex: {}",
         id
     );
@@ -486,10 +439,7 @@ fn new_output_id_only() {
 
     let stdout = String::from_utf8_lossy(&output.stdout);
     assert!(stdout.contains("test-"), "Should output ID");
-    assert!(
-        !stdout.contains("Created"),
-        "Should NOT contain verbose message"
-    );
+    assert!(!stdout.contains("Created"), "Should NOT contain verbose message");
     assert!(!stdout.contains("[task]"), "Should NOT contain type tag");
 }
 
@@ -508,10 +458,7 @@ fn new_output_ids_alias() {
 
     let stdout = String::from_utf8_lossy(&output.stdout);
     assert!(stdout.contains("test-"), "Should output ID");
-    assert!(
-        !stdout.contains("Created"),
-        "Should NOT contain verbose message"
-    );
+    assert!(!stdout.contains("Created"), "Should NOT contain verbose message");
 }
 
 #[test]
@@ -535,10 +482,7 @@ fn new_output_json_valid() {
 
     assert!(json.get("id").is_some(), "Should have id field");
     assert_eq!(json.get("type").and_then(|v| v.as_str()), Some("task"));
-    assert_eq!(
-        json.get("title").and_then(|v| v.as_str()),
-        Some("JSON task")
-    );
+    assert_eq!(json.get("title").and_then(|v| v.as_str()), Some("JSON task"));
     assert_eq!(json.get("status").and_then(|v| v.as_str()), Some("todo"));
     assert!(json
         .get("labels")
@@ -566,12 +510,7 @@ fn new_output_id_scripting_workflow() {
     assert!(!id.is_empty(), "ID should not be empty");
 
     // Use ID in subsequent command
-    wk().arg("label")
-        .arg(&id)
-        .arg("scripted")
-        .current_dir(temp.path())
-        .assert()
-        .success();
+    wk().arg("label").arg(&id).arg("scripted").current_dir(temp.path()).assert().success();
 
     // Verify label was added
     wk().arg("show")
@@ -597,12 +536,7 @@ fn new_default_text_output_includes_message() {
 #[test]
 fn new_prefix_with_other_flags() {
     let temp = TempDir::new().unwrap();
-    wk().arg("init")
-        .arg("--prefix")
-        .arg("main")
-        .current_dir(temp.path())
-        .assert()
-        .success();
+    wk().arg("init").arg("--prefix").arg("main").current_dir(temp.path()).assert().success();
 
     let output = wk()
         .arg("new")

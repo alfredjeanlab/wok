@@ -43,10 +43,7 @@ impl HookScope {
             HookScope::Project => Ok(PathBuf::from(".claude/settings.json")),
             HookScope::User => {
                 let home = dirs::home_dir().ok_or_else(|| {
-                    io::Error::new(
-                        io::ErrorKind::NotFound,
-                        "Could not determine home directory",
-                    )
+                    io::Error::new(io::ErrorKind::NotFound, "Could not determine home directory")
                 })?;
                 Ok(home.join(".claude/settings.json"))
             }
@@ -255,20 +252,13 @@ pub fn check_hooks(scope: HookScope) -> io::Result<HookStatus> {
         false
     };
 
-    Ok(HookStatus {
-        scope,
-        installed,
-        path,
-    })
+    Ok(HookStatus { scope, installed, path })
 }
 
 /// Check hooks status for all scopes.
 pub fn check_all_hooks() -> Vec<HookStatus> {
     let scopes = [HookScope::Local, HookScope::Project, HookScope::User];
-    scopes
-        .iter()
-        .filter_map(|&scope| check_hooks(scope).ok())
-        .collect()
+    scopes.iter().filter_map(|&scope| check_hooks(scope).ok()).collect()
 }
 
 /// Determine if we should use interactive mode.

@@ -11,11 +11,8 @@
 use super::common::*;
 
 fn create_issue(temp: &TempDir, type_: &str, title: &str) -> String {
-    let output = wk()
-        .args(["new", type_, title, "-o", "id"])
-        .current_dir(temp.path())
-        .output()
-        .unwrap();
+    let output =
+        wk().args(["new", type_, title, "-o", "id"]).current_dir(temp.path()).output().unwrap();
     String::from_utf8_lossy(&output.stdout).trim().to_string()
 }
 
@@ -95,10 +92,7 @@ fn show_displays_notes() {
     let temp = init_temp();
     let id = create_issue(&temp, "task", "ShowNotes Test task");
 
-    wk().args(["note", &id, "My note content"])
-        .current_dir(temp.path())
-        .assert()
-        .success();
+    wk().args(["note", &id, "My note content"]).current_dir(temp.path()).assert().success();
 
     wk().args(["show", &id])
         .current_dir(temp.path())
@@ -112,20 +106,11 @@ fn show_groups_notes_by_status() {
     let temp = init_temp();
     let id = create_issue(&temp, "task", "ShowNotes Grouped task");
 
-    wk().args(["note", &id, "Todo note"])
-        .current_dir(temp.path())
-        .assert()
-        .success();
+    wk().args(["note", &id, "Todo note"]).current_dir(temp.path()).assert().success();
 
-    wk().args(["start", &id])
-        .current_dir(temp.path())
-        .assert()
-        .success();
+    wk().args(["start", &id]).current_dir(temp.path()).assert().success();
 
-    wk().args(["note", &id, "In progress note"])
-        .current_dir(temp.path())
-        .assert()
-        .success();
+    wk().args(["note", &id, "In progress note"]).current_dir(temp.path()).assert().success();
 
     wk().args(["show", &id])
         .current_dir(temp.path())
@@ -145,10 +130,7 @@ fn show_displays_blocked_by() {
     let a = create_issue(&temp, "task", "ShowDep Blocker");
     let b = create_issue(&temp, "task", "ShowDep Blocked");
 
-    wk().args(["dep", &a, "blocks", &b])
-        .current_dir(temp.path())
-        .assert()
-        .success();
+    wk().args(["dep", &a, "blocks", &b]).current_dir(temp.path()).assert().success();
 
     wk().args(["show", &b])
         .current_dir(temp.path())
@@ -164,10 +146,7 @@ fn show_displays_blocks() {
     let a = create_issue(&temp, "task", "ShowDep Blocker");
     let b = create_issue(&temp, "task", "ShowDep Blocked");
 
-    wk().args(["dep", &a, "blocks", &b])
-        .current_dir(temp.path())
-        .assert()
-        .success();
+    wk().args(["dep", &a, "blocks", &b]).current_dir(temp.path()).assert().success();
 
     wk().args(["show", &a])
         .current_dir(temp.path())
@@ -183,10 +162,7 @@ fn show_displays_tracked_by() {
     let feature = create_issue(&temp, "feature", "ShowDep Parent feature");
     let task = create_issue(&temp, "task", "ShowDep Child task");
 
-    wk().args(["dep", &feature, "tracks", &task])
-        .current_dir(temp.path())
-        .assert()
-        .success();
+    wk().args(["dep", &feature, "tracks", &task]).current_dir(temp.path()).assert().success();
 
     wk().args(["show", &task])
         .current_dir(temp.path())
@@ -202,10 +178,7 @@ fn show_displays_tracks() {
     let feature = create_issue(&temp, "feature", "ShowDep Parent feature");
     let task = create_issue(&temp, "task", "ShowDep Child task");
 
-    wk().args(["dep", &feature, "tracks", &task])
-        .current_dir(temp.path())
-        .assert()
-        .success();
+    wk().args(["dep", &feature, "tracks", &task]).current_dir(temp.path()).assert().success();
 
     wk().args(["show", &feature])
         .current_dir(temp.path())
@@ -220,10 +193,7 @@ fn show_displays_log() {
     let temp = init_temp();
     let id = create_issue(&temp, "task", "ShowDep Log task");
 
-    wk().args(["start", &id])
-        .current_dir(temp.path())
-        .assert()
-        .success();
+    wk().args(["start", &id]).current_dir(temp.path()).assert().success();
 
     wk().args(["show", &id])
         .current_dir(temp.path())
@@ -240,19 +210,13 @@ fn show_displays_log() {
 #[test]
 fn show_nonexistent_fails() {
     let temp = init_temp();
-    wk().args(["show", "test-nonexistent"])
-        .current_dir(temp.path())
-        .assert()
-        .failure();
+    wk().args(["show", "test-nonexistent"]).current_dir(temp.path()).assert().failure();
 }
 
 #[test]
 fn show_requires_issue_id() {
     let temp = init_temp();
-    wk().args(["show"])
-        .current_dir(temp.path())
-        .assert()
-        .failure();
+    wk().args(["show"]).current_dir(temp.path()).assert().failure();
 }
 
 #[test]
@@ -291,11 +255,7 @@ fn show_json_single_issue_compact() {
     let temp = init_temp();
     let id = create_issue(&temp, "task", "Test issue");
 
-    let output = wk()
-        .args(["show", &id, "-o", "json"])
-        .current_dir(temp.path())
-        .output()
-        .unwrap();
+    let output = wk().args(["show", &id, "-o", "json"]).current_dir(temp.path()).output().unwrap();
 
     let stdout = String::from_utf8_lossy(&output.stdout);
 
@@ -314,11 +274,8 @@ fn show_json_multiple_issues_jsonl() {
     let id1 = create_issue(&temp, "task", "First issue");
     let id2 = create_issue(&temp, "task", "Second issue");
 
-    let output = wk()
-        .args(["show", &id1, &id2, "-o", "json"])
-        .current_dir(temp.path())
-        .output()
-        .unwrap();
+    let output =
+        wk().args(["show", &id1, &id2, "-o", "json"]).current_dir(temp.path()).output().unwrap();
 
     let stdout = String::from_utf8_lossy(&output.stdout);
     let lines: Vec<&str> = stdout.trim().lines().collect();

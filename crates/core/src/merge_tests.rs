@@ -79,10 +79,8 @@ fn merge_set_status_last_wins() {
         Hlc::new(2000, 0, 1),
         OpPayload::set_status("test-1".into(), Status::InProgress, None),
     );
-    let second = Op::new(
-        Hlc::new(3000, 0, 1),
-        OpPayload::set_status("test-1".into(), Status::Done, None),
-    );
+    let second =
+        Op::new(Hlc::new(3000, 0, 1), OpPayload::set_status("test-1".into(), Status::Done, None));
 
     db.apply(&first).unwrap();
     db.apply(&second).unwrap();
@@ -91,10 +89,8 @@ fn merge_set_status_last_wins() {
     assert_eq!(issue.status, Status::Done);
 
     // Now apply an older status change - should be ignored
-    let stale = Op::new(
-        Hlc::new(2500, 0, 1),
-        OpPayload::set_status("test-1".into(), Status::Closed, None),
-    );
+    let stale =
+        Op::new(Hlc::new(2500, 0, 1), OpPayload::set_status("test-1".into(), Status::Closed, None));
     assert!(!db.apply(&stale).unwrap()); // No-op because HLC is older
 
     let issue = db.get_issue("test-1").unwrap();
@@ -111,10 +107,8 @@ fn merge_set_title() {
     );
     db.apply(&create).unwrap();
 
-    let set_title = Op::new(
-        Hlc::new(2000, 0, 1),
-        OpPayload::set_title("test-1".into(), "New".into()),
-    );
+    let set_title =
+        Op::new(Hlc::new(2000, 0, 1), OpPayload::set_title("test-1".into(), "New".into()));
     assert!(db.apply(&set_title).unwrap());
 
     let issue = db.get_issue("test-1").unwrap();
@@ -132,10 +126,8 @@ fn merge_set_type() {
     );
     db.apply(&create).unwrap();
 
-    let set_type = Op::new(
-        Hlc::new(2000, 0, 1),
-        OpPayload::set_type("test-1".into(), IssueType::Bug),
-    );
+    let set_type =
+        Op::new(Hlc::new(2000, 0, 1), OpPayload::set_type("test-1".into(), IssueType::Bug));
     assert!(db.apply(&set_type).unwrap());
 
     let issue = db.get_issue("test-1").unwrap();
@@ -152,10 +144,8 @@ fn merge_add_label() {
     );
     db.apply(&create).unwrap();
 
-    let add_label = Op::new(
-        Hlc::new(2000, 0, 1),
-        OpPayload::add_label("test-1".into(), "urgent".into()),
-    );
+    let add_label =
+        Op::new(Hlc::new(2000, 0, 1), OpPayload::add_label("test-1".into(), "urgent".into()));
     assert!(db.apply(&add_label).unwrap());
 
     let labels = db.get_labels("test-1").unwrap();
@@ -172,16 +162,12 @@ fn merge_remove_label() {
     );
     db.apply(&create).unwrap();
 
-    let add_label = Op::new(
-        Hlc::new(2000, 0, 1),
-        OpPayload::add_label("test-1".into(), "urgent".into()),
-    );
+    let add_label =
+        Op::new(Hlc::new(2000, 0, 1), OpPayload::add_label("test-1".into(), "urgent".into()));
     db.apply(&add_label).unwrap();
 
-    let remove_label = Op::new(
-        Hlc::new(3000, 0, 1),
-        OpPayload::remove_label("test-1".into(), "urgent".into()),
-    );
+    let remove_label =
+        Op::new(Hlc::new(3000, 0, 1), OpPayload::remove_label("test-1".into(), "urgent".into()));
     assert!(db.apply(&remove_label).unwrap());
 
     let labels = db.get_labels("test-1").unwrap();
@@ -289,10 +275,7 @@ fn merge_apply_all() {
             Hlc::new(2000, 0, 1),
             OpPayload::set_status("test-1".into(), Status::InProgress, None),
         ),
-        Op::new(
-            Hlc::new(3000, 0, 1),
-            OpPayload::add_label("test-1".into(), "urgent".into()),
-        ),
+        Op::new(Hlc::new(3000, 0, 1), OpPayload::add_label("test-1".into(), "urgent".into())),
     ];
 
     let applied = db.apply_all(&ops).unwrap();
@@ -349,14 +332,8 @@ fn set_status_later_hlc_wins(status1: Status, status2: Status) {
     db1.apply(&create).unwrap();
     db2.apply(&create).unwrap();
 
-    let op1 = Op::new(
-        Hlc::new(1000, 0, 1),
-        OpPayload::set_status("test-1".into(), status1, None),
-    );
-    let op2 = Op::new(
-        Hlc::new(2000, 0, 1),
-        OpPayload::set_status("test-1".into(), status2, None),
-    );
+    let op1 = Op::new(Hlc::new(1000, 0, 1), OpPayload::set_status("test-1".into(), status1, None));
+    let op2 = Op::new(Hlc::new(2000, 0, 1), OpPayload::set_status("test-1".into(), status2, None));
 
     // db1: forward order, db2: reverse order
     db1.apply(&op1).unwrap();
@@ -386,14 +363,8 @@ fn set_title_later_hlc_wins(title1: &str, title2: &str) {
     db1.apply(&create).unwrap();
     db2.apply(&create).unwrap();
 
-    let op1 = Op::new(
-        Hlc::new(1000, 0, 1),
-        OpPayload::set_title("test-1".into(), title1.into()),
-    );
-    let op2 = Op::new(
-        Hlc::new(2000, 0, 1),
-        OpPayload::set_title("test-1".into(), title2.into()),
-    );
+    let op1 = Op::new(Hlc::new(1000, 0, 1), OpPayload::set_title("test-1".into(), title1.into()));
+    let op2 = Op::new(Hlc::new(2000, 0, 1), OpPayload::set_title("test-1".into(), title2.into()));
 
     // db1: forward order, db2: reverse order
     db1.apply(&op1).unwrap();
@@ -423,14 +394,8 @@ fn add_label_commutative(tag1: &str, tag2: &str) {
     db1.apply(&create).unwrap();
     db2.apply(&create).unwrap();
 
-    let op1 = Op::new(
-        Hlc::new(1000, 0, 1),
-        OpPayload::add_label("test-1".into(), tag1.into()),
-    );
-    let op2 = Op::new(
-        Hlc::new(2000, 0, 1),
-        OpPayload::add_label("test-1".into(), tag2.into()),
-    );
+    let op1 = Op::new(Hlc::new(1000, 0, 1), OpPayload::add_label("test-1".into(), tag1.into()));
+    let op2 = Op::new(Hlc::new(2000, 0, 1), OpPayload::add_label("test-1".into(), tag2.into()));
 
     // db1: op1 then op2, db2: op2 then op1
     db1.apply(&op1).unwrap();
@@ -570,14 +535,8 @@ fn title_boundary_conditions(title1: &str, title2: &str) {
     );
     db.apply(&create).unwrap();
 
-    let op1 = Op::new(
-        Hlc::new(1000, 0, 1),
-        OpPayload::set_title("test-1".into(), title1.into()),
-    );
-    let op2 = Op::new(
-        Hlc::new(2000, 0, 1),
-        OpPayload::set_title("test-1".into(), title2.into()),
-    );
+    let op1 = Op::new(Hlc::new(1000, 0, 1), OpPayload::set_title("test-1".into(), title1.into()));
+    let op2 = Op::new(Hlc::new(2000, 0, 1), OpPayload::set_title("test-1".into(), title2.into()));
 
     db.apply(&op1).unwrap();
     db.apply(&op2).unwrap();
@@ -603,10 +562,8 @@ fn hlc_boundary_values(val1: u64, val2: u64) {
         Hlc::new(val1, 0, 1),
         OpPayload::set_status("test-1".into(), Status::InProgress, None),
     );
-    let op2 = Op::new(
-        Hlc::new(val2, 0, 1),
-        OpPayload::set_status("test-1".into(), Status::Done, None),
-    );
+    let op2 =
+        Op::new(Hlc::new(val2, 0, 1), OpPayload::set_status("test-1".into(), Status::Done, None));
 
     db.apply(&op1).unwrap();
     db.apply(&op2).unwrap();
@@ -619,14 +576,8 @@ fn hlc_boundary_values(val1: u64, val2: u64) {
 #[test]
 fn three_labels_commutative() {
     let labels = ["alpha", "beta", "gamma"];
-    let orderings: [[usize; 3]; 6] = [
-        [0, 1, 2],
-        [0, 2, 1],
-        [1, 0, 2],
-        [1, 2, 0],
-        [2, 0, 1],
-        [2, 1, 0],
-    ];
+    let orderings: [[usize; 3]; 6] =
+        [[0, 1, 2], [0, 2, 1], [1, 0, 2], [1, 2, 0], [2, 0, 1], [2, 1, 0]];
 
     let mut results: Vec<Vec<String>> = Vec::new();
 
@@ -674,14 +625,10 @@ fn mixed_ops_convergence() {
         Hlc::new(1000, 0, 1),
         OpPayload::set_status("test-1".into(), Status::InProgress, None),
     );
-    let title_op = Op::new(
-        Hlc::new(2000, 0, 1),
-        OpPayload::set_title("test-1".into(), "Updated".into()),
-    );
-    let label_op = Op::new(
-        Hlc::new(3000, 0, 1),
-        OpPayload::add_label("test-1".into(), "important".into()),
-    );
+    let title_op =
+        Op::new(Hlc::new(2000, 0, 1), OpPayload::set_title("test-1".into(), "Updated".into()));
+    let label_op =
+        Op::new(Hlc::new(3000, 0, 1), OpPayload::add_label("test-1".into(), "important".into()));
 
     // db1: status, title, label
     db1.apply(&status_op).unwrap();
@@ -699,10 +646,7 @@ fn mixed_ops_convergence() {
 
     assert_eq!(issue1.status, issue2.status);
     assert_eq!(issue1.title, issue2.title);
-    assert_eq!(
-        db1.get_labels("test-1").unwrap(),
-        db2.get_labels("test-1").unwrap()
-    );
+    assert_eq!(db1.get_labels("test-1").unwrap(), db2.get_labels("test-1").unwrap());
 }
 
 /// Tests concurrent updates to the same field from different nodes
@@ -721,18 +665,12 @@ fn concurrent_updates_same_field() {
     db3.apply(&create).unwrap();
 
     // Three nodes update title at the "same" wall time, different node IDs
-    let op_node1 = Op::new(
-        Hlc::new(1000, 0, 1),
-        OpPayload::set_title("test-1".into(), "From node 1".into()),
-    );
-    let op_node2 = Op::new(
-        Hlc::new(1000, 0, 2),
-        OpPayload::set_title("test-1".into(), "From node 2".into()),
-    );
-    let op_node3 = Op::new(
-        Hlc::new(1000, 0, 3),
-        OpPayload::set_title("test-1".into(), "From node 3".into()),
-    );
+    let op_node1 =
+        Op::new(Hlc::new(1000, 0, 1), OpPayload::set_title("test-1".into(), "From node 1".into()));
+    let op_node2 =
+        Op::new(Hlc::new(1000, 0, 2), OpPayload::set_title("test-1".into(), "From node 2".into()));
+    let op_node3 =
+        Op::new(Hlc::new(1000, 0, 3), OpPayload::set_title("test-1".into(), "From node 3".into()));
 
     // Apply in different orders to each database
     db1.apply(&op_node1).unwrap();
@@ -770,10 +708,8 @@ fn merge_config_rename_updates_all_tables() {
     db.apply(&create2).unwrap();
 
     // Add label
-    let add_label = Op::new(
-        Hlc::new(2000, 0, 1),
-        OpPayload::add_label("old-1".into(), "urgent".into()),
-    );
+    let add_label =
+        Op::new(Hlc::new(2000, 0, 1), OpPayload::add_label("old-1".into(), "urgent".into()));
     db.apply(&add_label).unwrap();
 
     // Add note
@@ -791,10 +727,8 @@ fn merge_config_rename_updates_all_tables() {
     db.apply(&add_dep).unwrap();
 
     // Apply config rename
-    let rename = Op::new(
-        Hlc::new(5000, 0, 1),
-        OpPayload::config_rename("old".into(), "new".into()),
-    );
+    let rename =
+        Op::new(Hlc::new(5000, 0, 1), OpPayload::config_rename("old".into(), "new".into()));
     assert!(db.apply(&rename).unwrap());
 
     // Verify issues were renamed
@@ -827,10 +761,8 @@ fn merge_config_rename_is_idempotent() {
     );
     db.apply(&create).unwrap();
 
-    let rename = Op::new(
-        Hlc::new(2000, 0, 1),
-        OpPayload::config_rename("old".into(), "new".into()),
-    );
+    let rename =
+        Op::new(Hlc::new(2000, 0, 1), OpPayload::config_rename("old".into(), "new".into()));
 
     // Apply once
     db.apply(&rename).unwrap();
@@ -857,29 +789,19 @@ fn merge_config_rename_partial_match() {
     );
     let create2 = Op::new(
         Hlc::new(1001, 0, 1),
-        OpPayload::create_issue(
-            "older-1".into(),
-            IssueType::Task,
-            "Should NOT rename".into(),
-        ),
+        OpPayload::create_issue("older-1".into(), IssueType::Task, "Should NOT rename".into()),
     );
     let create3 = Op::new(
         Hlc::new(1002, 0, 1),
-        OpPayload::create_issue(
-            "oldest-1".into(),
-            IssueType::Task,
-            "Should NOT rename".into(),
-        ),
+        OpPayload::create_issue("oldest-1".into(), IssueType::Task, "Should NOT rename".into()),
     );
     db.apply(&create1).unwrap();
     db.apply(&create2).unwrap();
     db.apply(&create3).unwrap();
 
     // Rename only "old" prefix
-    let rename = Op::new(
-        Hlc::new(2000, 0, 1),
-        OpPayload::config_rename("old".into(), "new".into()),
-    );
+    let rename =
+        Op::new(Hlc::new(2000, 0, 1), OpPayload::config_rename("old".into(), "new".into()));
     db.apply(&rename).unwrap();
 
     // Verify correct renames
@@ -901,10 +823,8 @@ fn merge_config_rename_no_matching_issues() {
     db.apply(&create).unwrap();
 
     // Rename a prefix that doesn't exist
-    let rename = Op::new(
-        Hlc::new(2000, 0, 1),
-        OpPayload::config_rename("nonexistent".into(), "new".into()),
-    );
+    let rename =
+        Op::new(Hlc::new(2000, 0, 1), OpPayload::config_rename("nonexistent".into(), "new".into()));
     assert!(db.apply(&rename).unwrap()); // Still returns true (operation applied)
 
     // Verify issue unchanged

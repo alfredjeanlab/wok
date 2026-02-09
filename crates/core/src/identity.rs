@@ -36,10 +36,7 @@ pub fn get_user_name() -> String {
 }
 
 fn get_git_user_name() -> Option<String> {
-    let output = Command::new("git")
-        .args(["config", "--get", "user.name"])
-        .output()
-        .ok()?;
+    let output = Command::new("git").args(["config", "--get", "user.name"]).output().ok()?;
 
     if output.status.success() {
         let name = String::from_utf8_lossy(&output.stdout).trim().to_string();
@@ -51,10 +48,7 @@ fn get_git_user_name() -> Option<String> {
 }
 
 fn get_unix_username() -> Option<String> {
-    std::env::var("USER")
-        .or_else(|_| std::env::var("LOGNAME"))
-        .ok()
-        .filter(|s| !s.is_empty())
+    std::env::var("USER").or_else(|_| std::env::var("LOGNAME")).ok().filter(|s| !s.is_empty())
 }
 
 fn is_system_account(name: &str) -> bool {

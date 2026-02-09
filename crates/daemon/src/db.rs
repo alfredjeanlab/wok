@@ -46,27 +46,15 @@ impl Database {
             }
             QueryOp::GetIssue { id } => {
                 let issue = self.core.get_issue(&id)?;
-                Ok(QueryResult::Issue {
-                    issue: issue.into(),
-                })
+                Ok(QueryResult::Issue { issue: issue.into() })
             }
-            QueryOp::ListIssues {
-                status,
-                issue_type,
-                label,
-            } => {
-                let issues = self
-                    .core
-                    .list_issues(status, issue_type, label.as_deref())?;
-                Ok(QueryResult::Issues {
-                    issues: issues.into_iter().map(Into::into).collect(),
-                })
+            QueryOp::ListIssues { status, issue_type, label } => {
+                let issues = self.core.list_issues(status, issue_type, label.as_deref())?;
+                Ok(QueryResult::Issues { issues: issues.into_iter().map(Into::into).collect() })
             }
             QueryOp::SearchIssues { query } => {
                 let issues = self.core.search_issues(&query)?;
-                Ok(QueryResult::Issues {
-                    issues: issues.into_iter().map(Into::into).collect(),
-                })
+                Ok(QueryResult::Issues { issues: issues.into_iter().map(Into::into).collect() })
             }
             QueryOp::GetBlockedIssueIds => {
                 let ids = self.core.get_blocked_issue_ids()?;
@@ -171,11 +159,7 @@ impl Database {
                 let removed = self.core.remove_label(&id, &label)?;
                 Ok(MutateResult::LabelRemoved { removed })
             }
-            MutateOp::AddNote {
-                id,
-                status,
-                content,
-            } => {
+            MutateOp::AddNote { id, status, content } => {
                 self.core.add_note(&id, status, &content)?;
                 Ok(MutateResult::Ok)
             }
@@ -183,29 +167,15 @@ impl Database {
                 self.core.log_event(&event)?;
                 Ok(MutateResult::Ok)
             }
-            MutateOp::AddDependency(DependencyRef {
-                from_id,
-                to_id,
-                relation,
-            }) => {
+            MutateOp::AddDependency(DependencyRef { from_id, to_id, relation }) => {
                 self.core.add_dependency(&from_id, &to_id, relation)?;
                 Ok(MutateResult::Ok)
             }
-            MutateOp::RemoveDependency(DependencyRef {
-                from_id,
-                to_id,
-                relation,
-            }) => {
+            MutateOp::RemoveDependency(DependencyRef { from_id, to_id, relation }) => {
                 self.core.remove_dependency(&from_id, &to_id, relation)?;
                 Ok(MutateResult::Ok)
             }
-            MutateOp::AddLink {
-                id,
-                link_type,
-                url,
-                external_id,
-                rel,
-            } => {
+            MutateOp::AddLink { id, link_type, url, external_id, rel } => {
                 let mut link = wk_core::Link::new(id);
                 if let Some(lt) = link_type {
                     link = link.with_type(lt);

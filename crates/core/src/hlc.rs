@@ -37,20 +37,12 @@ pub struct Hlc {
 impl Hlc {
     /// Creates a new HLC with the given components.
     pub fn new(wall_ms: u64, counter: u32, node_id: u32) -> Self {
-        Hlc {
-            wall_ms,
-            counter,
-            node_id,
-        }
+        Hlc { wall_ms, counter, node_id }
     }
 
     /// Creates an HLC representing the earliest possible time (for queries).
     pub fn min() -> Self {
-        Hlc {
-            wall_ms: 0,
-            counter: 0,
-            node_id: 0,
-        }
+        Hlc { wall_ms: 0, counter: 0, node_id: 0 }
     }
 
     /// Parses an HLC from its string representation.
@@ -131,10 +123,7 @@ pub struct SystemClock;
 
 impl ClockSource for SystemClock {
     fn now_ms(&self) -> u64 {
-        SystemTime::now()
-            .duration_since(UNIX_EPOCH)
-            .map(|d| d.as_millis() as u64)
-            .unwrap_or(0)
+        SystemTime::now().duration_since(UNIX_EPOCH).map(|d| d.as_millis() as u64).unwrap_or(0)
     }
 }
 
@@ -165,12 +154,7 @@ impl HlcClock<SystemClock> {
 impl<C: ClockSource> HlcClock<C> {
     /// Creates a new HLC clock with a custom clock source.
     pub fn with_clock(clock: C, node_id: u32) -> Self {
-        HlcClock {
-            clock,
-            node_id,
-            last_wall_ms: Mutex::new(0),
-            last_counter: AtomicU32::new(0),
-        }
+        HlcClock { clock, node_id, last_wall_ms: Mutex::new(0), last_counter: AtomicU32::new(0) }
     }
 
     /// Returns the node ID for this clock.

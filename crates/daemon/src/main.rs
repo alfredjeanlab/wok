@@ -139,9 +139,9 @@ fn handle_request(
             DaemonResponse::Status(DaemonStatus::new(pid, uptime_secs))
         }
         DaemonRequest::Shutdown => DaemonResponse::ShuttingDown,
-        DaemonRequest::Hello { version: _ } => DaemonResponse::Hello {
-            version: env!("CARGO_PKG_VERSION").to_string(),
-        },
+        DaemonRequest::Hello { version: _ } => {
+            DaemonResponse::Hello { version: env!("CARGO_PKG_VERSION").to_string() }
+        }
         DaemonRequest::Query(op) => match db.execute_query(op) {
             Ok(result) => DaemonResponse::QueryResult(result),
             Err(e) => DaemonResponse::Error { message: e },
@@ -179,32 +179,17 @@ fn setup_logging(log_path: &Path) {
     let filter = EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info"));
 
     // Try to open log file, fall back to stderr
-    if let Ok(file) = fs::OpenOptions::new()
-        .create(true)
-        .append(true)
-        .open(log_path)
-    {
-        tracing_subscriber::fmt()
-            .with_env_filter(filter)
-            .with_writer(file)
-            .with_ansi(false)
-            .init();
+    if let Ok(file) = fs::OpenOptions::new().create(true).append(true).open(log_path) {
+        tracing_subscriber::fmt().with_env_filter(filter).with_writer(file).with_ansi(false).init();
     } else {
-        tracing_subscriber::fmt()
-            .with_env_filter(filter)
-            .with_writer(std::io::stderr)
-            .init();
+        tracing_subscriber::fmt().with_env_filter(filter).with_writer(std::io::stderr).init();
     }
 }
 
 fn acquire_lock(lock_path: &Path) -> std::io::Result<fs::File> {
     use fs2::FileExt;
 
-    let file = fs::OpenOptions::new()
-        .create(true)
-        .write(true)
-        .truncate(true)
-        .open(lock_path)?;
+    let file = fs::OpenOptions::new().create(true).write(true).truncate(true).open(lock_path)?;
     file.try_lock_exclusive()
         .map_err(|_| std::io::Error::other("another daemon instance is already running"))?;
     Ok(file)

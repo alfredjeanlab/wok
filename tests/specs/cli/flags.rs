@@ -51,11 +51,7 @@ fn init_flags_prefix() {
         .success();
 
     let id = create_issue(&temp, "task", "Test task");
-    assert!(
-        id.starts_with("myproj-"),
-        "Issue ID should start with 'myproj-', got: {}",
-        id
-    );
+    assert!(id.starts_with("myproj-"), "Issue ID should start with 'myproj-', got: {}", id);
 }
 
 #[test]
@@ -116,12 +112,8 @@ fn new_flags_multiple_labels() {
 #[test]
 fn new_flags_note_adds_initial_note() {
     let temp = init_temp();
-    let id = create_issue_with_opts(
-        &temp,
-        "task",
-        "Test task",
-        &["--note", "Initial note content"],
-    );
+    let id =
+        create_issue_with_opts(&temp, "task", "Test task", &["--note", "Initial note content"]);
 
     wk().arg("show")
         .arg(&id)
@@ -205,16 +197,8 @@ fn reopen_flag_reason_records_in_log() {
     let temp = init_temp();
     let id = create_issue(&temp, "task", "Test reopen");
 
-    wk().arg("start")
-        .arg(&id)
-        .current_dir(temp.path())
-        .assert()
-        .success();
-    wk().arg("done")
-        .arg(&id)
-        .current_dir(temp.path())
-        .assert()
-        .success();
+    wk().arg("start").arg(&id).current_dir(temp.path()).assert().success();
+    wk().arg("done").arg(&id).current_dir(temp.path()).assert().success();
 
     wk().arg("reopen")
         .arg(&id)
@@ -262,13 +246,7 @@ fn edit_type_changes_issue_type() {
     let temp = init_temp();
     let id = create_issue(&temp, "task", "Test issue");
 
-    wk().arg("edit")
-        .arg(&id)
-        .arg("type")
-        .arg("bug")
-        .current_dir(temp.path())
-        .assert()
-        .success();
+    wk().arg("edit").arg(&id).arg("type").arg("bug").current_dir(temp.path()).assert().success();
 
     wk().arg("show")
         .arg(&id)
@@ -324,21 +302,9 @@ fn list_status_filters_by_status(status: &str, expected: &str, not_expected: &st
     let id3 = create_issue(&temp, "task", "StatusFlag Done");
     let id4 = create_issue(&temp, "task", "StatusFlag Closed");
 
-    wk().arg("start")
-        .arg(&id2)
-        .current_dir(temp.path())
-        .assert()
-        .success();
-    wk().arg("start")
-        .arg(&id3)
-        .current_dir(temp.path())
-        .assert()
-        .success();
-    wk().arg("done")
-        .arg(&id3)
-        .current_dir(temp.path())
-        .assert()
-        .success();
+    wk().arg("start").arg(&id2).current_dir(temp.path()).assert().success();
+    wk().arg("start").arg(&id3).current_dir(temp.path()).assert().success();
+    wk().arg("done").arg(&id3).current_dir(temp.path()).assert().success();
     wk().arg("close")
         .arg(&id4)
         .arg("--reason")
@@ -429,12 +395,7 @@ fn list_type_comma_separated() {
 #[test]
 fn list_label_filters_by_label() {
     let temp = init_temp();
-    create_issue_with_opts(
-        &temp,
-        "task",
-        "LabelFlag Labeled task",
-        &["--label", "findme"],
-    );
+    create_issue_with_opts(&temp, "task", "LabelFlag Labeled task", &["--label", "findme"]);
     create_issue(&temp, "task", "LabelFlag Unlabeled task");
 
     wk().arg("list")
@@ -498,11 +459,7 @@ fn list_blocked_shows_only_blocked_issues() {
 fn list_blocked_short_flag_b_not_supported() {
     let temp = init_temp();
 
-    wk().arg("list")
-        .arg("-b")
-        .current_dir(temp.path())
-        .assert()
-        .failure();
+    wk().arg("list").arg("-b").current_dir(temp.path()).assert().failure();
 }
 
 #[test]
@@ -537,11 +494,7 @@ fn list_combined_status_and_type() {
     create_issue(&temp, "task", "CombFlag Todo task");
     let bug_id = create_issue(&temp, "bug", "CombFlag Todo bug");
 
-    wk().arg("start")
-        .arg(&bug_id)
-        .current_dir(temp.path())
-        .assert()
-        .success();
+    wk().arg("start").arg(&bug_id).current_dir(temp.path()).assert().success();
 
     wk().arg("list")
         .arg("--status")
@@ -559,24 +512,11 @@ fn list_combined_status_and_type() {
 #[test]
 fn list_combined_label_and_status() {
     let temp = init_temp();
-    create_issue_with_opts(
-        &temp,
-        "task",
-        "CombLabel Tagged todo",
-        &["--label", "mylabel"],
-    );
-    let started_id = create_issue_with_opts(
-        &temp,
-        "task",
-        "CombLabel Tagged started",
-        &["--label", "mylabel"],
-    );
+    create_issue_with_opts(&temp, "task", "CombLabel Tagged todo", &["--label", "mylabel"]);
+    let started_id =
+        create_issue_with_opts(&temp, "task", "CombLabel Tagged started", &["--label", "mylabel"]);
 
-    wk().arg("start")
-        .arg(&started_id)
-        .current_dir(temp.path())
-        .assert()
-        .success();
+    wk().arg("start").arg(&started_id).current_dir(temp.path()).assert().success();
 
     wk().arg("list")
         .arg("--label")
@@ -600,37 +540,12 @@ fn log_limit_limits_output() {
     let temp = init_temp();
     let id = create_issue(&temp, "task", "LogLimit task");
 
-    wk().arg("note")
-        .arg(&id)
-        .arg("Note 1")
-        .current_dir(temp.path())
-        .assert()
-        .success();
-    wk().arg("note")
-        .arg(&id)
-        .arg("Note 2")
-        .current_dir(temp.path())
-        .assert()
-        .success();
-    wk().arg("note")
-        .arg(&id)
-        .arg("Note 3")
-        .current_dir(temp.path())
-        .assert()
-        .success();
-    wk().arg("start")
-        .arg(&id)
-        .current_dir(temp.path())
-        .assert()
-        .success();
+    wk().arg("note").arg(&id).arg("Note 1").current_dir(temp.path()).assert().success();
+    wk().arg("note").arg(&id).arg("Note 2").current_dir(temp.path()).assert().success();
+    wk().arg("note").arg(&id).arg("Note 3").current_dir(temp.path()).assert().success();
+    wk().arg("start").arg(&id).current_dir(temp.path()).assert().success();
 
-    wk().arg("log")
-        .arg(&id)
-        .arg("--limit")
-        .arg("2")
-        .current_dir(temp.path())
-        .assert()
-        .success();
+    wk().arg("log").arg(&id).arg("--limit").arg("2").current_dir(temp.path()).assert().success();
 }
 
 #[test]
@@ -638,17 +553,8 @@ fn log_limit_1_shows_most_recent() {
     let temp = init_temp();
     let id = create_issue(&temp, "task", "LogLimit1 task");
 
-    wk().arg("note")
-        .arg(&id)
-        .arg("Note 1")
-        .current_dir(temp.path())
-        .assert()
-        .success();
-    wk().arg("start")
-        .arg(&id)
-        .current_dir(temp.path())
-        .assert()
-        .success();
+    wk().arg("note").arg(&id).arg("Note 1").current_dir(temp.path()).assert().success();
+    wk().arg("start").arg(&id).current_dir(temp.path()).assert().success();
 
     wk().arg("log")
         .arg(&id)
@@ -699,12 +605,7 @@ fn ready_type_short_flag_t_works() {
 #[test]
 fn ready_label_filters_items() {
     let temp = init_temp();
-    create_issue_with_opts(
-        &temp,
-        "task",
-        "ReadyLabel Labeled task",
-        &["--label", "urgent"],
-    );
+    create_issue_with_opts(&temp, "task", "ReadyLabel Labeled task", &["--label", "urgent"]);
     create_issue(&temp, "task", "ReadyLabel Unlabeled task");
 
     wk().arg("ready")
@@ -720,30 +621,17 @@ fn ready_label_filters_items() {
 #[test]
 fn ready_type_and_label_combined() {
     let temp = init_temp();
-    create_issue_with_opts(
-        &temp,
-        "bug",
-        "ReadyComb Labeled bug",
-        &["--label", "team:alpha"],
-    );
+    create_issue_with_opts(&temp, "bug", "ReadyComb Labeled bug", &["--label", "team:alpha"]);
     create_issue_with_opts(
         &temp,
         "task",
         "ReadyComb Other labeled task",
         &["--label", "team:alpha"],
     );
-    let blocker = create_issue_with_opts(
-        &temp,
-        "bug",
-        "ReadyComb Blocker bug",
-        &["--label", "team:alpha"],
-    );
-    let blocked = create_issue_with_opts(
-        &temp,
-        "bug",
-        "ReadyComb Blocked bug",
-        &["--label", "team:alpha"],
-    );
+    let blocker =
+        create_issue_with_opts(&temp, "bug", "ReadyComb Blocker bug", &["--label", "team:alpha"]);
+    let blocked =
+        create_issue_with_opts(&temp, "bug", "ReadyComb Blocked bug", &["--label", "team:alpha"]);
 
     wk().arg("dep")
         .arg(&blocker)
@@ -775,22 +663,14 @@ fn ready_type_and_label_combined() {
 fn ready_rejects_all_flag() {
     let temp = init_temp();
 
-    wk().arg("ready")
-        .arg("--all")
-        .current_dir(temp.path())
-        .assert()
-        .failure();
+    wk().arg("ready").arg("--all").current_dir(temp.path()).assert().failure();
 }
 
 #[test]
 fn ready_rejects_blocked_flag() {
     let temp = init_temp();
 
-    wk().arg("ready")
-        .arg("--blocked")
-        .current_dir(temp.path())
-        .assert()
-        .failure();
+    wk().arg("ready").arg("--blocked").current_dir(temp.path()).assert().failure();
 }
 
 // =============================================================================

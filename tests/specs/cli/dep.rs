@@ -48,13 +48,7 @@ fn dep_blocks_creates_relationship() {
     let a = create_issue(&temp, "task", "DepBlocks Task A");
     let b = create_issue(&temp, "task", "DepBlocks Task B");
 
-    wk().arg("dep")
-        .arg(&a)
-        .arg("blocks")
-        .arg(&b)
-        .current_dir(temp.path())
-        .assert()
-        .success();
+    wk().arg("dep").arg(&a).arg("blocks").arg(&b).current_dir(temp.path()).assert().success();
 }
 
 #[test]
@@ -63,13 +57,7 @@ fn dep_blocks_default_list_shows_both() {
     let a = create_issue(&temp, "task", "DepBlocksList Task A");
     let b = create_issue(&temp, "task", "DepBlocksList Task B");
 
-    wk().arg("dep")
-        .arg(&a)
-        .arg("blocks")
-        .arg(&b)
-        .current_dir(temp.path())
-        .assert()
-        .success();
+    wk().arg("dep").arg(&a).arg("blocks").arg(&b).current_dir(temp.path()).assert().success();
 
     // Default list shows both blocked and unblocked issues
     wk().arg("list")
@@ -86,13 +74,7 @@ fn dep_blocks_blocked_flag_filters() {
     let a = create_issue(&temp, "task", "DepBlocksFilter Task A");
     let b = create_issue(&temp, "task", "DepBlocksFilter Task B");
 
-    wk().arg("dep")
-        .arg(&a)
-        .arg("blocks")
-        .arg(&b)
-        .current_dir(temp.path())
-        .assert()
-        .success();
+    wk().arg("dep").arg(&a).arg("blocks").arg(&b).current_dir(temp.path()).assert().success();
 
     // --blocked filters to show only blocked issues
     wk().arg("list")
@@ -208,22 +190,10 @@ fn undep_removes_blocking_relationship() {
     let b = create_issue(&temp, "task", "DepUndepBlock Task B");
 
     // Create relationship
-    wk().arg("dep")
-        .arg(&a)
-        .arg("blocks")
-        .arg(&b)
-        .current_dir(temp.path())
-        .assert()
-        .success();
+    wk().arg("dep").arg(&a).arg("blocks").arg(&b).current_dir(temp.path()).assert().success();
 
     // Remove relationship
-    wk().arg("undep")
-        .arg(&a)
-        .arg("blocks")
-        .arg(&b)
-        .current_dir(temp.path())
-        .assert()
-        .success();
+    wk().arg("undep").arg(&a).arg("blocks").arg(&b).current_dir(temp.path()).assert().success();
 
     // B should no longer appear in blocked list
     wk().arg("list")
@@ -275,13 +245,7 @@ fn undep_nonexistent_relationship_graceful() {
 
     // Undep on a relationship that doesn't exist
     // Should either succeed (idempotent) or fail gracefully
-    let result = wk()
-        .arg("undep")
-        .arg(&a)
-        .arg("blocks")
-        .arg(&b)
-        .current_dir(temp.path())
-        .assert();
+    let result = wk().arg("undep").arg(&a).arg("blocks").arg(&b).current_dir(temp.path()).assert();
 
     // The command should complete (either success or failure is acceptable)
     // This matches the BATS test which just had `true` after the command
@@ -297,13 +261,7 @@ fn dep_to_self_fails() {
     let temp = init_temp();
     let a = create_issue(&temp, "task", "DepErr Self Task");
 
-    wk().arg("dep")
-        .arg(&a)
-        .arg("blocks")
-        .arg(&a)
-        .current_dir(temp.path())
-        .assert()
-        .failure();
+    wk().arg("dep").arg(&a).arg("blocks").arg(&a).current_dir(temp.path()).assert().failure();
 }
 
 #[parameterized(
@@ -325,13 +283,7 @@ fn dep_nonexistent_id_fails(from_marker: &str, to_marker: &str) {
         to_marker.to_string()
     };
 
-    wk().arg("dep")
-        .arg(&from)
-        .arg("blocks")
-        .arg(&to)
-        .current_dir(temp.path())
-        .assert()
-        .failure();
+    wk().arg("dep").arg(&from).arg("blocks").arg(&to).current_dir(temp.path()).assert().failure();
 }
 
 #[test]
@@ -340,11 +292,5 @@ fn dep_invalid_relationship_fails() {
     let a = create_issue(&temp, "task", "DepErr Invalid A");
     let b = create_issue(&temp, "task", "DepErr Invalid B");
 
-    wk().arg("dep")
-        .arg(&a)
-        .arg("requires")
-        .arg(&b)
-        .current_dir(temp.path())
-        .assert()
-        .failure();
+    wk().arg("dep").arg(&a).arg("requires").arg(&b).current_dir(temp.path()).assert().failure();
 }

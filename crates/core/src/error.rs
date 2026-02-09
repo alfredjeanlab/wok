@@ -12,17 +12,10 @@ pub enum Error {
     IssueNotFound(String),
 
     #[error("ambiguous issue ID '{prefix}' matches: {}", matches.join(", "))]
-    AmbiguousId {
-        prefix: String,
-        matches: Vec<String>,
-    },
+    AmbiguousId { prefix: String, matches: Vec<String> },
 
     #[error("invalid status transition: cannot go from {from} to {to}\n  hint: from '{from}' you can go to: {valid_targets}")]
-    InvalidTransition {
-        from: String,
-        to: String,
-        valid_targets: String,
-    },
+    InvalidTransition { from: String, to: String, valid_targets: String },
 
     #[error(
         "would create a dependency cycle\n  hint: this would create a circular dependency chain"
@@ -33,11 +26,7 @@ pub enum Error {
     SelfDependency,
 
     #[error("dependency not found: {from} {rel} {to}")]
-    DependencyNotFound {
-        from: String,
-        rel: String,
-        to: String,
-    },
+    DependencyNotFound { from: String, rel: String, to: String },
 
     #[error(
         "invalid issue type: '{0}'\n  hint: valid types are: feature, task, bug, chore, idea, epic"

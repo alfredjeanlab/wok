@@ -98,20 +98,13 @@ fn install_creates_settings_for_scope(scope_args: &[&str], expected_file: &str) 
     let mut args = vec!["hooks", "install", "-y"];
     args.extend(scope_args.iter());
 
-    wk().args(&args)
-        .current_dir(temp.path())
-        .env("HOME", temp.path())
-        .assert()
-        .success();
+    wk().args(&args).current_dir(temp.path()).env("HOME", temp.path()).assert().success();
 
     let file_path = temp.path().join(expected_file);
     assert!(file_path.exists(), "Expected {} to exist", expected_file);
 
     let content = std::fs::read_to_string(&file_path).unwrap();
-    assert!(
-        content.contains("\"hooks\""),
-        "Settings file should contain hooks"
-    );
+    assert!(content.contains("\"hooks\""), "Settings file should contain hooks");
 }
 
 #[test]
@@ -125,16 +118,10 @@ fn install_user_creates_home_settings() {
         .success();
 
     let file_path = temp.path().join(".claude/settings.json");
-    assert!(
-        file_path.exists(),
-        "Expected ~/.claude/settings.json to exist"
-    );
+    assert!(file_path.exists(), "Expected ~/.claude/settings.json to exist");
 
     let content = std::fs::read_to_string(&file_path).unwrap();
-    assert!(
-        content.contains("\"hooks\""),
-        "Settings file should contain hooks"
-    );
+    assert!(content.contains("\"hooks\""), "Settings file should contain hooks");
 }
 
 // =============================================================================
@@ -166,10 +153,7 @@ fn install_is_idempotent() {
     let second_content =
         std::fs::read_to_string(temp.path().join(".claude/settings.local.json")).unwrap();
 
-    assert_eq!(
-        first_content, second_content,
-        "Install should be idempotent"
-    );
+    assert_eq!(first_content, second_content, "Install should be idempotent");
 }
 
 #[test]
@@ -192,10 +176,7 @@ fn install_preserves_existing_settings() {
 
     let content = std::fs::read_to_string(temp.path().join(".claude/settings.local.json")).unwrap();
     assert!(content.contains("\"hooks\""), "Should add hooks");
-    assert!(
-        content.contains("\"mcpServers\""),
-        "Should preserve mcpServers"
-    );
+    assert!(content.contains("\"mcpServers\""), "Should preserve mcpServers");
 }
 
 // =============================================================================
@@ -223,10 +204,7 @@ fn uninstall_removes_hooks() {
     let file_path = temp.path().join(".claude/settings.local.json");
     if file_path.exists() {
         let content = std::fs::read_to_string(&file_path).unwrap();
-        assert!(
-            !content.contains("\"PreCompact\""),
-            "PreCompact should be removed"
-        );
+        assert!(!content.contains("\"PreCompact\""), "PreCompact should be removed");
     }
 }
 
@@ -249,10 +227,7 @@ fn uninstall_preserves_other_settings() {
         .success();
 
     let content = std::fs::read_to_string(temp.path().join(".claude/settings.local.json")).unwrap();
-    assert!(
-        content.contains("\"mcpServers\""),
-        "Should preserve mcpServers"
-    );
+    assert!(content.contains("\"mcpServers\""), "Should preserve mcpServers");
 }
 
 #[test]
@@ -482,10 +457,7 @@ fn install_creates_valid_json_with_precompact_and_wk_prime() {
     let content = std::fs::read_to_string(temp.path().join(".claude/settings.local.json")).unwrap();
 
     // Contains PreCompact
-    assert!(
-        content.contains("\"PreCompact\""),
-        "Should contain PreCompact"
-    );
+    assert!(content.contains("\"PreCompact\""), "Should contain PreCompact");
 
     // Valid JSON - parse it
     let parsed: serde_json::Value = serde_json::from_str(&content).expect("Should be valid JSON");
@@ -591,10 +563,7 @@ fn smart_merge_preserves_existing_non_wk_hooks() {
         .success();
 
     let content = std::fs::read_to_string(temp.path().join(".claude/settings.local.json")).unwrap();
-    assert!(
-        content.contains("custom-script.sh"),
-        "Should preserve custom hooks"
-    );
+    assert!(content.contains("custom-script.sh"), "Should preserve custom hooks");
     assert!(content.contains("wk prime"), "Should add wk prime");
 }
 
@@ -647,10 +616,7 @@ fn smart_merge_adds_missing_events() {
         .success();
 
     let content = std::fs::read_to_string(temp.path().join(".claude/settings.local.json")).unwrap();
-    assert!(
-        content.contains("\"SessionStart\""),
-        "Should add SessionStart event"
-    );
+    assert!(content.contains("\"SessionStart\""), "Should add SessionStart event");
 }
 
 #[test]
@@ -678,10 +644,7 @@ fn smart_merge_preserves_hooks_on_other_events() {
         .success();
 
     let content = std::fs::read_to_string(temp.path().join(".claude/settings.local.json")).unwrap();
-    assert!(
-        content.contains("PostToolUse"),
-        "Should preserve PostToolUse"
-    );
+    assert!(content.contains("PostToolUse"), "Should preserve PostToolUse");
     assert!(content.contains("my-hook.sh"), "Should preserve my-hook.sh");
 }
 
@@ -752,10 +715,7 @@ fn detects_wk_prime_with_full_path() {
     let content = std::fs::read_to_string(temp.path().join(".claude/settings.local.json")).unwrap();
     // Should not duplicate - count occurrences of "wk prime"
     let count = content.matches("wk prime").count();
-    assert_eq!(
-        count, 2,
-        "Should recognize /usr/local/bin/wk prime as existing hook"
-    );
+    assert_eq!(count, 2, "Should recognize /usr/local/bin/wk prime as existing hook");
 }
 
 #[test]
@@ -785,9 +745,5 @@ fn detects_wk_prime_with_args() {
     let content = std::fs::read_to_string(temp.path().join(".claude/settings.local.json")).unwrap();
     // Should detect "wk prime --verbose" as wk prime and not duplicate PreCompact
     let count = content.matches("PreCompact").count();
-    assert_eq!(
-        count, 1,
-        "Should only have one PreCompact entry, got content: {}",
-        content
-    );
+    assert_eq!(count, 1, "Should only have one PreCompact entry, got content: {}", content);
 }

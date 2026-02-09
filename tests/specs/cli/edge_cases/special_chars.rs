@@ -147,12 +147,7 @@ fn label_with_colon() {
     let temp = init_temp();
     let id = create_issue(&temp, "task", "Test");
 
-    wk().arg("label")
-        .arg(&id)
-        .arg("namespace:value")
-        .current_dir(temp.path())
-        .assert()
-        .success();
+    wk().arg("label").arg(&id).arg("namespace:value").current_dir(temp.path()).assert().success();
 
     wk().arg("show")
         .arg(&id)
@@ -177,23 +172,13 @@ fn title_with_leading_trailing_whitespace() {
 fn very_long_title() {
     let temp = init_temp();
     let long_title = "x".repeat(500);
-    wk().arg("new")
-        .arg("task")
-        .arg(&long_title)
-        .current_dir(temp.path())
-        .assert()
-        .success();
+    wk().arg("new").arg("task").arg(&long_title).current_dir(temp.path()).assert().success();
 }
 
 #[test]
 fn title_with_only_numbers() {
     let temp = init_temp();
-    wk().arg("new")
-        .arg("task")
-        .arg("12345")
-        .current_dir(temp.path())
-        .assert()
-        .success();
+    wk().arg("new").arg("task").arg("12345").current_dir(temp.path()).assert().success();
 }
 
 #[test]
@@ -238,10 +223,5 @@ fn unicode_in_title_preserved(title: &str, expected: &str) {
 )]
 fn special_chars_in_title(title: &str) {
     let temp = init_temp();
-    wk().arg("new")
-        .arg("task")
-        .arg(title)
-        .current_dir(temp.path())
-        .assert()
-        .success();
+    wk().arg("new").arg("task").arg(title).current_dir(temp.path()).assert().success();
 }

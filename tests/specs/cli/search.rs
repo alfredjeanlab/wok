@@ -61,13 +61,7 @@ fn create_issue_with_opts(temp: &TempDir, type_: &str, title: &str, opts: &[&str
 
 fn create_issue_with_prefix(temp: &TempDir, type_: &str, title: &str, prefix: &str) -> String {
     let mut cmd = wk();
-    cmd.arg("new")
-        .arg(type_)
-        .arg(title)
-        .arg("--prefix")
-        .arg(prefix)
-        .arg("-o")
-        .arg("id");
+    cmd.arg("new").arg(type_).arg(title).arg("--prefix").arg(prefix).arg("-o").arg("id");
 
     let output = cmd.current_dir(temp.path()).output().unwrap();
     String::from_utf8_lossy(&output.stdout).trim().to_string()
@@ -138,10 +132,7 @@ fn search_finds_by_note_content() {
 fn search_finds_by_label() {
     let temp = init_temp();
     let id = create_issue(&temp, "task", "SearchLabel Important task");
-    wk().args(["label", &id, "priority:high"])
-        .current_dir(temp.path())
-        .assert()
-        .success();
+    wk().args(["label", &id, "priority:high"]).current_dir(temp.path()).assert().success();
 
     wk().args(["search", "priority:high"])
         .current_dir(temp.path())
@@ -170,10 +161,7 @@ fn search_finds_by_external_link_url() {
 fn search_finds_by_external_id() {
     let temp = init_temp();
     let id = create_issue(&temp, "task", "SearchExtId Jira linked");
-    wk().args(["link", &id, "jira://PE-5555"])
-        .current_dir(temp.path())
-        .assert()
-        .success();
+    wk().args(["link", &id, "jira://PE-5555"]).current_dir(temp.path()).assert().success();
 
     wk().args(["search", "PE-5555"])
         .current_dir(temp.path())
@@ -219,14 +207,8 @@ fn search_status_filter() {
     let temp = init_temp();
     create_issue(&temp, "task", "SearchFilter Todo task");
     let id2 = create_issue(&temp, "task", "SearchFilter Done task");
-    wk().args(["start", &id2])
-        .current_dir(temp.path())
-        .assert()
-        .success();
-    wk().args(["done", &id2])
-        .current_dir(temp.path())
-        .assert()
-        .success();
+    wk().args(["start", &id2]).current_dir(temp.path()).assert().success();
+    wk().args(["done", &id2]).current_dir(temp.path()).assert().success();
 
     wk().args(["search", "SearchFilter", "--status", "todo"])
         .current_dir(temp.path())
@@ -255,10 +237,7 @@ fn search_label_filter() {
     let temp = init_temp();
     let id1 = create_issue(&temp, "task", "SearchLabelF Task A");
     create_issue(&temp, "task", "SearchLabelF Task B");
-    wk().args(["label", &id1, "urgent"])
-        .current_dir(temp.path())
-        .assert()
-        .success();
+    wk().args(["label", &id1, "urgent"]).current_dir(temp.path()).assert().success();
 
     wk().args(["search", "Task", "--label", "urgent"])
         .current_dir(temp.path())
@@ -312,10 +291,7 @@ fn search_output_json_short_flag() {
 
 #[test]
 fn search_help_shows_examples() {
-    wk().args(["search", "--help"])
-        .assert()
-        .success()
-        .stdout(predicate::str::contains("Examples"));
+    wk().args(["search", "--help"]).assert().success().stdout(predicate::str::contains("Examples"));
 }
 
 // =============================================================================
@@ -330,21 +306,15 @@ fn search_limits_results_to_25() {
         create_issue(&temp, "task", &format!("SearchLimit test item {}", i));
     }
 
-    let output = wk()
-        .args(["search", "SearchLimit test"])
-        .current_dir(temp.path())
-        .output()
-        .unwrap();
+    let output =
+        wk().args(["search", "SearchLimit test"]).current_dir(temp.path()).output().unwrap();
 
     assert!(output.status.success());
     let stdout = String::from_utf8_lossy(&output.stdout);
 
     let count = stdout.matches("SearchLimit test item").count();
     assert_eq!(count, 25, "Should return exactly 25 results, got {}", count);
-    assert!(
-        stdout.contains("... 5 more"),
-        "Should show '... 5 more' message"
-    );
+    assert!(stdout.contains("... 5 more"), "Should show '... 5 more' message");
 
     // JSON output should also be limited to 25 items
     let json_output = wk()
@@ -367,18 +337,12 @@ fn search_under_limit_no_more_message() {
         create_issue(&temp, "task", &format!("SearchUnderLimit {}", i));
     }
 
-    let output = wk()
-        .args(["search", "SearchUnderLimit"])
-        .current_dir(temp.path())
-        .output()
-        .unwrap();
+    let output =
+        wk().args(["search", "SearchUnderLimit"]).current_dir(temp.path()).output().unwrap();
 
     assert!(output.status.success());
     let stdout = String::from_utf8_lossy(&output.stdout);
-    assert!(
-        !stdout.contains("more"),
-        "Should not show 'more' message when under limit"
-    );
+    assert!(!stdout.contains("more"), "Should not show 'more' message when under limit");
 
     // JSON output returns all results
     let json_output = wk()
@@ -460,11 +424,7 @@ fn search_limit_overrides_default(flag: &str, limit: &str) {
     let stdout = String::from_utf8_lossy(&output.stdout);
     let count = stdout.matches("SearchLimitOverride").count();
     let expected: usize = limit.parse().unwrap();
-    assert_eq!(
-        count, expected,
-        "Should return exactly {} results",
-        expected
-    );
+    assert_eq!(count, expected, "Should return exactly {} results", expected);
 }
 
 // =============================================================================
@@ -481,14 +441,7 @@ fn search_filter_and_limit_work_together() {
 
     // Filter + limit
     let output = wk()
-        .args([
-            "search",
-            "SearchCombo",
-            "--filter",
-            "age < 1h",
-            "--limit",
-            "2",
-        ])
+        .args(["search", "SearchCombo", "--filter", "age < 1h", "--limit", "2"])
         .current_dir(temp.path())
         .output()
         .unwrap();
@@ -500,14 +453,7 @@ fn search_filter_and_limit_work_together() {
 
     // JSON output with filter
     let json_output = wk()
-        .args([
-            "search",
-            "SearchCombo",
-            "--filter",
-            "age < 1d",
-            "-o",
-            "json",
-        ])
+        .args(["search", "SearchCombo", "--filter", "age < 1d", "-o", "json"])
         .current_dir(temp.path())
         .output()
         .unwrap();
@@ -525,25 +471,15 @@ fn search_filter_and_limit_work_together() {
 
     let json_limit_stdout = String::from_utf8_lossy(&json_limit_output.stdout);
     let json_limit: serde_json::Value = serde_json::from_str(&json_limit_stdout).unwrap();
-    assert_eq!(
-        json_limit.as_array().unwrap().len(),
-        3,
-        "Should have 3 items"
-    );
+    assert_eq!(json_limit.as_array().unwrap().len(), 3, "Should have 3 items");
 }
 
 #[test]
 fn search_filter_closed() {
     let temp = init_temp();
     let closed_id = create_issue(&temp, "task", "SearchClosed Closed");
-    wk().args(["start", &closed_id])
-        .current_dir(temp.path())
-        .assert()
-        .success();
-    wk().args(["done", &closed_id])
-        .current_dir(temp.path())
-        .assert()
-        .success();
+    wk().args(["start", &closed_id]).current_dir(temp.path()).assert().success();
+    wk().args(["done", &closed_id]).current_dir(temp.path()).assert().success();
     create_issue(&temp, "task", "SearchClosed Open");
 
     wk().args(["search", "SearchClosed", "--filter", "closed < 1d"])

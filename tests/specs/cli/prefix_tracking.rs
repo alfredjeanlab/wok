@@ -148,10 +148,7 @@ fn config_prefixes_json_output_valid() {
     let first = &prefixes[0];
     assert_eq!(first.get("prefix").and_then(|v| v.as_str()), Some("main"));
     assert_eq!(first.get("issue_count").and_then(|v| v.as_i64()), Some(1));
-    assert_eq!(
-        first.get("is_default").and_then(|v| v.as_bool()),
-        Some(true)
-    );
+    assert_eq!(first.get("is_default").and_then(|v| v.as_bool()), Some(true));
 }
 
 #[test]
@@ -184,11 +181,7 @@ fn new_prefix_creates_issue_with_different_prefix() {
     let temp = init_temp_with_prefix("main");
 
     let id = create_issue_with_prefix(&temp, "task", "Other project task", "other");
-    assert!(
-        id.starts_with("other-"),
-        "Expected other- prefix, got: {}",
-        id
-    );
+    assert!(id.starts_with("other-"), "Expected other- prefix, got: {}", id);
 
     // Issue should be visible
     wk().arg("show")
@@ -216,11 +209,7 @@ fn new_prefix_short_flag() {
         .unwrap();
 
     let id = String::from_utf8_lossy(&output.stdout).trim().to_string();
-    assert!(
-        id.starts_with("short-"),
-        "Expected short- prefix, got: {}",
-        id
-    );
+    assert!(id.starts_with("short-"), "Expected short- prefix, got: {}", id);
 }
 
 #[parameterized(

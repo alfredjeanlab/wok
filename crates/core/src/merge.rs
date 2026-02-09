@@ -43,11 +43,7 @@ pub trait Merge {
 impl Merge for Database {
     fn apply(&mut self, op: &Op) -> Result<bool> {
         match &op.payload {
-            OpPayload::CreateIssue {
-                id,
-                issue_type,
-                title,
-            } => {
+            OpPayload::CreateIssue { id, issue_type, title } => {
                 // First write wins
                 if self.issue_exists(id)? {
                     return Ok(false);
@@ -77,18 +73,15 @@ impl Merge for Database {
                 Ok(true)
             }
 
-            OpPayload::SetStatus {
-                issue_id,
-                status,
-                reason,
-            } => self.apply_set_status(issue_id, *status, reason.clone(), op.id),
+            OpPayload::SetStatus { issue_id, status, reason } => {
+                self.apply_set_status(issue_id, *status, reason.clone(), op.id)
+            }
 
             OpPayload::SetTitle { issue_id, title } => self.apply_set_title(issue_id, title, op.id),
 
-            OpPayload::SetType {
-                issue_id,
-                issue_type,
-            } => self.apply_set_type(issue_id, *issue_type, op.id),
+            OpPayload::SetType { issue_id, issue_type } => {
+                self.apply_set_type(issue_id, *issue_type, op.id)
+            }
 
             OpPayload::AddLabel { issue_id, label } => {
                 // Add always succeeds (idempotent)
@@ -119,11 +112,7 @@ impl Merge for Database {
                 Ok(true)
             }
 
-            OpPayload::AddNote {
-                issue_id,
-                content,
-                status,
-            } => {
+            OpPayload::AddNote { issue_id, content, status } => {
                 // Always append
                 if !self.issue_exists(issue_id)? {
                     return Ok(false);
@@ -136,11 +125,7 @@ impl Merge for Database {
                 Ok(true)
             }
 
-            OpPayload::AddDep {
-                from_id,
-                to_id,
-                relation,
-            } => {
+            OpPayload::AddDep { from_id, to_id, relation } => {
                 // Add always succeeds (idempotent)
                 if !self.issue_exists(from_id)? || !self.issue_exists(to_id)? {
                     return Ok(false);
@@ -157,11 +142,7 @@ impl Merge for Database {
                 }
             }
 
-            OpPayload::RemoveDep {
-                from_id,
-                to_id,
-                relation,
-            } => {
+            OpPayload::RemoveDep { from_id, to_id, relation } => {
                 // Remove always succeeds (idempotent)
                 if !self.issue_exists(from_id)? {
                     return Ok(false);
@@ -177,10 +158,9 @@ impl Merge for Database {
                 }
             }
 
-            OpPayload::ConfigRename {
-                old_prefix,
-                new_prefix,
-            } => self.apply_config_rename(old_prefix, new_prefix),
+            OpPayload::ConfigRename { old_prefix, new_prefix } => {
+                self.apply_config_rename(old_prefix, new_prefix)
+            }
         }
     }
 }

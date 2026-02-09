@@ -77,23 +77,11 @@ fn list_default_shows_todo_and_in_progress() {
     let id3 = create_issue(&temp, "task", "ListDefault Done task");
 
     // Start id2
-    wk().arg("start")
-        .arg(&id2)
-        .current_dir(temp.path())
-        .assert()
-        .success();
+    wk().arg("start").arg(&id2).current_dir(temp.path()).assert().success();
 
     // Start and complete id3
-    wk().arg("start")
-        .arg(&id3)
-        .current_dir(temp.path())
-        .assert()
-        .success();
-    wk().arg("done")
-        .arg(&id3)
-        .current_dir(temp.path())
-        .assert()
-        .success();
+    wk().arg("start").arg(&id3).current_dir(temp.path()).assert().success();
+    wk().arg("done").arg(&id3).current_dir(temp.path()).assert().success();
 
     wk().arg("list")
         .current_dir(temp.path())
@@ -111,21 +99,9 @@ fn list_status_filter_todo() {
     let id2 = create_issue(&temp, "task", "StatusFilter InProgress");
     let id3 = create_issue(&temp, "task", "StatusFilter Done");
 
-    wk().arg("start")
-        .arg(&id2)
-        .current_dir(temp.path())
-        .assert()
-        .success();
-    wk().arg("start")
-        .arg(&id3)
-        .current_dir(temp.path())
-        .assert()
-        .success();
-    wk().arg("done")
-        .arg(&id3)
-        .current_dir(temp.path())
-        .assert()
-        .success();
+    wk().arg("start").arg(&id2).current_dir(temp.path()).assert().success();
+    wk().arg("start").arg(&id3).current_dir(temp.path()).assert().success();
+    wk().arg("done").arg(&id3).current_dir(temp.path()).assert().success();
 
     wk().arg("list")
         .arg("--status")
@@ -144,11 +120,7 @@ fn list_status_filter_in_progress() {
     let _id1 = create_issue(&temp, "task", "StatusFilter2 Todo");
     let id2 = create_issue(&temp, "task", "StatusFilter2 InProgress");
 
-    wk().arg("start")
-        .arg(&id2)
-        .current_dir(temp.path())
-        .assert()
-        .success();
+    wk().arg("start").arg(&id2).current_dir(temp.path()).assert().success();
 
     wk().arg("list")
         .arg("--status")
@@ -166,16 +138,8 @@ fn list_status_filter_done() {
     let _id1 = create_issue(&temp, "task", "StatusFilter3 Todo");
     let id2 = create_issue(&temp, "task", "StatusFilter3 Done");
 
-    wk().arg("start")
-        .arg(&id2)
-        .current_dir(temp.path())
-        .assert()
-        .success();
-    wk().arg("done")
-        .arg(&id2)
-        .current_dir(temp.path())
-        .assert()
-        .success();
+    wk().arg("start").arg(&id2).current_dir(temp.path()).assert().success();
+    wk().arg("done").arg(&id2).current_dir(temp.path()).assert().success();
 
     wk().arg("list")
         .arg("--status")
@@ -271,12 +235,7 @@ fn list_type_short_flag() {
 #[test]
 fn list_label_filter() {
     let temp = init_temp();
-    create_issue_with_opts(
-        &temp,
-        "task",
-        "LabelFilter Labeled",
-        &["--label", "project:auth"],
-    );
+    create_issue_with_opts(&temp, "task", "LabelFilter Labeled", &["--label", "project:auth"]);
     create_issue(&temp, "task", "LabelFilter Other");
 
     wk().arg("list")
@@ -359,12 +318,7 @@ fn list_no_blocked_count_footer() {
 #[test]
 fn list_combined_filters() {
     let temp = init_temp();
-    create_issue_with_opts(
-        &temp,
-        "feature",
-        "Combined Feature",
-        &["--label", "team:alpha"],
-    );
+    create_issue_with_opts(&temp, "feature", "Combined Feature", &["--label", "team:alpha"]);
     create_issue_with_opts(&temp, "task", "Combined Task", &["--label", "team:alpha"]);
 
     wk().arg("list")
@@ -387,20 +341,10 @@ fn list_combined_filters() {
 fn list_output_json_valid() {
     let temp = init_temp();
     let id = create_issue(&temp, "task", "JSONList Task");
-    wk().arg("label")
-        .arg(&id)
-        .arg("priority:high")
-        .current_dir(temp.path())
-        .assert()
-        .success();
+    wk().arg("label").arg(&id).arg("priority:high").current_dir(temp.path()).assert().success();
 
-    let output = wk()
-        .arg("list")
-        .arg("--output")
-        .arg("json")
-        .current_dir(temp.path())
-        .output()
-        .unwrap();
+    let output =
+        wk().arg("list").arg("--output").arg("json").current_dir(temp.path()).output().unwrap();
 
     let stdout = String::from_utf8_lossy(&output.stdout);
     let json: serde_json::Value =
@@ -414,22 +358,14 @@ fn list_output_json_fields() {
     let temp = init_temp();
     create_issue(&temp, "task", "JSONFields Task");
 
-    let output = wk()
-        .arg("list")
-        .arg("--output")
-        .arg("json")
-        .current_dir(temp.path())
-        .output()
-        .unwrap();
+    let output =
+        wk().arg("list").arg("--output").arg("json").current_dir(temp.path()).output().unwrap();
 
     let stdout = String::from_utf8_lossy(&output.stdout);
     let json: serde_json::Value = serde_json::from_str(&stdout).unwrap();
 
     let issues = json.as_array().unwrap();
-    let issue = issues
-        .iter()
-        .find(|i| i["title"] == "JSONFields Task")
-        .unwrap();
+    let issue = issues.iter().find(|i| i["title"] == "JSONFields Task").unwrap();
 
     assert!(issue.get("id").is_some());
     assert!(issue.get("issue_type").is_some());
@@ -442,29 +378,16 @@ fn list_output_json_fields() {
 fn list_output_json_labels() {
     let temp = init_temp();
     let id = create_issue(&temp, "task", "JSONLabels Task");
-    wk().arg("label")
-        .arg(&id)
-        .arg("priority:high")
-        .current_dir(temp.path())
-        .assert()
-        .success();
+    wk().arg("label").arg(&id).arg("priority:high").current_dir(temp.path()).assert().success();
 
-    let output = wk()
-        .arg("list")
-        .arg("--output")
-        .arg("json")
-        .current_dir(temp.path())
-        .output()
-        .unwrap();
+    let output =
+        wk().arg("list").arg("--output").arg("json").current_dir(temp.path()).output().unwrap();
 
     let stdout = String::from_utf8_lossy(&output.stdout);
     let json: serde_json::Value = serde_json::from_str(&stdout).unwrap();
 
     let issues = json.as_array().unwrap();
-    let issue = issues
-        .iter()
-        .find(|i| i["title"] == "JSONLabels Task")
-        .unwrap();
+    let issue = issues.iter().find(|i| i["title"] == "JSONLabels Task").unwrap();
     let labels = issue["labels"].as_array().unwrap();
     assert!(labels.iter().any(|l| l.as_str() == Some("priority:high")));
 }
@@ -474,13 +397,7 @@ fn list_output_json_short_flag() {
     let temp = init_temp();
     create_issue(&temp, "task", "JSONShort Task");
 
-    let output = wk()
-        .arg("list")
-        .arg("-o")
-        .arg("json")
-        .current_dir(temp.path())
-        .output()
-        .unwrap();
+    let output = wk().arg("list").arg("-o").arg("json").current_dir(temp.path()).output().unwrap();
 
     let stdout = String::from_utf8_lossy(&output.stdout);
     let _json: serde_json::Value =
@@ -526,13 +443,8 @@ fn list_output_json_no_blocked_count() {
         .assert()
         .success();
 
-    let output = wk()
-        .arg("list")
-        .arg("--output")
-        .arg("json")
-        .current_dir(temp.path())
-        .output()
-        .unwrap();
+    let output =
+        wk().arg("list").arg("--output").arg("json").current_dir(temp.path()).output().unwrap();
 
     let stdout = String::from_utf8_lossy(&output.stdout);
     let json: serde_json::Value = serde_json::from_str(&stdout).unwrap();
@@ -549,20 +461,10 @@ fn list_output_json_no_blocked_count() {
 fn list_sorts_by_priority_asc() {
     let temp = init_temp();
     let id1 = create_issue(&temp, "task", "SortList P3 task");
-    wk().arg("label")
-        .arg(&id1)
-        .arg("priority:3")
-        .current_dir(temp.path())
-        .assert()
-        .success();
+    wk().arg("label").arg(&id1).arg("priority:3").current_dir(temp.path()).assert().success();
 
     let id2 = create_issue(&temp, "task", "SortList P1 task");
-    wk().arg("label")
-        .arg(&id2)
-        .arg("priority:1")
-        .current_dir(temp.path())
-        .assert()
-        .success();
+    wk().arg("label").arg(&id2).arg("priority:1").current_dir(temp.path()).assert().success();
 
     let output = wk().arg("list").current_dir(temp.path()).output().unwrap();
 
@@ -591,22 +493,12 @@ fn list_same_priority_newer_first() {
 fn list_missing_priority_as_2() {
     let temp = init_temp();
     let id1 = create_issue(&temp, "task", "PrioList High");
-    wk().arg("label")
-        .arg(&id1)
-        .arg("priority:1")
-        .current_dir(temp.path())
-        .assert()
-        .success();
+    wk().arg("label").arg(&id1).arg("priority:1").current_dir(temp.path()).assert().success();
 
     create_issue(&temp, "task", "PrioList Default");
 
     let id3 = create_issue(&temp, "task", "PrioList Low");
-    wk().arg("label")
-        .arg(&id3)
-        .arg("priority:3")
-        .current_dir(temp.path())
-        .assert()
-        .success();
+    wk().arg("label").arg(&id3).arg("priority:3").current_dir(temp.path()).assert().success();
 
     let output = wk().arg("list").current_dir(temp.path()).output().unwrap();
 
@@ -623,18 +515,8 @@ fn list_missing_priority_as_2() {
 fn list_prefers_priority_over_p() {
     let temp = init_temp();
     let id4 = create_issue(&temp, "task", "PrefList Dual");
-    wk().arg("label")
-        .arg(&id4)
-        .arg("p:0")
-        .current_dir(temp.path())
-        .assert()
-        .success();
-    wk().arg("label")
-        .arg(&id4)
-        .arg("priority:4")
-        .current_dir(temp.path())
-        .assert()
-        .success();
+    wk().arg("label").arg(&id4).arg("p:0").current_dir(temp.path()).assert().success();
+    wk().arg("label").arg(&id4).arg("priority:4").current_dir(temp.path()).assert().success();
 
     create_issue(&temp, "task", "PrefList Default2");
 
@@ -645,10 +527,7 @@ fn list_prefers_priority_over_p() {
     let default2_pos = stdout.find("PrefList Default2").unwrap();
 
     // priority:4 should be used over p:0, so Default2 (p2) appears first
-    assert!(
-        default2_pos < dual_pos,
-        "Default2 should appear before Dual"
-    );
+    assert!(default2_pos < dual_pos, "Default2 should appear before Dual");
 }
 
 // =============================================================================
@@ -694,12 +573,7 @@ fn list_filter_short_flag() {
     let temp = init_temp();
     create_issue(&temp, "task", "FilterShort Task");
 
-    wk().arg("list")
-        .arg("-q")
-        .arg("age < 1h")
-        .current_dir(temp.path())
-        .assert()
-        .success();
+    wk().arg("list").arg("-q").arg("age < 1h").current_dir(temp.path()).assert().success();
 }
 
 #[test]
@@ -744,12 +618,7 @@ fn list_filter_invalid_duration() {
 #[test]
 fn list_filter_multiple() {
     let temp = init_temp();
-    create_issue_with_opts(
-        &temp,
-        "task",
-        "MultiFilter Task",
-        &["--label", "team:alpha"],
-    );
+    create_issue_with_opts(&temp, "task", "MultiFilter Task", &["--label", "team:alpha"]);
 
     wk().arg("list")
         .arg("--filter")
@@ -765,12 +634,7 @@ fn list_filter_multiple() {
 #[test]
 fn list_filter_combined_with_flags() {
     let temp = init_temp();
-    create_issue_with_opts(
-        &temp,
-        "task",
-        "MultiFilter2 Task",
-        &["--label", "team:alpha"],
-    );
+    create_issue_with_opts(&temp, "task", "MultiFilter2 Task", &["--label", "team:alpha"]);
     create_issue_with_opts(&temp, "bug", "MultiFilter2 Bug", &["--label", "team:alpha"]);
 
     wk().arg("list")
@@ -791,16 +655,8 @@ fn list_filter_combined_with_flags() {
 fn list_filter_closed() {
     let temp = init_temp();
     let id = create_issue(&temp, "task", "ClosedFilter Issue");
-    wk().arg("start")
-        .arg(&id)
-        .current_dir(temp.path())
-        .assert()
-        .success();
-    wk().arg("done")
-        .arg(&id)
-        .current_dir(temp.path())
-        .assert()
-        .success();
+    wk().arg("start").arg(&id).current_dir(temp.path()).assert().success();
+    wk().arg("done").arg(&id).current_dir(temp.path()).assert().success();
 
     // Without filter, done hidden
     wk().arg("list")
@@ -824,16 +680,8 @@ fn list_filter_closed_includes_both() {
     let temp = init_temp();
 
     let done_id = create_issue(&temp, "task", "ClosedStatus Done");
-    wk().arg("start")
-        .arg(&done_id)
-        .current_dir(temp.path())
-        .assert()
-        .success();
-    wk().arg("done")
-        .arg(&done_id)
-        .current_dir(temp.path())
-        .assert()
-        .success();
+    wk().arg("start").arg(&done_id).current_dir(temp.path()).assert().success();
+    wk().arg("done").arg(&done_id).current_dir(temp.path()).assert().success();
 
     let closed_id = create_issue(&temp, "task", "ClosedStatus Closed");
     wk().arg("close")
@@ -862,16 +710,8 @@ fn list_filter_completed() {
     let temp = init_temp();
 
     let done_id = create_issue(&temp, "task", "CompletedFilter Done");
-    wk().arg("start")
-        .arg(&done_id)
-        .current_dir(temp.path())
-        .assert()
-        .success();
-    wk().arg("done")
-        .arg(&done_id)
-        .current_dir(temp.path())
-        .assert()
-        .success();
+    wk().arg("start").arg(&done_id).current_dir(temp.path()).assert().success();
+    wk().arg("done").arg(&done_id).current_dir(temp.path()).assert().success();
 
     let closed_id = create_issue(&temp, "task", "CompletedFilter Cancelled");
     wk().arg("close")
@@ -900,16 +740,8 @@ fn list_filter_completed_synonym_done() {
     let temp = init_temp();
 
     let done_id = create_issue(&temp, "task", "CompletedSynonym Done");
-    wk().arg("start")
-        .arg(&done_id)
-        .current_dir(temp.path())
-        .assert()
-        .success();
-    wk().arg("done")
-        .arg(&done_id)
-        .current_dir(temp.path())
-        .assert()
-        .success();
+    wk().arg("start").arg(&done_id).current_dir(temp.path()).assert().success();
+    wk().arg("done").arg(&done_id).current_dir(temp.path()).assert().success();
 
     let closed_id = create_issue(&temp, "task", "CompletedSynonym Cancelled");
     wk().arg("close")
@@ -935,16 +767,8 @@ fn list_filter_skipped() {
     let temp = init_temp();
 
     let done_id = create_issue(&temp, "task", "SkippedFilter Done");
-    wk().arg("start")
-        .arg(&done_id)
-        .current_dir(temp.path())
-        .assert()
-        .success();
-    wk().arg("done")
-        .arg(&done_id)
-        .current_dir(temp.path())
-        .assert()
-        .success();
+    wk().arg("start").arg(&done_id).current_dir(temp.path()).assert().success();
+    wk().arg("done").arg(&done_id).current_dir(temp.path()).assert().success();
 
     let closed_id = create_issue(&temp, "task", "SkippedFilter Cancelled");
     wk().arg("close")
@@ -982,16 +806,8 @@ fn list_filter_skipped_synonym_cancelled() {
         .success();
 
     let done_id = create_issue(&temp, "task", "SkippedSynonym Done");
-    wk().arg("start")
-        .arg(&done_id)
-        .current_dir(temp.path())
-        .assert()
-        .success();
-    wk().arg("done")
-        .arg(&done_id)
-        .current_dir(temp.path())
-        .assert()
-        .success();
+    wk().arg("start").arg(&done_id).current_dir(temp.path()).assert().success();
+    wk().arg("done").arg(&done_id).current_dir(temp.path()).assert().success();
 
     wk().arg("list")
         .arg("--filter")
@@ -1010,16 +826,8 @@ fn list_filter_bare_closed() {
     create_issue(&temp, "task", "BareFilter Open");
 
     let done_id = create_issue(&temp, "task", "BareFilter Done");
-    wk().arg("start")
-        .arg(&done_id)
-        .current_dir(temp.path())
-        .assert()
-        .success();
-    wk().arg("done")
-        .arg(&done_id)
-        .current_dir(temp.path())
-        .assert()
-        .success();
+    wk().arg("start").arg(&done_id).current_dir(temp.path()).assert().success();
+    wk().arg("done").arg(&done_id).current_dir(temp.path()).assert().success();
 
     let skipped_id = create_issue(&temp, "task", "BareFilter Skipped");
     wk().arg("close")
@@ -1048,16 +856,8 @@ fn list_filter_bare_completed() {
     create_issue(&temp, "task", "BareCompleted Open");
 
     let done_id = create_issue(&temp, "task", "BareCompleted Done");
-    wk().arg("start")
-        .arg(&done_id)
-        .current_dir(temp.path())
-        .assert()
-        .success();
-    wk().arg("done")
-        .arg(&done_id)
-        .current_dir(temp.path())
-        .assert()
-        .success();
+    wk().arg("start").arg(&done_id).current_dir(temp.path()).assert().success();
+    wk().arg("done").arg(&done_id).current_dir(temp.path()).assert().success();
 
     let skipped_id = create_issue(&temp, "task", "BareCompleted Skipped");
     wk().arg("close")
@@ -1086,16 +886,8 @@ fn list_filter_bare_skipped() {
     create_issue(&temp, "task", "BareSkipped Open");
 
     let done_id = create_issue(&temp, "task", "BareSkipped Done");
-    wk().arg("start")
-        .arg(&done_id)
-        .current_dir(temp.path())
-        .assert()
-        .success();
-    wk().arg("done")
-        .arg(&done_id)
-        .current_dir(temp.path())
-        .assert()
-        .success();
+    wk().arg("start").arg(&done_id).current_dir(temp.path()).assert().success();
+    wk().arg("done").arg(&done_id).current_dir(temp.path()).assert().success();
 
     let skipped_id = create_issue(&temp, "task", "BareSkipped Skipped");
     wk().arg("close")
@@ -1122,16 +914,8 @@ fn list_filter_bare_aliases() {
     let temp = init_temp();
 
     let done_id = create_issue(&temp, "task", "AliasFilter Done");
-    wk().arg("start")
-        .arg(&done_id)
-        .current_dir(temp.path())
-        .assert()
-        .success();
-    wk().arg("done")
-        .arg(&done_id)
-        .current_dir(temp.path())
-        .assert()
-        .success();
+    wk().arg("start").arg(&done_id).current_dir(temp.path()).assert().success();
+    wk().arg("done").arg(&done_id).current_dir(temp.path()).assert().success();
 
     let skipped_id = create_issue(&temp, "task", "AliasFilter Skipped");
     wk().arg("close")
@@ -1290,19 +1074,9 @@ fn list_filter_word_case_insensitive() {
     let temp = init_temp();
     create_issue(&temp, "task", "WordCase Task");
 
-    wk().arg("list")
-        .arg("--filter")
-        .arg("age LT 1d")
-        .current_dir(temp.path())
-        .assert()
-        .success();
+    wk().arg("list").arg("--filter").arg("age LT 1d").current_dir(temp.path()).assert().success();
 
-    wk().arg("list")
-        .arg("--filter")
-        .arg("age GT 0ms")
-        .current_dir(temp.path())
-        .assert()
-        .success();
+    wk().arg("list").arg("--filter").arg("age GT 0ms").current_dir(temp.path()).assert().success();
 }
 
 // =============================================================================
@@ -1447,10 +1221,7 @@ fn list_json_metadata_filters_applied() {
 
     // Output is a plain array, no metadata wrapper
     assert!(json.as_array().is_some(), "Output should be a plain array");
-    assert!(
-        json.as_array().unwrap().len() == 1,
-        "Should have one issue matching filter"
-    );
+    assert!(json.as_array().unwrap().len() == 1, "Should have one issue matching filter");
 }
 
 #[test]
@@ -1481,13 +1252,8 @@ fn list_output_ids_space_separated() {
     let id1 = create_issue(&temp, "task", "IDFormat Issue 1");
     let id2 = create_issue(&temp, "task", "IDFormat Issue 2");
 
-    let output = wk()
-        .arg("list")
-        .arg("--output")
-        .arg("ids")
-        .current_dir(temp.path())
-        .output()
-        .unwrap();
+    let output =
+        wk().arg("list").arg("--output").arg("ids").current_dir(temp.path()).output().unwrap();
 
     let stdout = String::from_utf8_lossy(&output.stdout);
     assert!(stdout.contains(&id1));
@@ -1506,13 +1272,8 @@ fn list_output_ids_no_metadata() {
     let temp = init_temp();
     create_issue(&temp, "task", "IDNoMeta Issue");
 
-    let output = wk()
-        .arg("list")
-        .arg("--output")
-        .arg("ids")
-        .current_dir(temp.path())
-        .output()
-        .unwrap();
+    let output =
+        wk().arg("list").arg("--output").arg("ids").current_dir(temp.path()).output().unwrap();
 
     let stdout = String::from_utf8_lossy(&output.stdout);
     assert!(!stdout.contains("task"));
@@ -1576,13 +1337,7 @@ fn list_output_ids_short_flag() {
     let temp = init_temp();
     let id = create_issue(&temp, "task", "ShortFlagID Issue");
 
-    let output = wk()
-        .arg("list")
-        .arg("-o")
-        .arg("ids")
-        .current_dir(temp.path())
-        .output()
-        .unwrap();
+    let output = wk().arg("list").arg("-o").arg("ids").current_dir(temp.path()).output().unwrap();
 
     let stdout = String::from_utf8_lossy(&output.stdout);
     assert!(stdout.contains(&id));
@@ -1593,22 +1348,13 @@ fn list_output_ids_clean_format() {
     let temp = init_temp();
     create_issue(&temp, "task", "Pipe Test Issue");
 
-    let output = wk()
-        .arg("list")
-        .arg("--output")
-        .arg("ids")
-        .current_dir(temp.path())
-        .output()
-        .unwrap();
+    let output =
+        wk().arg("list").arg("--output").arg("ids").current_dir(temp.path()).output().unwrap();
 
     let stdout = String::from_utf8_lossy(&output.stdout);
     // Output should be space-separated IDs (alphanumeric with hyphens only)
     let re = regex::Regex::new(r"^[a-z0-9-]+$").unwrap();
     for word in stdout.split_whitespace() {
-        assert!(
-            re.is_match(word),
-            "ID format should be alphanumeric with hyphens: {}",
-            word
-        );
+        assert!(re.is_match(word), "ID format should be alphanumeric with hyphens: {}", word);
     }
 }

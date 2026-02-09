@@ -85,8 +85,5 @@ fn remote_help_shows_subcommands(args: &[&str]) {
 #[test]
 #[ignore = "remote subcommand not yet implemented"]
 fn remote_appears_in_main_help() {
-    wk().arg("help")
-        .assert()
-        .success()
-        .stdout(predicate::str::contains("remote"));
+    wk().arg("help").assert().success().stdout(predicate::str::contains("remote"));
 }

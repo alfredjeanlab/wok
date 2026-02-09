@@ -73,11 +73,7 @@ impl Ord for Op {
 #[serde(tag = "type", rename_all = "snake_case")]
 pub enum OpPayload {
     /// Create a new issue.
-    CreateIssue {
-        id: String,
-        issue_type: IssueType,
-        title: String,
-    },
+    CreateIssue { id: String, issue_type: IssueType, title: String },
 
     /// Set the status of an issue.
     SetStatus {
@@ -91,10 +87,7 @@ pub enum OpPayload {
     SetTitle { issue_id: String, title: String },
 
     /// Set the type of an issue.
-    SetType {
-        issue_id: String,
-        issue_type: IssueType,
-    },
+    SetType { issue_id: String, issue_type: IssueType },
 
     /// Add a label to an issue.
     AddLabel { issue_id: String, label: String },
@@ -111,43 +104,24 @@ pub enum OpPayload {
     },
 
     /// Add a dependency between issues.
-    AddDep {
-        from_id: String,
-        to_id: String,
-        relation: Relation,
-    },
+    AddDep { from_id: String, to_id: String, relation: Relation },
 
     /// Remove a dependency between issues.
-    RemoveDep {
-        from_id: String,
-        to_id: String,
-        relation: Relation,
-    },
+    RemoveDep { from_id: String, to_id: String, relation: Relation },
 
     /// Rename the issue ID prefix across all issues.
-    ConfigRename {
-        old_prefix: String,
-        new_prefix: String,
-    },
+    ConfigRename { old_prefix: String, new_prefix: String },
 }
 
 impl OpPayload {
     /// Creates a CreateIssue payload.
     pub fn create_issue(id: String, issue_type: IssueType, title: String) -> Self {
-        OpPayload::CreateIssue {
-            id,
-            issue_type,
-            title,
-        }
+        OpPayload::CreateIssue { id, issue_type, title }
     }
 
     /// Creates a SetStatus payload.
     pub fn set_status(issue_id: String, status: Status, reason: Option<String>) -> Self {
-        OpPayload::SetStatus {
-            issue_id,
-            status,
-            reason,
-        }
+        OpPayload::SetStatus { issue_id, status, reason }
     }
 
     /// Creates a SetTitle payload.
@@ -157,10 +131,7 @@ impl OpPayload {
 
     /// Creates a SetType payload.
     pub fn set_type(issue_id: String, issue_type: IssueType) -> Self {
-        OpPayload::SetType {
-            issue_id,
-            issue_type,
-        }
+        OpPayload::SetType { issue_id, issue_type }
     }
 
     /// Creates an AddLabel payload.
@@ -175,37 +146,22 @@ impl OpPayload {
 
     /// Creates an AddNote payload.
     pub fn add_note(issue_id: String, content: String, status: Status) -> Self {
-        OpPayload::AddNote {
-            issue_id,
-            content,
-            status,
-        }
+        OpPayload::AddNote { issue_id, content, status }
     }
 
     /// Creates an AddDep payload.
     pub fn add_dep(from_id: String, to_id: String, relation: Relation) -> Self {
-        OpPayload::AddDep {
-            from_id,
-            to_id,
-            relation,
-        }
+        OpPayload::AddDep { from_id, to_id, relation }
     }
 
     /// Creates a RemoveDep payload.
     pub fn remove_dep(from_id: String, to_id: String, relation: Relation) -> Self {
-        OpPayload::RemoveDep {
-            from_id,
-            to_id,
-            relation,
-        }
+        OpPayload::RemoveDep { from_id, to_id, relation }
     }
 
     /// Creates a ConfigRename payload.
     pub fn config_rename(old_prefix: String, new_prefix: String) -> Self {
-        OpPayload::ConfigRename {
-            old_prefix,
-            new_prefix,
-        }
+        OpPayload::ConfigRename { old_prefix, new_prefix }
     }
 }
 

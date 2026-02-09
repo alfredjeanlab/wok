@@ -22,12 +22,7 @@ fn create_issue(temp: &TempDir, type_: &str, title: &str) -> String {
 }
 
 fn get_status(temp: &TempDir, id: &str) -> String {
-    let output = wk()
-        .arg("show")
-        .arg(id)
-        .current_dir(temp.path())
-        .output()
-        .unwrap();
+    let output = wk().arg("show").arg(id).current_dir(temp.path()).output().unwrap();
     let stdout = String::from_utf8_lossy(&output.stdout);
     // Parse "Status: todo" -> "todo"
     stdout
@@ -49,11 +44,7 @@ fn todo_to_in_progress_via_start() {
 
     assert_eq!(get_status(&temp, &id), "todo");
 
-    wk().arg("start")
-        .arg(&id)
-        .current_dir(temp.path())
-        .assert()
-        .success();
+    wk().arg("start").arg(&id).current_dir(temp.path()).assert().success();
 
     assert_eq!(get_status(&temp, &id), "in_progress");
 }
@@ -99,19 +90,11 @@ fn in_progress_to_todo_via_reopen() {
     let temp = init_temp();
     let id = create_issue(&temp, "task", "SM Test");
 
-    wk().arg("start")
-        .arg(&id)
-        .current_dir(temp.path())
-        .assert()
-        .success();
+    wk().arg("start").arg(&id).current_dir(temp.path()).assert().success();
 
     assert_eq!(get_status(&temp, &id), "in_progress");
 
-    wk().arg("reopen")
-        .arg(&id)
-        .current_dir(temp.path())
-        .assert()
-        .success();
+    wk().arg("reopen").arg(&id).current_dir(temp.path()).assert().success();
 
     assert_eq!(get_status(&temp, &id), "todo");
 }
@@ -121,19 +104,11 @@ fn in_progress_to_done_via_done() {
     let temp = init_temp();
     let id = create_issue(&temp, "task", "SM Test");
 
-    wk().arg("start")
-        .arg(&id)
-        .current_dir(temp.path())
-        .assert()
-        .success();
+    wk().arg("start").arg(&id).current_dir(temp.path()).assert().success();
 
     assert_eq!(get_status(&temp, &id), "in_progress");
 
-    wk().arg("done")
-        .arg(&id)
-        .current_dir(temp.path())
-        .assert()
-        .success();
+    wk().arg("done").arg(&id).current_dir(temp.path()).assert().success();
 
     assert_eq!(get_status(&temp, &id), "done");
 }
@@ -143,11 +118,7 @@ fn in_progress_to_closed_via_close_with_reason() {
     let temp = init_temp();
     let id = create_issue(&temp, "task", "SM Test");
 
-    wk().arg("start")
-        .arg(&id)
-        .current_dir(temp.path())
-        .assert()
-        .success();
+    wk().arg("start").arg(&id).current_dir(temp.path()).assert().success();
 
     assert_eq!(get_status(&temp, &id), "in_progress");
 
@@ -167,16 +138,8 @@ fn done_to_todo_via_reopen_with_reason() {
     let temp = init_temp();
     let id = create_issue(&temp, "task", "SM Test");
 
-    wk().arg("start")
-        .arg(&id)
-        .current_dir(temp.path())
-        .assert()
-        .success();
-    wk().arg("done")
-        .arg(&id)
-        .current_dir(temp.path())
-        .assert()
-        .success();
+    wk().arg("start").arg(&id).current_dir(temp.path()).assert().success();
+    wk().arg("done").arg(&id).current_dir(temp.path()).assert().success();
 
     assert_eq!(get_status(&temp, &id), "done");
 
@@ -226,11 +189,7 @@ fn reopen_from_todo_is_idempotent() {
     let temp = init_temp();
     let id = create_issue(&temp, "task", "SM Test");
 
-    wk().arg("reopen")
-        .arg(&id)
-        .current_dir(temp.path())
-        .assert()
-        .success();
+    wk().arg("reopen").arg(&id).current_dir(temp.path()).assert().success();
 
     assert_eq!(get_status(&temp, &id), "todo");
 }
@@ -240,11 +199,7 @@ fn cannot_done_from_todo_without_reason() {
     let temp = init_temp();
     let id = create_issue(&temp, "task", "SM Test");
 
-    wk().arg("done")
-        .arg(&id)
-        .current_dir(temp.path())
-        .assert()
-        .failure();
+    wk().arg("done").arg(&id).current_dir(temp.path()).assert().failure();
 }
 
 #[parameterized(
@@ -257,16 +212,8 @@ fn start_from_terminal_state_succeeds(terminal_state: &str) {
 
     // Move to terminal state
     if terminal_state == "done" {
-        wk().arg("start")
-            .arg(&id)
-            .current_dir(temp.path())
-            .assert()
-            .success();
-        wk().arg("done")
-            .arg(&id)
-            .current_dir(temp.path())
-            .assert()
-            .success();
+        wk().arg("start").arg(&id).current_dir(temp.path()).assert().success();
+        wk().arg("done").arg(&id).current_dir(temp.path()).assert().success();
     } else {
         wk().arg("close")
             .arg(&id)
@@ -278,11 +225,7 @@ fn start_from_terminal_state_succeeds(terminal_state: &str) {
     }
 
     // Start should succeed (permissive transitions)
-    wk().arg("start")
-        .arg(&id)
-        .current_dir(temp.path())
-        .assert()
-        .success();
+    wk().arg("start").arg(&id).current_dir(temp.path()).assert().success();
 
     assert_eq!(get_status(&temp, &id), "in_progress");
 }
@@ -320,11 +263,7 @@ fn close_requires_reason() {
     let temp = init_temp();
     let id = create_issue(&temp, "task", "SM Test");
 
-    wk().arg("close")
-        .arg(&id)
-        .current_dir(temp.path())
-        .assert()
-        .failure();
+    wk().arg("close").arg(&id).current_dir(temp.path()).assert().failure();
 }
 
 #[test]
@@ -332,22 +271,10 @@ fn reopen_requires_reason_from_done() {
     let temp = init_temp();
     let id = create_issue(&temp, "task", "SM Test");
 
-    wk().arg("start")
-        .arg(&id)
-        .current_dir(temp.path())
-        .assert()
-        .success();
-    wk().arg("done")
-        .arg(&id)
-        .current_dir(temp.path())
-        .assert()
-        .success();
+    wk().arg("start").arg(&id).current_dir(temp.path()).assert().success();
+    wk().arg("done").arg(&id).current_dir(temp.path()).assert().success();
 
-    wk().arg("reopen")
-        .arg(&id)
-        .current_dir(temp.path())
-        .assert()
-        .failure();
+    wk().arg("reopen").arg(&id).current_dir(temp.path()).assert().failure();
 }
 
 // =============================================================================
@@ -360,32 +287,16 @@ fn can_cycle_through_states() {
     let id = create_issue(&temp, "task", "SM Test");
 
     // todo -> in_progress
-    wk().arg("start")
-        .arg(&id)
-        .current_dir(temp.path())
-        .assert()
-        .success();
+    wk().arg("start").arg(&id).current_dir(temp.path()).assert().success();
 
     // in_progress -> todo
-    wk().arg("reopen")
-        .arg(&id)
-        .current_dir(temp.path())
-        .assert()
-        .success();
+    wk().arg("reopen").arg(&id).current_dir(temp.path()).assert().success();
 
     // todo -> in_progress
-    wk().arg("start")
-        .arg(&id)
-        .current_dir(temp.path())
-        .assert()
-        .success();
+    wk().arg("start").arg(&id).current_dir(temp.path()).assert().success();
 
     // in_progress -> done
-    wk().arg("done")
-        .arg(&id)
-        .current_dir(temp.path())
-        .assert()
-        .success();
+    wk().arg("done").arg(&id).current_dir(temp.path()).assert().success();
 
     // done -> todo
     wk().arg("reopen")
@@ -397,18 +308,10 @@ fn can_cycle_through_states() {
         .success();
 
     // todo -> in_progress
-    wk().arg("start")
-        .arg(&id)
-        .current_dir(temp.path())
-        .assert()
-        .success();
+    wk().arg("start").arg(&id).current_dir(temp.path()).assert().success();
 
     // in_progress -> done (final)
-    wk().arg("done")
-        .arg(&id)
-        .current_dir(temp.path())
-        .assert()
-        .success();
+    wk().arg("done").arg(&id).current_dir(temp.path()).assert().success();
 
     assert_eq!(get_status(&temp, &id), "done");
 }

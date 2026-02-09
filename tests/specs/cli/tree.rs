@@ -11,11 +11,8 @@
 use super::common::*;
 
 fn create_issue(temp: &TempDir, type_: &str, title: &str) -> String {
-    let output = wk()
-        .args(["new", type_, title, "-o", "id"])
-        .current_dir(temp.path())
-        .output()
-        .unwrap();
+    let output =
+        wk().args(["new", type_, title, "-o", "id"]).current_dir(temp.path()).output().unwrap();
     String::from_utf8_lossy(&output.stdout).trim().to_string()
 }
 
@@ -29,10 +26,7 @@ fn tree_shows_issue_and_children() {
     let feature = create_issue(&temp, "feature", "Parent feature");
     let task = create_issue(&temp, "task", "Child task");
 
-    wk().args(["dep", &feature, "tracks", &task])
-        .current_dir(temp.path())
-        .assert()
-        .success();
+    wk().args(["dep", &feature, "tracks", &task]).current_dir(temp.path()).assert().success();
 
     wk().args(["tree", &feature])
         .current_dir(temp.path())
@@ -48,15 +42,9 @@ fn tree_shows_status_of_children() {
     let feature = create_issue(&temp, "feature", "Parent");
     let task = create_issue(&temp, "task", "Child");
 
-    wk().args(["dep", &feature, "tracks", &task])
-        .current_dir(temp.path())
-        .assert()
-        .success();
+    wk().args(["dep", &feature, "tracks", &task]).current_dir(temp.path()).assert().success();
 
-    wk().args(["start", &task])
-        .current_dir(temp.path())
-        .assert()
-        .success();
+    wk().args(["start", &task]).current_dir(temp.path()).assert().success();
 
     wk().args(["tree", &feature])
         .current_dir(temp.path())
@@ -72,15 +60,9 @@ fn tree_shows_nested_hierarchy() {
     let sub = create_issue(&temp, "task", "Subtask");
     let subsub = create_issue(&temp, "task", "Sub-subtask");
 
-    wk().args(["dep", &feature, "tracks", &sub])
-        .current_dir(temp.path())
-        .assert()
-        .success();
+    wk().args(["dep", &feature, "tracks", &sub]).current_dir(temp.path()).assert().success();
 
-    wk().args(["dep", &sub, "tracks", &subsub])
-        .current_dir(temp.path())
-        .assert()
-        .success();
+    wk().args(["dep", &sub, "tracks", &subsub]).current_dir(temp.path()).assert().success();
 
     wk().args(["tree", &feature])
         .current_dir(temp.path())
@@ -97,10 +79,7 @@ fn tree_shows_blocking_relationships() {
     let a = create_issue(&temp, "task", "Blocker");
     let b = create_issue(&temp, "task", "Blocked");
 
-    wk().args(["dep", &a, "blocks", &b])
-        .current_dir(temp.path())
-        .assert()
-        .success();
+    wk().args(["dep", &a, "blocks", &b]).current_dir(temp.path()).assert().success();
 
     wk().args(["tree", &b])
         .current_dir(temp.path())
@@ -129,20 +108,14 @@ fn tree_with_no_children_shows_just_the_issue() {
 fn tree_nonexistent_issue_fails() {
     let temp = init_temp();
 
-    wk().args(["tree", "test-nonexistent"])
-        .current_dir(temp.path())
-        .assert()
-        .failure();
+    wk().args(["tree", "test-nonexistent"]).current_dir(temp.path()).assert().failure();
 }
 
 #[test]
 fn tree_requires_issue_id() {
     let temp = init_temp();
 
-    wk().args(["tree"])
-        .current_dir(temp.path())
-        .assert()
-        .failure();
+    wk().args(["tree"]).current_dir(temp.path()).assert().failure();
 }
 
 // =============================================================================

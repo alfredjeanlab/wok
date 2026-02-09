@@ -32,12 +32,7 @@ use super::common::*;
 fn creates_wok_directory() {
     let temp = TempDir::new().unwrap();
 
-    wk().arg("init")
-        .arg("--prefix")
-        .arg("myapp")
-        .current_dir(temp.path())
-        .assert()
-        .success();
+    wk().arg("init").arg("--prefix").arg("myapp").current_dir(temp.path()).assert().success();
 
     assert!(temp.path().join(".wok").exists());
     assert!(temp.path().join(".wok/config.toml").exists());
@@ -53,20 +48,10 @@ fn fails_if_already_initialized() {
     let temp = TempDir::new().unwrap();
 
     // First init should succeed
-    wk().arg("init")
-        .arg("--prefix")
-        .arg("prj")
-        .current_dir(temp.path())
-        .assert()
-        .success();
+    wk().arg("init").arg("--prefix").arg("prj").current_dir(temp.path()).assert().success();
 
     // Second init should fail
-    wk().arg("init")
-        .arg("--prefix")
-        .arg("prj")
-        .current_dir(temp.path())
-        .assert()
-        .failure();
+    wk().arg("init").arg("--prefix").arg("prj").current_dir(temp.path()).assert().failure();
 }
 
 #[test]
@@ -77,12 +62,7 @@ fn succeeds_if_wok_exists_without_config() {
     std::fs::create_dir_all(temp.path().join(".wok")).unwrap();
 
     // Init should succeed
-    wk().arg("init")
-        .arg("--prefix")
-        .arg("prj")
-        .current_dir(temp.path())
-        .assert()
-        .success();
+    wk().arg("init").arg("--prefix").arg("prj").current_dir(temp.path()).assert().success();
 
     assert!(temp.path().join(".wok/config.toml").exists());
 }
@@ -165,10 +145,7 @@ fn uses_directory_name_as_default_prefix() {
     let project_dir = temp.path().join("myproject");
     std::fs::create_dir_all(&project_dir).unwrap();
 
-    wk().arg("init")
-        .current_dir(&project_dir)
-        .assert()
-        .success();
+    wk().arg("init").current_dir(&project_dir).assert().success();
 
     let config = std::fs::read_to_string(project_dir.join(".wok/config.toml")).unwrap();
     assert!(config.contains("prefix = \"myproject\""));
@@ -180,10 +157,7 @@ fn lowercases_and_filters_alphanumeric() {
     let project_dir = temp.path().join("MyProject123");
     std::fs::create_dir_all(&project_dir).unwrap();
 
-    wk().arg("init")
-        .current_dir(&project_dir)
-        .assert()
-        .success();
+    wk().arg("init").current_dir(&project_dir).assert().success();
 
     let config = std::fs::read_to_string(project_dir.join(".wok/config.toml")).unwrap();
     assert!(config.contains("prefix = \"myproject123\""));
@@ -195,12 +169,7 @@ fn explicit_prefix_overrides_directory() {
     let project_dir = temp.path().join("somedir");
     std::fs::create_dir_all(&project_dir).unwrap();
 
-    wk().arg("init")
-        .arg("--prefix")
-        .arg("custom")
-        .current_dir(&project_dir)
-        .assert()
-        .success();
+    wk().arg("init").arg("--prefix").arg("custom").current_dir(&project_dir).assert().success();
 
     let config = std::fs::read_to_string(project_dir.join(".wok/config.toml")).unwrap();
     assert!(config.contains("prefix = \"custom\""));
@@ -212,10 +181,7 @@ fn fails_with_invalid_directory_name_for_prefix() {
     let project_dir = temp.path().join("a---");
     std::fs::create_dir_all(&project_dir).unwrap();
 
-    wk().arg("init")
-        .current_dir(&project_dir)
-        .assert()
-        .failure();
+    wk().arg("init").current_dir(&project_dir).assert().failure();
 }
 
 #[test]
@@ -223,30 +189,15 @@ fn valid_prefixes_accepted() {
     let temp = TempDir::new().unwrap();
 
     // Test: abc
-    wk().arg("init")
-        .arg("--prefix")
-        .arg("abc")
-        .current_dir(temp.path())
-        .assert()
-        .success();
+    wk().arg("init").arg("--prefix").arg("abc").current_dir(temp.path()).assert().success();
     std::fs::remove_dir_all(temp.path().join(".wok")).unwrap();
 
     // Test: ab
-    wk().arg("init")
-        .arg("--prefix")
-        .arg("ab")
-        .current_dir(temp.path())
-        .assert()
-        .success();
+    wk().arg("init").arg("--prefix").arg("ab").current_dir(temp.path()).assert().success();
     std::fs::remove_dir_all(temp.path().join(".wok")).unwrap();
 
     // Test: abc123
-    wk().arg("init")
-        .arg("--prefix")
-        .arg("abc123")
-        .current_dir(temp.path())
-        .assert()
-        .success();
+    wk().arg("init").arg("--prefix").arg("abc123").current_dir(temp.path()).assert().success();
     let config = std::fs::read_to_string(temp.path().join(".wok/config.toml")).unwrap();
     assert!(config.contains("prefix = \"abc123\""));
     std::fs::remove_dir_all(temp.path().join(".wok")).unwrap();
@@ -267,12 +218,7 @@ fn invalid_prefixes_rejected() {
     let invalid_prefixes = ["ABC", "123", "my-prefix", "my_prefix", "a"];
 
     for prefix in invalid_prefixes {
-        wk().arg("init")
-            .arg("--prefix")
-            .arg(prefix)
-            .current_dir(temp.path())
-            .assert()
-            .failure();
+        wk().arg("init").arg("--prefix").arg(prefix).current_dir(temp.path()).assert().failure();
     }
 }
 
@@ -323,21 +269,13 @@ fn private_database_has_required_tables() {
     for table in tables {
         let output = std::process::Command::new("sqlite3")
             .arg(temp.path().join(".wok/issues.db"))
-            .arg(format!(
-                "SELECT name FROM sqlite_master WHERE type='table' AND name='{}';",
-                table
-            ))
+            .arg(format!("SELECT name FROM sqlite_master WHERE type='table' AND name='{}';", table))
             .output()
             .expect("sqlite3 command failed");
 
         assert!(output.status.success());
         let stdout = String::from_utf8_lossy(&output.stdout);
-        assert!(
-            stdout.trim() == table,
-            "Expected table '{}' but got '{}'",
-            table,
-            stdout.trim()
-        );
+        assert!(stdout.trim() == table, "Expected table '{}' but got '{}'", table, stdout.trim());
     }
 }
 
@@ -366,30 +304,17 @@ fn private_empty_database_shows_no_issues() {
 fn config_is_valid_toml() {
     let temp = TempDir::new().unwrap();
 
-    wk().arg("init")
-        .arg("--prefix")
-        .arg("prj")
-        .current_dir(temp.path())
-        .assert()
-        .success();
+    wk().arg("init").arg("--prefix").arg("prj").current_dir(temp.path()).assert().success();
 
     let config = std::fs::read_to_string(temp.path().join(".wok/config.toml")).unwrap();
 
     // Check that prefix line exists with correct format
-    assert!(
-        config.contains("prefix = \"prj\""),
-        "Config should contain prefix"
-    );
+    assert!(config.contains("prefix = \"prj\""), "Config should contain prefix");
 
     // Check that there's at least one key = value line
-    let key_value_lines: Vec<&str> = config
-        .lines()
-        .filter(|line| line.starts_with(|c: char| c.is_ascii_lowercase()))
-        .collect();
-    assert!(
-        !key_value_lines.is_empty(),
-        "Config should have at least one key-value line"
-    );
+    let key_value_lines: Vec<&str> =
+        config.lines().filter(|line| line.starts_with(|c: char| c.is_ascii_lowercase())).collect();
+    assert!(!key_value_lines.is_empty(), "Config should have at least one key-value line");
 }
 
 #[test]
@@ -404,22 +329,13 @@ fn allows_immediate_issue_creation_with_prefix() {
         .assert()
         .success();
 
-    let output = wk()
-        .arg("new")
-        .arg("task")
-        .arg("Test issue")
-        .current_dir(temp.path())
-        .output()
-        .unwrap();
+    let output =
+        wk().arg("new").arg("task").arg("Test issue").current_dir(temp.path()).output().unwrap();
 
     assert!(output.status.success());
     let stdout = String::from_utf8_lossy(&output.stdout);
     // Issue ID should start with the prefix
-    assert!(
-        stdout.contains("myprj-"),
-        "Issue ID should contain prefix 'myprj-', got: {}",
-        stdout
-    );
+    assert!(stdout.contains("myprj-"), "Issue ID should contain prefix 'myprj-', got: {}", stdout);
 }
 
 // =============================================================================
@@ -476,12 +392,7 @@ fn private_with_path_option() {
 fn user_level_gitignore_contains_config_only() {
     let temp = TempDir::new().unwrap();
 
-    wk().arg("init")
-        .arg("--prefix")
-        .arg("prj")
-        .current_dir(temp.path())
-        .assert()
-        .success();
+    wk().arg("init").arg("--prefix").arg("prj").current_dir(temp.path()).assert().success();
 
     let gitignore = std::fs::read_to_string(temp.path().join(".wok/.gitignore")).unwrap();
     assert!(gitignore.contains("config.toml"));
@@ -510,12 +421,7 @@ fn private_gitignore_contains_config_and_database() {
 fn default_mode_ignores_config_toml() {
     let temp = TempDir::new().unwrap();
 
-    wk().arg("init")
-        .arg("--prefix")
-        .arg("prj")
-        .current_dir(temp.path())
-        .assert()
-        .success();
+    wk().arg("init").arg("--prefix").arg("prj").current_dir(temp.path()).assert().success();
 
     let gitignore = std::fs::read_to_string(temp.path().join(".wok/.gitignore")).unwrap();
     assert!(gitignore.contains("config.toml"));
@@ -529,12 +435,7 @@ fn default_mode_ignores_config_toml() {
 fn defaults_to_user_level_mode() {
     let temp = TempDir::new().unwrap();
 
-    wk().arg("init")
-        .arg("--prefix")
-        .arg("prj")
-        .current_dir(temp.path())
-        .assert()
-        .success();
+    wk().arg("init").arg("--prefix").arg("prj").current_dir(temp.path()).assert().success();
 
     let config = std::fs::read_to_string(temp.path().join(".wok/config.toml")).unwrap();
     // Default mode should not have private = true

@@ -14,9 +14,7 @@ struct MockClock {
 
 impl MockClock {
     fn new(initial_ms: u64) -> Self {
-        MockClock {
-            time_ms: AtomicU64::new(initial_ms),
-        }
+        MockClock { time_ms: AtomicU64::new(initial_ms) }
     }
 
     fn set(&self, ms: u64) {

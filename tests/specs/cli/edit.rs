@@ -12,11 +12,8 @@ use super::common::*;
 use yare::parameterized;
 
 fn create_issue(temp: &TempDir, type_: &str, title: &str) -> String {
-    let output = wk()
-        .args(["new", type_, title, "-o", "id"])
-        .current_dir(temp.path())
-        .output()
-        .unwrap();
+    let output =
+        wk().args(["new", type_, title, "-o", "id"]).current_dir(temp.path()).output().unwrap();
     String::from_utf8_lossy(&output.stdout).trim().to_string()
 }
 
@@ -41,10 +38,7 @@ fn edit_title_changes_issue_title() {
     let temp = init_temp();
     let id = create_issue(&temp, "task", "Original title");
 
-    wk().args(["edit", &id, "title", "New title"])
-        .current_dir(temp.path())
-        .assert()
-        .success();
+    wk().args(["edit", &id, "title", "New title"]).current_dir(temp.path()).assert().success();
 
     wk().args(["show", &id])
         .current_dir(temp.path())
@@ -68,10 +62,7 @@ fn edit_type_changes_issue_type(from_type: &str, to_type: &str, expected_tag: &s
     let temp = init_temp();
     let id = create_issue(&temp, from_type, "Test issue");
 
-    wk().args(["edit", &id, "type", to_type])
-        .current_dir(temp.path())
-        .assert()
-        .success();
+    wk().args(["edit", &id, "type", to_type]).current_dir(temp.path()).assert().success();
 
     wk().args(["show", &id])
         .current_dir(temp.path())
@@ -89,15 +80,9 @@ fn edit_both_title_and_type_sequentially() {
     let temp = init_temp();
     let id = create_issue(&temp, "task", "Original");
 
-    wk().args(["edit", &id, "title", "Updated"])
-        .current_dir(temp.path())
-        .assert()
-        .success();
+    wk().args(["edit", &id, "title", "Updated"]).current_dir(temp.path()).assert().success();
 
-    wk().args(["edit", &id, "type", "bug"])
-        .current_dir(temp.path())
-        .assert()
-        .success();
+    wk().args(["edit", &id, "type", "bug"]).current_dir(temp.path()).assert().success();
 
     wk().args(["show", &id])
         .current_dir(temp.path())
@@ -116,10 +101,7 @@ fn edit_logs_event() {
     let temp = init_temp();
     let id = create_issue(&temp, "task", "Test task");
 
-    wk().args(["edit", &id, "title", "New title"])
-        .current_dir(temp.path())
-        .assert()
-        .success();
+    wk().args(["edit", &id, "title", "New title"]).current_dir(temp.path()).assert().success();
 
     wk().args(["log", &id])
         .current_dir(temp.path())
@@ -146,19 +128,13 @@ fn edit_with_invalid_type_fails() {
     let temp = init_temp();
     let id = create_issue(&temp, "task", "Test task");
 
-    wk().args(["edit", &id, "type", "bogus"])
-        .current_dir(temp.path())
-        .assert()
-        .failure();
+    wk().args(["edit", &id, "type", "bogus"]).current_dir(temp.path()).assert().failure();
 }
 
 #[test]
 fn edit_requires_issue_id() {
     let temp = init_temp();
-    wk().args(["edit", "title", "New"])
-        .current_dir(temp.path())
-        .assert()
-        .failure();
+    wk().args(["edit", "title", "New"]).current_dir(temp.path()).assert().failure();
 }
 
 // =============================================================================
@@ -170,10 +146,7 @@ fn edit_preserves_other_fields() {
     let temp = init_temp();
     let id = create_issue_with_opts(&temp, "task", "Test task", &["--label", "mylabel"]);
 
-    wk().args(["edit", &id, "title", "New title"])
-        .current_dir(temp.path())
-        .assert()
-        .success();
+    wk().args(["edit", &id, "title", "New title"]).current_dir(temp.path()).assert().success();
 
     wk().args(["show", &id])
         .current_dir(temp.path())
@@ -226,10 +199,7 @@ fn edit_type_flag_updates_type() {
     let temp = init_temp();
     let id = create_issue(&temp, "task", "Test issue");
 
-    wk().args(["edit", &id, "--type", "bug"])
-        .current_dir(temp.path())
-        .assert()
-        .success();
+    wk().args(["edit", &id, "--type", "bug"]).current_dir(temp.path()).assert().success();
 
     wk().args(["show", &id])
         .current_dir(temp.path())
@@ -243,10 +213,7 @@ fn edit_assignee_flag_updates_assignee() {
     let temp = init_temp();
     let id = create_issue(&temp, "task", "Test issue");
 
-    wk().args(["edit", &id, "--assignee", "alice"])
-        .current_dir(temp.path())
-        .assert()
-        .success();
+    wk().args(["edit", &id, "--assignee", "alice"]).current_dir(temp.path()).assert().success();
 
     wk().args(["show", &id])
         .current_dir(temp.path())

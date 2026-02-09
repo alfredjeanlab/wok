@@ -91,11 +91,7 @@ fn check_hooks_at(base: &Path, scope: HookScope) -> io::Result<HookStatus> {
         false
     };
 
-    Ok(HookStatus {
-        scope,
-        installed,
-        path: abs_path,
-    })
+    Ok(HookStatus { scope, installed, path: abs_path })
 }
 
 #[test]
@@ -157,11 +153,7 @@ fn install_hooks_preserves_existing() {
         // Create existing settings
         let claude_dir = base.join(".claude");
         fs::create_dir_all(&claude_dir).unwrap();
-        fs::write(
-            claude_dir.join("settings.local.json"),
-            r#"{"mcpServers": {}}"#,
-        )
-        .unwrap();
+        fs::write(claude_dir.join("settings.local.json"), r#"{"mcpServers": {}}"#).unwrap();
 
         install_hooks_at(base, HookScope::Local).unwrap();
 
@@ -333,9 +325,7 @@ fn merge_preserves_custom_hooks() {
     let hooks = settings["hooks"]["PreCompact"].as_array().unwrap();
     // Should have both: custom hook and wk hook
     assert_eq!(hooks.len(), 2);
-    assert!(hooks
-        .iter()
-        .any(|h| { h["hooks"][0]["command"].as_str() == Some("custom.sh") }));
+    assert!(hooks.iter().any(|h| { h["hooks"][0]["command"].as_str() == Some("custom.sh") }));
     assert!(hooks.iter().any(is_wk_hook));
 }
 

@@ -78,12 +78,7 @@ fn status_from_str_invalid(input: &str) {
     closed_to_done = { Status::Closed, Status::Done },
 )]
 fn status_transition_valid(from: Status, to: Status) {
-    assert!(
-        from.can_transition_to(to),
-        "{} -> {} should be valid",
-        from,
-        to
-    );
+    assert!(from.can_transition_to(to), "{} -> {} should be valid", from, to);
 }
 
 // Self-transitions are not valid (handled as idempotent at the command level)
@@ -94,12 +89,7 @@ fn status_transition_valid(from: Status, to: Status) {
     closed_to_closed = { Status::Closed, Status::Closed },
 )]
 fn status_self_transition_invalid(from: Status, to: Status) {
-    assert!(
-        !from.can_transition_to(to),
-        "{} -> {} should be invalid (self-transition)",
-        from,
-        to
-    );
+    assert!(!from.can_transition_to(to), "{} -> {} should be invalid (self-transition)", from, to);
 }
 
 #[parameterized(
@@ -179,12 +169,7 @@ fn event_builder_pattern() {
 #[test]
 fn issue_new() {
     let now = Utc::now();
-    let issue = Issue::new(
-        "test-123".to_string(),
-        IssueType::Task,
-        "Test".to_string(),
-        now,
-    );
+    let issue = Issue::new("test-123".to_string(), IssueType::Task, "Test".to_string(), now);
 
     assert_eq!(issue.id, "test-123");
     assert_eq!(issue.issue_type, IssueType::Task);
@@ -227,9 +212,8 @@ fn status_serialization() {
 
 #[test]
 fn event_with_timestamp() {
-    let custom_time = chrono::DateTime::parse_from_rfc3339("2026-01-15T12:00:00Z")
-        .unwrap()
-        .to_utc();
+    let custom_time =
+        chrono::DateTime::parse_from_rfc3339("2026-01-15T12:00:00Z").unwrap().to_utc();
     let event = Event::new("test-123".to_string(), Action::Started).with_timestamp(custom_time);
 
     assert_eq!(event.created_at, custom_time);

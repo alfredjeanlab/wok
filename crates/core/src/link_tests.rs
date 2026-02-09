@@ -17,10 +17,7 @@ fn link_type_from_str() {
     assert_eq!("GITHUB".parse::<LinkType>().unwrap(), LinkType::Github);
     assert_eq!("jira".parse::<LinkType>().unwrap(), LinkType::Jira);
     assert_eq!("gitlab".parse::<LinkType>().unwrap(), LinkType::Gitlab);
-    assert_eq!(
-        "confluence".parse::<LinkType>().unwrap(),
-        LinkType::Confluence
-    );
+    assert_eq!("confluence".parse::<LinkType>().unwrap(), LinkType::Confluence);
     assert!("invalid".parse::<LinkType>().is_err());
 }
 
@@ -52,10 +49,7 @@ fn link_builder_pattern() {
 
     assert_eq!(link.issue_id, "test-123");
     assert_eq!(link.link_type, Some(LinkType::Github));
-    assert_eq!(
-        link.url,
-        Some("https://github.com/org/repo/issues/1".to_string())
-    );
+    assert_eq!(link.url, Some("https://github.com/org/repo/issues/1".to_string()));
     assert_eq!(link.external_id, Some("1".to_string()));
     assert_eq!(link.rel, Some(LinkRel::Tracks));
 }

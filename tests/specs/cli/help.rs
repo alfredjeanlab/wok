@@ -73,10 +73,7 @@ fn help_displays_usage_and_commands() {
 
 #[test]
 fn help_and_h_flags_work() {
-    wk().arg("--help")
-        .assert()
-        .success()
-        .stdout(predicate::str::contains("wok"));
+    wk().arg("--help").assert().success().stdout(predicate::str::contains("wok"));
 
     wk().arg("-h")
         .assert()
@@ -93,10 +90,7 @@ fn h_and_help_produce_same_output() {
     let h_stdout = String::from_utf8_lossy(&h_output.stdout);
     let help_stdout = String::from_utf8_lossy(&help_output.stdout);
 
-    assert_eq!(
-        h_stdout, help_stdout,
-        "-h and --help should produce identical output"
-    );
+    assert_eq!(h_stdout, help_stdout, "-h and --help should produce identical output");
 }
 
 // =============================================================================
@@ -124,10 +118,7 @@ fn h_and_help_produce_same_output() {
     export = { "export" },
 )]
 fn command_supports_h_flag(cmd: &str) {
-    wk().args([cmd, "-h"])
-        .assert()
-        .success()
-        .stdout(predicate::str::contains(cmd));
+    wk().args([cmd, "-h"]).assert().success().stdout(predicate::str::contains(cmd));
 }
 
 #[parameterized(
@@ -150,10 +141,7 @@ fn command_supports_h_flag(cmd: &str) {
     export = { "export" },
 )]
 fn command_supports_help_flag(cmd: &str) {
-    wk().args([cmd, "--help"])
-        .assert()
-        .success()
-        .stdout(predicate::str::contains(cmd));
+    wk().args([cmd, "--help"]).assert().success().stdout(predicate::str::contains(cmd));
 }
 
 // help <command> works for all commands including 'help' itself
@@ -178,10 +166,7 @@ fn command_supports_help_flag(cmd: &str) {
     help = { "help" },
 )]
 fn help_subcommand_works(cmd: &str) {
-    wk().args(["help", cmd])
-        .assert()
-        .success()
-        .stdout(predicate::str::contains(cmd));
+    wk().args(["help", cmd]).assert().success().stdout(predicate::str::contains(cmd));
 }
 
 // =============================================================================

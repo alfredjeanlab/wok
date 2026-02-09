@@ -12,11 +12,8 @@ use super::common::*;
 use yare::parameterized;
 
 fn create_issue(temp: &TempDir, type_: &str, title: &str) -> String {
-    let output = wk()
-        .args(["new", type_, title, "-o", "id"])
-        .current_dir(temp.path())
-        .output()
-        .unwrap();
+    let output =
+        wk().args(["new", type_, title, "-o", "id"]).current_dir(temp.path()).output().unwrap();
     String::from_utf8_lossy(&output.stdout).trim().to_string()
 }
 
@@ -65,10 +62,7 @@ fn log_shows_start_event() {
     let temp = init_temp();
     let id = create_issue(&temp, "task", "LogEvent Start task");
 
-    wk().args(["start", &id])
-        .current_dir(temp.path())
-        .assert()
-        .success();
+    wk().args(["start", &id]).current_dir(temp.path()).assert().success();
 
     wk().args(["log", &id])
         .current_dir(temp.path())
@@ -82,15 +76,9 @@ fn log_shows_reopen_event_from_in_progress() {
     let temp = init_temp();
     let id = create_issue(&temp, "task", "LogEvent Reopen inprog task");
 
-    wk().args(["start", &id])
-        .current_dir(temp.path())
-        .assert()
-        .success();
+    wk().args(["start", &id]).current_dir(temp.path()).assert().success();
 
-    wk().args(["reopen", &id])
-        .current_dir(temp.path())
-        .assert()
-        .success();
+    wk().args(["reopen", &id]).current_dir(temp.path()).assert().success();
 
     wk().args(["log", &id])
         .current_dir(temp.path())
@@ -104,15 +92,9 @@ fn log_shows_done_event() {
     let temp = init_temp();
     let id = create_issue(&temp, "task", "LogEvent Done task");
 
-    wk().args(["start", &id])
-        .current_dir(temp.path())
-        .assert()
-        .success();
+    wk().args(["start", &id]).current_dir(temp.path()).assert().success();
 
-    wk().args(["done", &id])
-        .current_dir(temp.path())
-        .assert()
-        .success();
+    wk().args(["done", &id]).current_dir(temp.path()).assert().success();
 
     wk().args(["log", &id])
         .current_dir(temp.path())
@@ -126,10 +108,7 @@ fn log_shows_close_event_with_reason() {
     let temp = init_temp();
     let id = create_issue(&temp, "task", "LogEvent Close task");
 
-    wk().args(["close", &id, "--reason", "duplicate"])
-        .current_dir(temp.path())
-        .assert()
-        .success();
+    wk().args(["close", &id, "--reason", "duplicate"]).current_dir(temp.path()).assert().success();
 
     wk().args(["log", &id])
         .current_dir(temp.path())
@@ -144,15 +123,9 @@ fn log_shows_reopen_event_with_reason() {
     let temp = init_temp();
     let id = create_issue(&temp, "task", "LogEvent Reopen done task");
 
-    wk().args(["start", &id])
-        .current_dir(temp.path())
-        .assert()
-        .success();
+    wk().args(["start", &id]).current_dir(temp.path()).assert().success();
 
-    wk().args(["done", &id])
-        .current_dir(temp.path())
-        .assert()
-        .success();
+    wk().args(["done", &id]).current_dir(temp.path()).assert().success();
 
     wk().args(["reopen", &id, "--reason", "regression"])
         .current_dir(temp.path())
@@ -176,10 +149,7 @@ fn log_shows_labeled_event() {
     let temp = init_temp();
     let id = create_issue(&temp, "task", "LogMeta Label task");
 
-    wk().args(["label", &id, "mylabel"])
-        .current_dir(temp.path())
-        .assert()
-        .success();
+    wk().args(["label", &id, "mylabel"]).current_dir(temp.path()).assert().success();
 
     wk().args(["log", &id])
         .current_dir(temp.path())
@@ -193,10 +163,7 @@ fn log_shows_noted_event() {
     let temp = init_temp();
     let id = create_issue(&temp, "task", "LogMeta Note task");
 
-    wk().args(["note", &id, "My note"])
-        .current_dir(temp.path())
-        .assert()
-        .success();
+    wk().args(["note", &id, "My note"]).current_dir(temp.path()).assert().success();
 
     wk().args(["log", &id])
         .current_dir(temp.path())
@@ -214,35 +181,20 @@ fn log_limit_restricts_output() {
     let temp = init_temp();
     let id = create_issue(&temp, "task", "LogOpts Limit task");
 
-    wk().args(["start", &id])
-        .current_dir(temp.path())
-        .assert()
-        .success();
+    wk().args(["start", &id]).current_dir(temp.path()).assert().success();
 
-    wk().args(["reopen", &id])
-        .current_dir(temp.path())
-        .assert()
-        .success();
+    wk().args(["reopen", &id]).current_dir(temp.path()).assert().success();
 
-    wk().args(["start", &id])
-        .current_dir(temp.path())
-        .assert()
-        .success();
+    wk().args(["start", &id]).current_dir(temp.path()).assert().success();
 
-    wk().args(["log", "--limit", "2"])
-        .current_dir(temp.path())
-        .assert()
-        .success();
+    wk().args(["log", "--limit", "2"]).current_dir(temp.path()).assert().success();
 }
 
 #[test]
 fn log_nonexistent_issue_fails() {
     let temp = init_temp();
 
-    wk().args(["log", "test-nonexistent"])
-        .current_dir(temp.path())
-        .assert()
-        .failure();
+    wk().args(["log", "test-nonexistent"]).current_dir(temp.path()).assert().failure();
 }
 
 #[test]
@@ -270,16 +222,10 @@ fn log_shows_lifecycle_event(action: &str, expected: &str) {
 
     // Start is required for done
     if action == "done" {
-        wk().args(["start", &id])
-            .current_dir(temp.path())
-            .assert()
-            .success();
+        wk().args(["start", &id]).current_dir(temp.path()).assert().success();
     }
 
-    wk().args([action, &id])
-        .current_dir(temp.path())
-        .assert()
-        .success();
+    wk().args([action, &id]).current_dir(temp.path()).assert().success();
 
     wk().args(["log", &id])
         .current_dir(temp.path())
@@ -296,10 +242,7 @@ fn log_shows_close_reason(reason: &str) {
     let temp = init_temp();
     let id = create_issue(&temp, "task", "LogParam Close task");
 
-    wk().args(["close", &id, "--reason", reason])
-        .current_dir(temp.path())
-        .assert()
-        .success();
+    wk().args(["close", &id, "--reason", reason]).current_dir(temp.path()).assert().success();
 
     wk().args(["log", &id])
         .current_dir(temp.path())

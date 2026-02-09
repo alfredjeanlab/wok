@@ -82,13 +82,8 @@ where
 /// These tests must run sequentially since they modify shared environment variables.
 #[test]
 fn env_detection_tests() {
-    let ai_vars = &[
-        "CLAUDE_CODE",
-        "CLAUDE_CODE_ENTRY",
-        "CODEX_ENV",
-        "AIDER_MODEL",
-        "CURSOR_TRACE_ID",
-    ];
+    let ai_vars =
+        &["CLAUDE_CODE", "CLAUDE_CODE_ENTRY", "CODEX_ENV", "AIDER_MODEL", "CURSOR_TRACE_ID"];
 
     // Test: detects Codex via CODEX_ENV
     with_env_vars(ai_vars, || {

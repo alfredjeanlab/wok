@@ -57,10 +57,7 @@ fn v_and_version_produce_identical_output() {
     let v_stdout = String::from_utf8_lossy(&v_output.stdout);
     let version_stdout = String::from_utf8_lossy(&version_output.stdout);
 
-    assert_eq!(
-        v_stdout, version_stdout,
-        "-v and --version should produce identical output"
-    );
+    assert_eq!(v_stdout, version_stdout, "-v and --version should produce identical output");
 }
 
 #[test]
@@ -71,10 +68,7 @@ fn big_v_produces_same_output_as_small_v() {
     let v_stdout = String::from_utf8_lossy(&v_output.stdout);
     let big_v_stdout = String::from_utf8_lossy(&big_v_output.stdout);
 
-    assert_eq!(
-        v_stdout, big_v_stdout,
-        "-V and -v should produce identical output"
-    );
+    assert_eq!(v_stdout, big_v_stdout, "-V and -v should produce identical output");
 }
 
 // =============================================================================
@@ -96,18 +90,9 @@ fn big_v_not_documented_in_help() {
     let stdout = String::from_utf8_lossy(&output.stdout);
 
     // -V should be hidden: check for patterns like " -V," or " -V " or "[-V"
-    assert!(
-        !stdout.contains(" -V,"),
-        "-V should not be documented in help"
-    );
-    assert!(
-        !stdout.contains(" -V "),
-        "-V should not be documented in help"
-    );
-    assert!(
-        !stdout.contains("[-V"),
-        "-V should not be documented in help"
-    );
+    assert!(!stdout.contains(" -V,"), "-V should not be documented in help");
+    assert!(!stdout.contains(" -V "), "-V should not be documented in help");
+    assert!(!stdout.contains("[-V"), "-V should not be documented in help");
 }
 
 // =============================================================================
